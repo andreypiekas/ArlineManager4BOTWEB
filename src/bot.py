@@ -415,7 +415,7 @@ class Bot:
             f"📊 <b>Resumo diário</b> {time.strftime('%d/%m/%Y', now)}",
             f"💰 Saldo: ${fmt(stats.money)}{esc(delta)}",
             f"⛽ Combustível: {fmt(stats.fuel)} / {fmt(stats.fuel_capacity)} a ${fmt(stats.fuel_price)} | comprado {fmt(counters['fuel_bought'])} libras (${fmt(counters['fuel_spent'])})",
-            f"🌿 CO2: {fmt(stats.co2)} / {fmt(stats.co2_capacity)} a ${fmt(stats.co2_price)} | comprado {fmt(counters['co2_bought'])} cotas (${fmt(counters['co2_spent'])})",
+            f"🌿 CO₂: {fmt(stats.co2)} / {fmt(stats.co2_capacity)} a ${fmt(stats.co2_price)} | comprado {fmt(counters['co2_bought'])} cotas (${fmt(counters['co2_spent'])})",
             f"✈️ Frota: {fmt(stats.fleet_size)} aeronaves, {fmt(stats.inflight)} em voo, {fmt(stats.parked)} estacionadas | decolagens: {counters['departures']}",
             f"🛫 Rotas criadas: {counters['routes']} | 🛒 Aeronaves encomendadas: {counters['aircraft']} | 🔧 Reparos: {counters['repairs']}, A-checks: {counters['checks']}",
         ]
@@ -488,8 +488,8 @@ class Bot:
         opt = lambda key: self.config.get_bool("options", key)  # noqa: E731
         log.info("Verificando a companhia aérea ...%s", " [SIMULAÇÃO: nenhuma compra ou planejamento é executado]" if self.dry_run else "")
         self._next_event = None
-        self._guard(self._check_tutorial, "comprobar el tutorial")
-        self._guard(self._read_mode, "leer el modo de juego")
+        self._guard(self._check_tutorial, "verificar o tutorial")
+        self._guard(self._read_mode, "ler o modo de jogo")
         # The game account only follows a language the user picked in the sidebar ([app] language), never the default.
         if (not self._language_checked and self.config.get("app", "language")
                 and self.config.get_bool("options", "sync_game_language", True)):
@@ -502,18 +502,18 @@ class Bot:
         # Maintenance and seat changes go before departures: a landed aircraft can only be repaired,
         # checked or modified while it sits at the base, so plan it before "Depart all" sends it away again.
         if opt("auto_repair") or opt("auto_check"):
-            self._guard(lambda: run_maintenance(self), "planificar mantenimiento")
+            self._guard(lambda: run_maintenance(self), "programar a manutenção")
         if opt("auto_seats") or self.config.get_bool("options", "auto_mods", True):
-            self._guard(lambda: optimize_seats(self), "revisar el taller (asientos y mejoras)")
+            self._guard(lambda: optimize_seats(self), "verificar a oficina (assentos e melhorias)")
         if opt("auto_depart"):
-            self._guard(self._depart_all, "despegar aviones")
+            self._guard(self._depart_all, "decolar aeronaves")
         if opt("autobuy_fuel") or opt("autobuy_co2"):
-            self._guard(self._check_market, "revisar el mercado de fuel / CO2")
+            self._guard(self._check_market, "verificar o mercado de combustível / CO₂")
         if opt("auto_route") or opt("autobuy_aircraft"):
-            self._guard(lambda: manage_fleet(self), "gestionar la flota")
+            self._guard(lambda: manage_fleet(self), "gerenciar a frota")
         if opt("auto_checklist"):
-            self._guard(lambda: check_checklist(self), "revisar el checklist")
-        self._guard(self._maybe_daily_summary, "enviar el resumen diario")
+            self._guard(lambda: check_checklist(self), "verificar a lista de tarefas")
+        self._guard(self._maybe_daily_summary, "enviar o resumo diário")
 
     def _guard(self, action: Callable[[], None], what: str) -> None:
         """Run one step of the cycle; a failing step is logged and the next ones still run.
@@ -607,7 +607,7 @@ class Bot:
             if not warned and time.time() - started > 20:
                 log_login.warning(
                     "Ainda sem sessão. Se o site apresentar um CAPTCHA ou erro, conclua o login manualmente "
-                    "(espero hasta %d s).",
+                    "(aguardarei até %d s).",
                     timeout,
                 )
                 warned = True
@@ -754,11 +754,11 @@ class Bot:
         self.close_popup()
 
     def _trade(self, kind: str) -> None:
-        label = "CO2" if kind == "co2" else "fuel"
+        label = "CO₂" if kind == "co2" else "combustível"
         tlog = logging.getLogger(f"am4bot.{kind}")
         panel = self._find(self._sel(f"{kind}_main"), timeout=10)
         if panel is None:
-            tlog.warning("No encuentro el panel de %s.", label)
+            tlog.warning("Não encontrei o painel de %s.", label)
             return
         panel_text = panel.text
 
@@ -1000,7 +1000,7 @@ class Bot:
     def _sel(self, name: str) -> str:
         xpath = self.config.get("selectors", name)
         if not xpath:
-            raise KeyError(f"Falta el selector '{name}' en config/defaults.ini")
+            raise KeyError(f"Falta o seletor '{name}' em config/defaults.ini")
         return xpath
 
     def _find(self, xpath: str, timeout: float = 10) -> Optional[WebElement]:

@@ -523,7 +523,7 @@ def order_aircraft(bot: "Bot", choice: AircraftModel, goal: bool = False) -> boo
     before = bot.read_money()
     bot.click_element(detail.find_element(By.XPATH, ".//*[@id='btnPurchaseIntro']"))
     response = bot.wait_text("//*[@id='orderAction']", timeout=15)
-    if not bot.confirm_purchase(before, choice.price, f"el pedido de {choice.name}", "orderAction"):
+    if not bot.confirm_purchase(before, choice.price, f"o pedido de {choice.name}", "orderAction"):
         return False
     bot.spent(choice.price, invest=True)
     bot.count("aircraft")

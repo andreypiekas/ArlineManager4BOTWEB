@@ -180,10 +180,10 @@ def plan(bot: "Bot", aircraft: Aircraft, kind: str) -> bool:
             reason = "o jogo não oferece essa ação"
         log.info("%s: %s não é possível agora (%s).", aircraft.reg, label, reason)
         return False
-    if not bot.can_spend(cost, f"la {label} de {aircraft.reg}", essential=True):
+    if not bot.can_spend(cost, f"o serviço de {label} da aeronave {aircraft.reg}", essential=True):
         return False
     detail = (f"{label} de {aircraft.reg} ({aircraft.model}, desgaste {aircraft.wear:.1f}%, "
-              f"{aircraft.hours_to_check} h hasta el check) por ${fmt(cost)}")
+              f"{aircraft.hours_to_check} h até a revisão) por ${fmt(cost)}")
     if bot.dry_run:
         log.info("[SIMULAÇÃO] Programaria %s.", detail)
         bot.notify(f"🧪 SIMULAÇÃO: programaria {esc(detail)}.", silent=True)
@@ -191,10 +191,10 @@ def plan(bot: "Bot", aircraft: Aircraft, kind: str) -> bool:
     before = bot.read_money()
     bot.click_element(buttons[0])
     response = bot.wait_text("//*[@id='maintPlanActionDo']", timeout=15)
-    if not bot.confirm_purchase(before, cost, f"la {label} de {aircraft.reg}", "maintPlanActionDo"):
+    if not bot.confirm_purchase(before, cost, f"o serviço de {label} da aeronave {aircraft.reg}", "maintPlanActionDo"):
         return False
     bot.spent(cost)
     bot.count("repairs" if kind == "repair" else "checks")
     log.info("Programado: %s. %s", detail, clean_response(response))
-    bot.notify(f"🔧 <b>Planificado: {esc(detail)}</b>.\n{esc(clean_response(response, 200))}".rstrip())
+    bot.notify(f"🔧 <b>Programado: {esc(detail)}</b>.\n{esc(clean_response(response, 200))}".rstrip())
     return True

@@ -262,7 +262,7 @@ def optimize_seats(bot: "Bot") -> None:
                         per_route[_airports(row["route"])], load, market, bot.mode)
         checked[aircraft.id] = now
         if plan is None:
-            log.debug("%s: no he podido leer los asientos o la demanda de su ruta.", aircraft.reg)
+            log.debug("%s: não foi possível ler os assentos ou a demanda da rota.", aircraft.reg)
             continue
         if reward and plan.old.f == 0 and plan.new.f > 0:
             plan.bonus = reward
@@ -287,7 +287,7 @@ def optimize_seats(bot: "Bot") -> None:
     plans = sorted(seat_plans, key=lambda p: p.payback) + mod_plans
     if not plans:
         log.info("Oficina: analisadas %d aeronaves na base (ocupação prevista %.0f %%); nenhuma apresenta ganho suficiente com "
-                 "otros asientos ni con mejoras.", len(due), load * 100)
+                 "alterações nos assentos ou melhorias.", len(due), load * 100)
         return
     # Plans over this cycle's limit, or that fail (money, no longer at the base), stay unmarked: next time.
     bot.open_popup("maintenance_main.php", "Maintenance", "nav_maintenance")
@@ -363,15 +363,15 @@ def apply_plan(bot: "Bot", plan: SeatPlan, max_payback: float, do_seats: bool = 
     bonus = plan.bonus if seats_change else 0
     parts = []
     if seats_change:
-        parts.append(f"asientos {plan.old} -> {plan.new}")
+        parts.append(f"assentos {plan.old} -> {plan.new}")
         if bonus:
-            parts.append(f"cobra ${fmt(int(bonus))} del checklist (primer pasajero de primera clase)")
+            parts.append(f"receberá ${fmt(int(bonus))} de recompensa da lista de tarefas (primeiro passageiro da primeira classe)")
     if chosen:
-        parts.append("mejoras " + ", ".join(MODS[mod] for mod in chosen))
+        parts.append("melhorias " + ", ".join(MODS[mod] for mod in chosen))
     payback = max(0.0, cost + revenue / 24 * hours - bonus) / gain if gain > 0 else float("inf")
     detail = (f"{plan.reg} ({plan.model}, {plan.route}): {'; '.join(parts)}, +{fmt_money(int(gain))}/dia estimado, "
               f"custo ${fmt(cost)}, {hours:.1f} h na oficina, retorno em {payback:.1f} dias")
-    if not bot.can_spend(cost, f"el taller de {plan.reg}"):
+    if not bot.can_spend(cost, f"a oficina da aeronave {plan.reg}"):
         return None
     if bot.dry_run:
         log.info("[SIMULAÇÃO] Executaria na oficina: %s.", detail)
@@ -384,7 +384,7 @@ def apply_plan(bot: "Bot", plan: SeatPlan, max_payback: float, do_seats: bool = 
     before = bot.read_money()
     bot.click_element(buttons[0])
     response = bot.wait_text("//*[@id='maintPlanActionDo']", timeout=15)
-    if not bot.confirm_purchase(before, cost, f"el taller de {plan.reg}", "maintPlanActionDo"):
+    if not bot.confirm_purchase(before, cost, f"a oficina da aeronave {plan.reg}", "maintPlanActionDo"):
         return None
     bot.spent(cost, invest=True)
     if seats_change:
