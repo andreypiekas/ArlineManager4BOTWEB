@@ -24,6 +24,20 @@ No painel web não há dependência de fontes remotas, frameworks CSS ou CDN.
 A aplicação desktop CustomTkinter compartilha a paleta por meio de
 `assets/theme.json`, com modo escuro como padrão para novas instalações.
 
+### Modo compacto da Torre de Controle
+
+A revisão **AM/04 V03** reduz a altura do cabeçalho e dos seis indicadores
+para privilegiar a visualização do registro operacional sem rolagem
+excessiva. Em monitores amplos, os indicadores aparecem em uma faixa única;
+em telas intermediárias, usam quatro colunas; no celular, duas.
+
+O console de eventos permanece legível e o quadro de confirmação de
+alterações é compacto. O layout de configurações também utiliza títulos e
+espaçamentos menores, sem alterar o comportamento de salvamento.
+
+O ajuste modifica somente CSS: mantém os IDs do DOM, o Javascript,
+os dados exibidos e os endpoints de automação existentes.
+
 ### Organização do painel
 
 - **Trilho lateral:** estado do serviço, tempo até o próximo ciclo, simulação,
