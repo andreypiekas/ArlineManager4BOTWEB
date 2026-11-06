@@ -53,6 +53,20 @@ Works in both game modes: the bot reads the mode of each account (easy: flights 
 
 The desktop app and web dashboard use Brazilian Portuguese (pt-BR) by default, with English as an option in **Idioma / Language**. Operational logs and Telegram notifications are localized to Portuguese. The game can use a different language: when selected, the bot only attempts to sync Brazilian Portuguese if the game's language selector supports it; otherwise, it preserves the game's existing language. Set `[options] sync_game_language = off` to always keep both language settings independent.
 
+## Instalação fácil: Raspberry Pi OS e Ubuntu
+
+Instalação automatizada do painel web, Chromium/ChromeDriver, ambiente Python e serviço de inicialização automática:
+
+```bash
+git clone https://github.com/andreypiekas/ArlineManager4BOTWEB.git
+cd ArlineManager4BOTWEB
+bash instalar.sh --rede-local
+```
+
+Para cadastrar credenciais do jogo pelo terminal (senha oculta), utilize `bash instalar.sh --rede-local --configurar-login`. Novos perfis começam em **simulação** para evitar ações reais antes da revisão. O script preserva configurações, sessões e dados existentes ao ser executado novamente.
+
+**[Guia completo do instalador Linux, acesso web, perfis e diagnóstico](docs/INSTALACAO_LINUX.md)**
+
 ## Requirements
 
 - Python 3.10 or newer.
@@ -61,8 +75,8 @@ The desktop app and web dashboard use Brazilian Portuguese (pt-BR) by default, w
 ## Install
 
 ```bash
-git clone https://github.com/JavierOlmedo/AirlineManager4Bot.git
-cd AirlineManager4Bot
+git clone https://github.com/andreypiekas/ArlineManager4BOTWEB.git
+cd ArlineManager4BOTWEB
 python -m venv .venv
 .venv\Scripts\activate        # Windows
 source .venv/bin/activate     # macOS / Linux
@@ -76,7 +90,7 @@ python src/main.py
 ```
 
 1. Type your e-mail and password in the sidebar. Leave them empty if you prefer to log in by hand in the Chrome window.
-2. Adjust the thresholds and switches. **Simulación** (dry run) is off by default; switch it on in the *Opciones* tab if you want to watch what the bot would do without spending anything.
+2. Adjust the thresholds and switches. **Simulação** (dry run) is off by default; switch it on in the aba *Opções* if you want to watch what the bot would do without spending anything.
 3. Press **INICIAR BOT**.
 
 You can also copy `config/secrets.example.ini` to `config/secrets.ini` and fill it in.
@@ -88,18 +102,6 @@ Each profile is one game account with its own settings, credentials, Chrome sess
 - **Perfil** at the top of the sidebar: pick another profile to open it in its own window, or **➕ Nuevo perfil…** to create one. A new profile copies your current settings (with "start on launch" off so you can type the new account first), keeps only the Telegram part of the secrets (same chat, messages tagged `[name]`), gets the next free web port and a desktop shortcut `AM4 Bot (name)`.
 - From the command line: `python src/main.py --profile realismo` (created the first time), `python src/main.py --web --profile realismo`, `scripts\web.bat -Perfil realismo`, `scripts\web_parar.bat -Perfil realismo`.
 - The main profile keeps the usual files (`config/`, `data/`); the others live in `profiles/<name>/` (git-ignored).
-
-## Running on a Raspberry Pi (24/7)
-
-Both profiles can run as Linux services on a Raspberry Pi (tested on a Pi 4 with Raspberry Pi OS 64-bit, Debian 12) while you develop on Windows:
-
-1. On the Pi: `sudo apt install chromium chromium-driver python3-venv` (Google ships no chromedriver for ARM, the bot uses the system one).
-2. On Windows, once: create a key with `ssh-keygen -t ed25519 -f %USERPROFILE%\.ssh\am4bot_pi` and append the `.pub` line to `~/.ssh/authorized_keys` on the Pi.
-3. Tell the scripts where the Pi is, once (it never goes into the repository): `setx AM4BOT_PI_HOST <pi ip or name>` and `setx AM4BOT_PI_USER <user>` (defaults `raspberrypi.local` and `pi`; `-Equipo` / `-Usuario` override them).
-4. `scripts\desplegar_pi.bat -Instalar` copies the code (src, assets, scripts, `config/defaults.ini`, requirements; never your settings, data, credentials or Chrome sessions), creates the virtualenv and installs the systemd services `am4bot@principal` and `am4bot@secundario` for that user (web mode, start at boot, restart on failure). Each machine keeps its own `config/`, `profiles/` and `data/`: copy them once if you move an airline to the Pi.
-5. Pi settings: `headless = on`, `start_on_launch = on`, `[web] host = 0.0.0.0` plus a `[web] token` in each profile's secrets. Open the dashboards from Windows at `http://<pi>:8744/?token=...` and `:8745`.
-6. On Windows add `[web] remote_instances = <pi ip>` to your `config/settings.ini` (same token): the window and web mode then refuse to start a bot that already runs on the Pi, so an airline is never played twice.
-7. After every code change: `scripts\desplegar_pi.bat` (copies and restarts the running services; `-SinReiniciar` only copies). Logs: `journalctl -u am4bot@principal -f` or each profile's `data/logs/am4bot.log` on the Pi.
 
 ## Web dashboard
 
