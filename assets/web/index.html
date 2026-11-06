@@ -97,8 +97,8 @@ footer { color: var(--muted); font-size: 12px; text-align: center; margin: 18px 
   <section class="kpis">
     <div class="tile"><div class="label" data-t="💰 Dinheiro">💰 Dinheiro</div><div class="value" id="kMoney">-</div><div class="sub" id="kMoneySub"></div></div>
     <div class="tile"><div class="label" data-t="⭐ Reputação">⭐ Reputação</div><div class="value" id="kRep">-</div><div class="sub" id="kRepSub"></div><div class="bar"><i id="bRep"></i></div></div>
-    <div class="tile"><div class="label">⛽ Fuel</div><div class="value" id="kFuel">-</div><div class="sub" id="kFuelSub"></div><div class="bar"><i id="bFuel"></i></div></div>
-    <div class="tile"><div class="label">🌿 CO2</div><div class="value" id="kCo2">-</div><div class="sub" id="kCo2Sub"></div><div class="bar"><i id="bCo2"></i></div></div>
+    <div class="tile"><div class="label" data-t="⛽ Combustível">⛽ Combustível</div><div class="value" id="kFuel">-</div><div class="sub" id="kFuelSub"></div><div class="bar"><i id="bFuel"></i></div></div>
+    <div class="tile"><div class="label" data-t="🌿 CO₂">🌿 CO₂</div><div class="value" id="kCo2">-</div><div class="sub" id="kCo2Sub"></div><div class="bar"><i id="bCo2"></i></div></div>
     <div class="tile"><div class="label" data-t="🛩️ Frota">🛩️ Frota</div><div class="value" id="kFleet">-</div><div class="sub" id="kFleetSub"></div></div>
     <div class="tile"><div class="label" data-t="🎯 Meta">🎯 Meta</div><div class="value" id="kGoal">-</div><div class="sub" id="kGoalSub"></div><div class="bar"><i id="bGoal"></i></div></div>
   </section>
@@ -136,7 +136,7 @@ const setText = (id, text) => { const e = $(id); e.textContent = text; e.title =
 // ------------------------------------------------------------------ language (follows the bot's interface language)
 const EN = {
   "🧪 Simulação": "🧪 Dry run", "Iniciar": "Start", "Parar": "Stop", "Verificar agora": "Check now",
-  "💰 Dinheiro": "💰 Money", "⭐ Reputação": "⭐ Reputation", "🛩️ Frota": "🛩️ Fleet", "🎯 Meta": "🎯 Goal",
+  "⛽ Combustível": "⛽ Fuel", "🌿 CO₂": "🌿 CO₂", "💰 Dinheiro": "💰 Money", "⭐ Reputação": "⭐ Reputation", "🛩️ Frota": "🛩️ Fleet", "🎯 Meta": "🎯 Goal",
   "Registros": "Log", "Filtrar por categoria": "Filter by category", "Todas as categorias": "All categories",
   "Configurações": "Settings", "As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.":
     "Switches are saved as you change them; numbers with “Save”. The full help is in the README.",

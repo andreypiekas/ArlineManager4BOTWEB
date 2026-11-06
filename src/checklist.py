@@ -55,7 +55,7 @@ def check_checklist(bot: "Bot") -> None:
     bot.ajax("welcome.php", "welcomeContent")
     tasks = bot.js(_TASKS_JS) or []
     if not tasks:
-        log.debug("No he podido leer el checklist.")
+        log.debug("Não foi possível ler a lista de tarefas.")
         return
     if any(task["claim"] for task in tasks):
         if bot.dry_run:
@@ -64,7 +64,7 @@ def check_checklist(bot: "Bot") -> None:
             claimed = bot.js(_CLAIM_JS) or 0
             bot.pause(1.5, 2.0)
             log.info("Lista de tarefas: recompensa coletada (%d botões acionados).", claimed)
-            bot.notify("🎁 <b>Checklist</b>: recompensa cobrada.")
+            bot.notify("🎁 <b>Lista de tarefas</b>: recompensa recebida.")
             bot.ajax("welcome.php", "welcomeContent")
             tasks = bot.js(_TASKS_JS) or tasks
 
@@ -73,7 +73,7 @@ def check_checklist(bot: "Bot") -> None:
     for task in previous or []:
         if task not in open_tasks:
             log.info("✅ Lista de tarefas: atividade concluída «%s».", task)
-            bot.notify(f"✅ <b>Checklist</b>: tarea completada «{esc(task)}».")
+            bot.notify(f"✅ <b>Lista de tarefas</b>: atividade concluída «{esc(task)}».")
     if open_tasks != previous:
         if open_tasks:
             log.info("Lista de tarefas: %d de %d atividades pendentes: %s.", len(open_tasks), len(tasks),

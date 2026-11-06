@@ -860,8 +860,8 @@ class App(ctk.CTk):
         except ValueError as exc:
             log.warning("%s", exc)
             return
-        log.info("Perfil «%s» creado con tus ajustes actuales (panel web en el puerto %d). Escribe su cuenta en la "
-                 "ventana que se abre.", profile.label, profile.port())
+        log.info("Perfil «%s» criado com suas configurações atuais (painel web na porta %d). Informe a conta na "
+                 "janela que será aberta.", profile.label, profile.port())
         shortcut = create_desktop_shortcut(profile)
         if shortcut:
             log.info("Atalho «%s» criado na área de trabalho.", shortcut.removesuffix(".lnk"))
@@ -900,7 +900,7 @@ class App(ctk.CTk):
         self.btn_telegram_test.configure(state="disabled")
 
         def worker() -> None:
-            ok, description = client.send_now("✅ <b>Airline Manager 4 Bot</b> conectado a Telegram.")
+            ok, description = client.send_now("✅ <b>Airline Manager 4 Bot</b> conectado ao Telegram.")
             if ok:
                 log.info("Mensagem de teste enviada ao Telegram.")
             else:

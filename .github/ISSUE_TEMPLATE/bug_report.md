@@ -1,38 +1,37 @@
 ---
-name: Bug report
-about: Create a report to help us improve
+name: Relatar erro
+about: Informe uma falha para ajudar a melhorar o projeto
 title: ''
 labels: ''
 assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**Descrição do erro**
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+Descreva objetivamente o que aconteceu.
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+**Como reproduzir**
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+1. Acesse ...
+2. Execute ...
+3. Observe ...
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+**Comportamento esperado**
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+Descreva o resultado que deveria ocorrer.
 
-**Additional context**
-Add any other context about the problem here.
+**Capturas de tela e registros**
+
+Anexe capturas, logs relevantes ou mensagens de erro. **Remova senhas, tokens, dados de sessão e informações pessoais antes de publicar.**
+
+**Ambiente**
+
+- Sistema operacional e versão:
+- Python e navegador:
+- Tipo de instalação (desktop, Ubuntu, Raspberry Pi OS):
+- Versão ou commit do bot:
+
+**Informações adicionais**
+
+Adicione o contexto necessário para reproduzir a falha.

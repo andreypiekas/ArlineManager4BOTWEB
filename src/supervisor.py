@@ -35,10 +35,10 @@ class AutoRestart:
             return False
         if self.restart_at is None:
             self.restart_at = time.time() + self.delay
-            log.warning("Reinicio automático en %d min.", max(1, self.delay // 60))
+            log.warning("Reinício automático em %d min.", max(1, self.delay // 60))
         elif time.time() >= self.restart_at:
             self.restart_at = None
             self.delay = min(self.delay * 2, RESTART_DELAY_MAX)
-            log.info("Reiniciando el bot ...")
+            log.info("Reiniciando o bot ...")
             return True
         return False

@@ -1,158 +1,110 @@
 <div align="center">
-    <img src="assets/logo.png" width="100px" alt="Airline Manager 4 Bot logo">
-    <h1>Airline Manager 4 Bot</h1>
-    <p>Desktop bot for the web version of <a href="https://www.airlinemanager.com">Airline Manager 4</a>: departs your aircraft, buys fuel and CO2 when they are cheap, keeps the fleet repaired, runs marketing campaigns, fits business and first class seats to each route, gives parked aircraft a route and buys the best-value aircraft. Desktop window and web dashboard.</p>
-    <img src="screenshots/desktop-mercado.png" alt="Screenshot of the desktop app">
+  <img src="assets/logo.png" width="100px" alt="Logotipo do Airline Manager 4 Bot">
+  <h1>Airline Manager 4 Bot</h1>
+  <p>Automação para o <a href="https://www.airlinemanager.com">Airline Manager 4</a> com painel desktop e web: decolagens, combustível, CO₂, manutenção, campanhas de marketing, rotas e compra de aeronaves.</p>
+  <img src="screenshots/desktop-mercado.png" alt="Painel do bot">
 </div>
 
-**Idioma padrão: Português (Brasil).** [Guia completo das configurações](#guia-do-aplicativo-em-português-brasileiro).
+**Idioma padrão: Português (Brasil).** Inglês disponível como alternativa.
 
-## Features
+## Funcionalidades
 
-- ✔️ Auto depart all aircraft.
-- ✔️ Auto buy fuel and CO2. Smart buy keeps a price history (`data/prices.json`, fed by the market chart, so it covers the last 5 hours even when the bot was off) and fills the tanks when the price is in the low percentile of the last days. A fixed "always buy at" price and a minimum stock top-up complete the rule. Buys once per 30-minute price window and never more than your free storage, your cash reserve or the per-purchase cap allow.
-- ✔️ Wakes up early when an aircraft is about to land or the market price is about to change, instead of waiting the full interval.
-- ✔️ Auto repair aircraft above a wear percentage and plan A-checks when the hours to check run low.
-- ✔️ Create routes for parked aircraft: searches the busiest routes from your hub, checks the aircraft can fly them, uses the game's autoprice.
-- ✔️ Buy the best-value aircraft (estimated daily profit divided by price) or a model you name, never below your cash reserve and never while aircraft sit parked without a route.
-- ✔️ Growth ladder: by default the goal is automatic. The bot saves for the aircraft that earns the most per day among those costing at most `ladder_budget_days` of income and paying back within `ladder_max_payback` days, so it climbs to bigger aircraft as income grows (today: MD-81, then MC-21-300, then MC-21-400). You can also pick a fixed goal (A330, B777, B747, A380 ...). Meanwhile it only buys a smaller aircraft when it pays for itself in less than half the time left to the goal. Shows progress, net income per day and the estimated arrival.
-- ✔️ Profit estimates calibrated on the airline's own flights: the bot measures the real seat occupancy every cycle (it follows the airline reputation) and uses the price it actually pays for fuel and CO2.
-- ✔️ Keeps free hangar slots: buys one more slot when they run low.
-- ✔️ Marketing: keeps an airline reputation campaign (level and duration configurable) and the cheap eco-friendly campaign running, but only while they pay. Seat occupancy follows the reputation, so a campaign multiplies the ticket income the bot measures by the points it adds over the current reputation; if that does not beat its price by 20 %, it is skipped (with a small fleet in realism, campaign 4 does not pay and the eco-friendly one does). A reputation campaign waits until 6 h of income have been measured.
-- ✔️ Fuel and CO2 stock in days: it never holds more than `stock_days` of what the fleet burns (twice that at an exceptional price), so the money goes to new aircraft instead of sitting in the tanks for weeks. The net income counts fuel and CO2 when they are burnt, not when they are bought.
-- ✔️ Seat layout by route demand: when an aircraft sits at the base, the bot reads its route's daily Y / J / F demand and gives it first and business seats up to that demand, the rest economy (per economy slot first pays the most, then business). It only modifies an aircraft when the cost plus the workshop time pays back within `seats_max_payback` days.
-- ✔️ Aircraft upgrades: in the same workshop visit it works out what each permanent upgrade of the game would earn on that aircraft's route (speed +10 % = more flights a day as far as demand allows, fuel -10 %, CO2 -10 %) and installs those that pay back within `seats_max_payback` days.
-- ✔️ Watches the game's checklist: logs the open tasks, reports the completed ones and collects rewards when the game offers a button. While "fly your first 1st class passenger" ($100,000) is open, the seat step counts that reward on the first aircraft it can give first-class seats.
-- ✔️ Exceptional prices (lowest percentile of the history) fill the tanks with all the cash above the reserve.
-- ✔️ The lowest fuel and CO2 prices ever seen appear next to the price boxes, as a reference of what "cheap" really is.
-- ✔️ Hover tooltips on every button and setting; the full guide in Brazilian Portuguese is below.
-- ✔️ Dry run mode: logs every purchase, repair, route or order it would make without spending anything.
-- ✔️ Dashboard window: statistic tiles (money and income, reputation and campaign time left, fuel and CO2 tanks with prices, fleet, savings goal), the settings tabs and a colour-coded, tagged log that is always visible. Dark and light themes.
-- ✔️ Web dashboard: the same tiles, log, controls and settings in a browser, also on your phone from the home network (with a token). It can also run without the desktop window (`python src/main.py --web`), for a machine that stays on all day.
-- ✔️ Telegram notifications for every action, errors and a daily summary.
-- ✔️ Automatic restart after a crash, so it can run unattended for days.
-- ✔️ Random interval between checks, optional headless Chrome, optional persistent browser session.
-- ✔️ Credentials live in `config/secrets.ini`, which is git-ignored.
+- Decola aeronaves prontas e verifica os voos.
+- Compra combustível e CO₂ usando histórico de preços, níveis mínimos e limites de saldo.
+- Programa reparos e revisões A-check, e amplia vagas do hangar quando necessário.
+- Avalia rotas, demanda, autonomia, assentos e melhorias das aeronaves.
+- Planeja novas aquisições com estimativas de rentabilidade e metas de crescimento.
+- Gerencia campanhas de reputação e ecológicas segundo o retorno estimado.
+- Acompanha tarefas do jogo e coleta recompensas disponíveis.
+- Exibe os dados da companhia, o histórico de operações e as configurações em painel desktop e web.
+- Envia notificações pelo Telegram e tenta reiniciar após falhas.
+- Oferece **Simulação (sem gastos)** para avaliar decisões antes de executá-las.
+
+As estimativas adaptam-se aos modos Fácil e Realista e dependem das informações disponíveis da companhia.
 
 <details>
-<summary><b>📸 All screenshots</b> (desktop window and web dashboard, every tab, dark and light)</summary>
+<summary><b>Imagens do desktop e painel web</b></summary>
 
-| Desktop window | Web dashboard |
+| Desktop | Painel web |
 | --- | --- |
-| <img src="screenshots/desktop-mercado.png" width="420" alt="Desktop, Mercado tab"> | <img src="screenshots/web-mercado.png" width="420" alt="Web, Mercado tab"> |
-| <img src="screenshots/desktop-flota.png" width="420" alt="Desktop, Flota tab"> | <img src="screenshots/web-flota.png" width="420" alt="Web, Flota tab"> |
-| <img src="screenshots/desktop-aviones.png" width="420" alt="Desktop, Aviones tab"> | <img src="screenshots/web-aviones.png" width="420" alt="Web, Aviones tab"> |
-| <img src="screenshots/desktop-opciones.png" width="420" alt="Desktop, Opciones tab"> | <img src="screenshots/web-opciones.png" width="420" alt="Web, Opciones tab"> |
-| <img src="screenshots/desktop-mercado-light.png" width="420" alt="Desktop, light theme"> | <img src="screenshots/web-mercado-light.png" width="420" alt="Web, light theme"> |
-| | <img src="screenshots/web-mobile.png" width="200" alt="Web on a phone"> |
+| <img src="screenshots/desktop-mercado.png" width="420" alt="Aba Mercado no desktop"> | <img src="screenshots/web-mercado.png" width="420" alt="Aba Mercado no navegador"> |
+| <img src="screenshots/desktop-flota.png" width="420" alt="Aba Frota no desktop"> | <img src="screenshots/web-flota.png" width="420" alt="Aba Frota no navegador"> |
+| <img src="screenshots/desktop-aviones.png" width="420" alt="Aba Aeronaves no desktop"> | <img src="screenshots/web-aviones.png" width="420" alt="Aba Aeronaves no navegador"> |
+| <img src="screenshots/desktop-opciones.png" width="420" alt="Aba Opções no desktop"> | <img src="screenshots/web-opciones.png" width="420" alt="Aba Opções no navegador"> |
+| <img src="screenshots/desktop-mercado-light.png" width="420" alt="Tema claro no desktop"> | <img src="screenshots/web-mercado-light.png" width="420" alt="Tema claro no navegador"> |
+| | <img src="screenshots/web-mobile.png" width="200" alt="Painel web no celular"> |
 
-The images use sample figures and an example account. To refresh all of them after a change: `.venv\Scripts\python.exe scripts\screenshots.py` (it never starts the bot and works while the bot is running).
+As imagens são exemplos de uma versão anterior. Para atualizar as capturas, utilize o gerador da pasta scripts no ambiente compatível.
 </details>
 
-Works in both game modes: the bot reads the mode of each account (easy: flights at 1.5x speed; realism: real speed and cheaper tickets) and adapts its profit, route and seat calculations to it.
+## Instalação fácil no Raspberry Pi OS e Ubuntu
 
-The desktop app and web dashboard use Brazilian Portuguese (pt-BR) by default, with English as an option in **Idioma / Language**. Operational logs and Telegram notifications are localized to Portuguese. The game can use a different language: when selected, the bot only attempts to sync Brazilian Portuguese if the game's language selector supports it; otherwise, it preserves the game's existing language. Set `[options] sync_game_language = off` to always keep both language settings independent.
+Execute:
 
-## Instalação fácil: Raspberry Pi OS e Ubuntu
-
-Instalação automatizada do painel web, Chromium/ChromeDriver, ambiente Python e serviço de inicialização automática:
-
-```bash
+~~~bash
 git clone https://github.com/andreypiekas/ArlineManager4BOTWEB.git
 cd ArlineManager4BOTWEB
 bash instalar.sh --rede-local
-```
+~~~
 
-Para cadastrar credenciais do jogo pelo terminal (senha oculta), utilize `bash instalar.sh --rede-local --configurar-login`. Novos perfis começam em **simulação** para evitar ações reais antes da revisão. O script preserva configurações, sessões e dados existentes ao ser executado novamente.
+O instalador configura dependências, Chromium, Python, painel web e serviço systemd para inicialização automática. Use a opção **--configurar-login** para informar credenciais. Novos perfis começam em **modo simulação**.
 
-**[Guia completo do instalador Linux, acesso web, perfis e diagnóstico](docs/INSTALACAO_LINUX.md)**
+**[Guia completo para Raspberry Pi OS e Ubuntu](docs/INSTALACAO_LINUX.md)**
 
-## Requirements
+## Instalação manual no Windows, Linux e macOS
 
-- Python 3.10 or newer.
-- Google Chrome. Selenium Manager downloads the matching chromedriver by itself, nothing to install by hand.
+Requisitos: Python 3.10 ou superior e Google Chrome ou Chromium compatível.
 
-## Install
-
-```bash
+~~~bash
 git clone https://github.com/andreypiekas/ArlineManager4BOTWEB.git
 cd ArlineManager4BOTWEB
 python -m venv .venv
-.venv\Scripts\activate        # Windows
-source .venv/bin/activate     # macOS / Linux
+~~~
+
+Ative o ambiente virtual: no Windows use **.venv\Scripts\activate**; no Linux/macOS use **source .venv/bin/activate**. Depois execute:
+
+~~~bash
 pip install -r requirements.txt
-```
-
-## Run
-
-```bash
 python src/main.py
-```
+~~~
 
-1. Type your e-mail and password in the sidebar. Leave them empty if you prefer to log in by hand in the Chrome window.
-2. Adjust the thresholds and switches. **Simulação** (dry run) is off by default; switch it on in the aba *Opções* if you want to watch what the bot would do without spending anything.
-3. Press **INICIAR BOT**.
+Informe o login do jogo, revise as opções e clique em **INICIAR BOT**. Para testar decisões sem gastos, ative **Simulação** antes de iniciar.
 
-You can also copy `config/secrets.example.ini` to `config/secrets.ini` and fill it in.
+## Painel web e execução em segundo plano
 
-## Profiles (several airlines)
+Para executar sem a interface desktop:
 
-Each profile is one game account with its own settings, credentials, Chrome session, data, log and web dashboard port, so several airlines can run at the same time.
+~~~bash
+python src/main.py --web
+~~~
 
-- **Perfil** at the top of the sidebar: pick another profile to open it in its own window, or **➕ Nuevo perfil…** to create one. A new profile copies your current settings (with "start on launch" off so you can type the new account first), keeps only the Telegram part of the secrets (same chat, messages tagged `[name]`), gets the next free web port and a desktop shortcut `AM4 Bot (name)`.
-- From the command line: `python src/main.py --profile realismo` (created the first time), `python src/main.py --web --profile realismo`, `scripts\web.bat -Perfil realismo`, `scripts\web_parar.bat -Perfil realismo`.
-- The main profile keeps the usual files (`config/`, `data/`); the others live in `profiles/<name>/` (git-ignored).
+O painel fica disponível em **http://127.0.0.1:8744/** por padrão. Para acesso pela rede local, altere a opção de host do painel web e configure um token secreto de autenticação. Nunca exponha diretamente a porta web na internet.
 
-## Web dashboard
+Em instalações Linux, gerencie o serviço com:
 
-<div align="center"><img src="screenshots/web-mercado.png" alt="Screenshot of the web dashboard" width="900"></div>
+~~~bash
+sudo systemctl status am4bot@principal
+sudo systemctl restart am4bot@principal
+sudo journalctl -u am4bot@principal -f
+~~~
 
-While the app is open, the same dashboard is served at <http://127.0.0.1:8744/> (click **Abrir el panel web** in the sidebar): statistic tiles, the live log with a category filter, start / stop / check now, and every setting of the four tabs. Switches save at once, numbers with **Guardar**; both interfaces stay in sync.
+## Perfis de diferentes companhias
 
-- **Only this PC by default.** To open it from your phone or another computer at home, set `host = 0.0.0.0` in the `[web]` section of `config/settings.ini` and put a long random `token` in the `[web]` section of `config/secrets.ini`. Then open `http://<this-pc-ip>:8744/?token=<token>` once on each device (it remembers the token in a cookie). Without a token the server refuses to listen beyond `127.0.0.1`.
-- **No desktop window:** `python src/main.py --web` runs the bot and the web dashboard only (credentials from `config/secrets.ini`, log also in the console). Handy on an always-on machine.
-- **Windows shortcuts:** `scripts\web.bat` opens the dashboard and, when no copy of the bot is running, starts it in web mode in a console window; `scripts\web_parar.bat` stops whichever copy is running (web mode or desktop app) cleanly, closing Chrome too. Point two desktop shortcuts at them (icons `assets\web.ico` and `assets\web_parar.ico`). Only one copy of the bot can run at a time: a second one notices the first and does not start its bot.
-- `[web] enabled = off` turns the web dashboard off; `port` changes the port.
-- The page never shows the game password or the Telegram token, it uses no external scripts or fonts, and it refuses requests from other sites.
+Cada perfil usa credenciais, configurações, dados, sessão do navegador e porta web independentes. Use **--profile companhia2** para iniciar outro perfil. O perfil principal utiliza as pastas **config/** e **data/**; os demais ficam em **profiles/nome/**. Evite executar o mesmo perfil em dois computadores simultaneamente.
 
-## What a cycle does
+## Telegram
 
-1. Reads money, points and the in-flight countdowns.
-2. Reads the reputation and starts the enabled marketing campaigns that are not running and pay (`marketing_campaign` 1-4 for `marketing_hours`, plus the eco-friendly one). While all of them run, the page is only checked again when the first one ends; one that does not pay is looked at again within the hour.
-3. Reads the maintenance plan: repairs aircraft at or above `repair_wear_pct`, plans an A-check when hours to check are at or below `check_hours_min`. This happens before departures so that a landed aircraft can still be serviced at the base.
-4. Seat layout: looks at up to 8 aircraft waiting at the base (each at most twice a day) and modifies at most 2 whose layout pays back within `seats_max_payback` days.
-5. Departs every aircraft that is ready.
-6. Reads the fuel and CO2 market, stores the chart prices in the history and buys when the price is at or below the higher of `fuel_price_good` / `co2_price_good` and the `buy_percentile` of the last `history_days`. Below `min_stock_pct` it tops up at any price. It never holds more than `stock_days` of the measured use (twice that at an exceptional price). Each purchase spends at most `market_max_spend_pct` of the cash above the reserve, and only once per 30-minute price window (remembered across restarts). An exceptional price (within `excellent_percentile` and below the fixed good price) may use all the cash above the reserve and buy again in the same window.
-7. Gives parked aircraft a route (busiest routes first, counting business and first demand when the seat layout is on; up to `route_max_distance` km, or `route_max_distance_big` for aircraft of 150+ seats, never beyond the aircraft's range; runway at least `route_min_runway` ft) and, when nothing is parked, buys one aircraft or keeps saving for `goal_model`.
-8. Reads the checklist when its counter changes (or every 6 hours).
-9. Waits a random time between `cycle_min_minutes` and `cycle_max_minutes`, or less when an aircraft is about to land or the price is about to change, and starts again.
+Crie um bot por meio do [@BotFather](https://t.me/BotFather), envie uma mensagem a ele e consulte a API **getUpdates** para obter o chat_id. Em **config/secrets.ini**, configure:
 
-Aircraft, campaigns, workshop, hangar and normal fuel or CO2 purchases never go below `cash_reserve`; only repairs, A-checks, the top-up of a nearly empty tank and the route of an aircraft already bought may use it. At most `fleet_actions_per_cycle` routes or orders happen per cycle.
-
-## Running unattended
-
-- **Iniciar el bot al abrir** (Opciones) starts the bot as soon as the app opens.
-- **Reiniciar solo tras un error** (Opciones, on by default) restarts the bot a couple of minutes after a crash, doubling the wait on repeated failures up to 30 minutes.
-- Put the desktop shortcut in the Windows Startup folder (`shell:startup`) so the app comes back after a reboot.
-- Telegram sends the daily summary and every action, so you can watch it from your phone.
-
-## Telegram notifications
-
-1. Create a bot with [@BotFather](https://t.me/BotFather) and copy its token.
-2. Send your new bot any message, then open `https://api.telegram.org/bot<TOKEN>/getUpdates` and read the `chat.id`.
-3. Put both values in `config/secrets.ini`:
-
-```ini
+~~~ini
 [telegram]
-bot_token = 123456789:AAExampleTokenFromBotFather
-chat_id = 123456789
-```
+bot_token = SEU_TOKEN
+chat_id = SEU_CHAT_ID
+~~~
 
-Then, in the app's *Opciones* tab, keep **Notificaciones por Telegram** on and press **Probar Telegram**.
+Para testar a integração, execute **python src/notify.py**. Mantenha o arquivo de segredos privado (chmod 600 no Linux).
 
-You get a message for every purchase, route, order, repair or A-check (also in dry run, marked as such), when the bot starts, stops or crashes, and one daily summary after `summary_hour` with the balance, stocks, fleet and the day's actions. Switch **Telegram: also departures** on if you want a message for every departure too.
-
-## Guia do aplicativo em português brasileiro
+## Guia detalhado das configurações
 
 O bot verifica a companhia aérea periodicamente: lê o saldo, administra campanhas, repara aeronaves, ajusta assentos, decola voos disponíveis, compra combustível e CO₂, cria rotas, adquire aeronaves ou economiza para uma meta. As ações ficam registradas no painel e podem ser enviadas pelo Telegram.
 
@@ -255,26 +207,22 @@ Execute `python src/main.py --web` para iniciar somente o painel web. O endereç
 Mantenha `config/secrets.ini` privado e não faça commit de credenciais. O idioma do aplicativo é português brasileiro por padrão, com inglês opcional. O bot somente seleciona português dentro do jogo se esse idioma existir nas opções da conta; caso contrário, preserva o idioma atual do jogo.
 
 
-## Configuration
 
-The defaults of every setting live in `config/defaults.ini` (tracked in git, shared by all profiles). What you change in the app or the web dashboard is saved in `config/settings.ini` (`profiles/<name>/settings.ini` for a named profile), which only keeps what differs from the defaults and is git-ignored, so your tuning, your Pi's address and so on never end up in a commit, and new defaults reach you unless you changed that value. Credentials and tokens live in `config/secrets.ini` (git-ignored, owner-only permissions on Linux). Sections:
+## Arquivos de configuração
 
-- `[settings]`: price thresholds, smart-buy and exceptional percentiles, history length, minimum stock, spend cap, check interval, login timeout, maintenance thresholds, cash reserve, route search limits, hangar slots to keep free, aircraft model and price cap, `goal_model`.
-- `[options]`: the switches shown in the app, including `smart_buy`, `save_for_goal`, `goal_invest`, `auto_hangar`, `auto_seats`, `auto_marketing`, `marketing_eco`, `auto_checklist`, `dry_run`, `telegram` and `auto_restart`.
-- `[web]`: `enabled`, `host` (127.0.0.1 = only this PC) and `port` of the web dashboard. Its access token goes in `config/secrets.ini`.
-- `[app]`: window title, `language` (`en` / `es`; unset = English and your game account's language is left alone), appearance (`System`, `Dark`, `Light`), `color_theme` (`am4` = `assets/theme.json`, or a customtkinter theme name), log file.
-- `[selectors]`: the XPath expressions used to find elements in the game. They are part of the code, so they are only read from `config/defaults.ini`: if the game changes its layout, fix them there (and send a pull request). The app rewrites `settings.ini` when you save settings, so comments in it do not survive.
+- **config/defaults.ini**: configurações padrão e seletores de elementos do jogo, versionados no Git.
+- **config/settings.ini**: configurações específicas do perfil principal; ignorado pelo Git.
+- **config/secrets.ini**: credenciais do jogo, token do painel web e Telegram; mantenha privado.
+- **profiles/nome/**: configuração e dados dos perfis adicionais.
+- **data/prices.json**: histórico de preços; **data/market.json**: mercado de aeronaves; **data/state.json**: estado e contadores do bot.
+- **data/logs/am4bot.log**: registro de execução.
 
-The bot also keeps `data/prices.json` (price history), `data/state.json` (counters, money samples, lowest prices, seat checks, checklist) and `data/market.json` (aircraft market list). All of `data/` is git-ignored.
+As seções de configuração são **[settings]** (valores numéricos), **[options]** (botões de ativação), **[web]** (rede e porta), **[app]** (aparência e idioma pt_BR ou en) e **[selectors]** (seletores do jogo, definidos apenas no arquivo de padrões).
 
-Logs are written to `data/logs/am4bot.log`.
+## Observações
 
-## Notes
-
-- The bot drives a real Chrome window with Selenium. If the site asks for a captcha, solve it by hand: the bot waits up to `login_timeout` seconds.
-- The aircraft ranking is an estimate built from the market list (capacity, speed, fuel per km, range, price) and the game's economy ticket price. Name a model in the settings if you prefer your own choice.
-- Bots may be against the game's terms of service. Use at your own risk.
-
-<div align="center">
-    Made with ❤️ in Spain
-</div>
+- O jogo pode modificar a estrutura das páginas; a automação Selenium depende desses elementos.
+- Se surgir CAPTCHA, faça a verificação manualmente; o bot não contorna mecanismos de segurança.
+- As estimativas de lucro não garantem resultados.
+- A automação pode ser restrita pelos termos do jogo; confira as regras antes de utilizá-la.
+- O projeto usa a licença MIT. O aviso de copyright obrigatório está preservado no arquivo [LICENSE](LICENSE).

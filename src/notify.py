@@ -55,7 +55,7 @@ class Telegram:
     def send_now(self, text: str) -> tuple[bool, str]:
         """Send synchronously and return (ok, description). Used by the GUI test button."""
         if not self.enabled:
-            return False, "token or chat id missing in config/secrets.ini"
+            return False, "token ou chat_id ausente em config/secrets.ini"
         return self._post(text, silent=False)
 
     # ------------------------------------------------------------------ internals
@@ -64,7 +64,7 @@ class Telegram:
             text, silent = self._queue.get()
             ok, description = self._post(text, silent)
             if not ok and time.time() - self._last_failure > 600:
-                log.warning("Telegram message failed: %s", description)
+                log.warning("Falha ao enviar mensagem ao Telegram: %s", description)
                 self._last_failure = time.time()
             self._queue.task_done()
 
@@ -89,8 +89,8 @@ class Telegram:
         except (urllib.error.URLError, OSError, ValueError) as exc:
             return False, str(exc)
         if body.get("ok"):
-            return True, "sent"
-        return False, body.get("description") or "unknown error"
+            return True, "enviado"
+        return False, body.get("description") or "erro desconhecido"
 
 
 if __name__ == "__main__":  # quick manual check: python src/notify.py
@@ -107,4 +107,4 @@ if __name__ == "__main__":  # quick manual check: python src/notify.py
     client = Telegram(token, chat_id)
     print("configured:", client.enabled)
     if client.enabled:
-        print(client.send_now("✅ <b>Airline Manager 4 Bot</b> conectado a Telegram."))
+        print(client.send_now("✅ <b>Airline Manager 4 Bot</b> conectado ao Telegram."))

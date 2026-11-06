@@ -160,7 +160,7 @@ def create(name: str, source: Optional[Profile] = None) -> Profile:
         raise ValueError(f"Nome de perfil inválido: «{name}» (letras, números, - e _; até 24).")
     profile = Profile(name)
     if profile.exists():
-        raise ValueError(f"El perfil «{name}» ya existe.")
+        raise ValueError(f"O perfil «{name}» já existe.")
     source = source or Profile("")
     settings = ConfigParser(interpolation=None)
     settings.read(source.settings, encoding="utf-8")

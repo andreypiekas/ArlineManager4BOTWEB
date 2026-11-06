@@ -59,17 +59,17 @@ SAMPLE_STATS = dict(money=1925006, points=134, fuel=7382536, fuel_capacity=80000
 SAMPLE_LOG = [
     ("bot", "Revisando la aerolínea ..."),
     ("dinero", "Dinero: $1,925,006 | Puntos: 134 | ingresos netos ~$9,436,178/día"),
-    ("vuelos", "13 aviones en vuelo, próximo aterrizaje en 04:12."),
+    ("vuelos", "13 aeronaves em voo, próximo pouso em 04:12."),
     ("marketing", "Reputación 87 % | 2 campañas activas, la primera acaba en 6:57 h."),
-    ("mant", "Flota: 21 aviones | mayor desgaste 44.9% (EC-006) | próximo A-check en 130 h (FIRST)"),
+    ("mant", "Frota: 21 aeronaves | maior desgaste 44,9% (EC-006) | próxima revisão em 130 h (FIRST)"),
     ("asientos", "Asientos cambiados: First (B737-800, EPRZ - LEMD): Y184 J0 F0 -> Y106 J27 F8, +$979k/día estimado, "
                  "coste $344,000, 2.5 h en el taller, se paga en 0.4 días."),
-    ("vuelos", "Todos los aviones han despegado."),
+    ("vuelos", "Todas as aeronaves decolaram."),
     ("fuel", "Precio fuel: $410 (compro a <= $600) | tanque 6,658,790 / 8,000,000 | histórico 3d: mín 310, p10 520"),
     ("fuel", "Comprado: 715,056 fuel a $410 (unos $293,172, precio excepcional)."),
     ("co2", "Precio CO2: $125 (compro a <= $120) | tanque 2,745,179 / 4,000,000"),
-    ("flota", "0 aviones aparcados sin ruta, 2 pendientes de entrega."),
-    ("aviones", "Escalera: siguiente avión DC-10-10 ($6.8M, 250 plazas, gana ~$2.4M/día, se paga en ~2.9 días)."),
+    ("flota", "0 aeronaves estacionadas sem rota, 2 aguardando entrega."),
+    ("aviones", "Progressão: próxima aeronave DC-10-10 ($6,8M, 250 assentos, rende ~$2,4M/dia, retorno em ~2,9 dias)."),
     ("checklist", "✅ Checklist: tarea completada «Fly with your first 1st class passenger»."),
     ("bot", "Próxima revisión en 4 min 31 s (me adelanto por el próximo aterrizaje)."),
 ]
@@ -99,12 +99,12 @@ def capture_window(app, path: Path) -> None:
     ctypes.windll.dwmapi.DwmGetWindowAttribute(hwnd, 9, ctypes.byref(rect), ctypes.sizeof(rect))
     image = ImageGrab.grab(bbox=(rect.left, rect.top, rect.right, rect.bottom), all_screens=True)
     image.save(path, optimize=True)
-    print("saved", path.relative_to(ROOT) if path.is_relative_to(ROOT) else path, image.size)
+    print("salvo", path.relative_to(ROOT) if path.is_relative_to(ROOT) else path, image.size)
 
 
 def desktop_shots() -> None:
     if os.name != "nt":
-        print("desktop screenshots need Windows, skipped")
+        print("Capturas do aplicativo desktop exigem Windows; ignoradas")
         return
     from app import App, tab_title
 
@@ -163,7 +163,7 @@ def web_shots() -> None:
                 driver.find_elements(By.CSS_SELECTOR, "#tabs button")[tab].click()
                 time.sleep(0.5)
             driver.save_screenshot(str(OUT / name))
-            print("saved", f"screenshots/{name}")
+            print("salvo", f"screenshots/{name}")
 
         for index, tab in enumerate(("mercado", "flota", "aviones", "opciones")):
             shot(f"web-{tab}.png", 1400, 900, tab=index)
