@@ -264,7 +264,9 @@ PT_BR: dict[str, str] = {
     "Acción desconocida.": "Ação desconhecida.",
     "Guardado.": "Salvo.",
     "«{key}» debe ser un número entero.": "«{key}» deve ser um número inteiro.",
-    "Ajuste desconocido «{key}».": "Configuração desconhecida: «{key}»."
+    "Ajuste desconocido «{key}».": "Configuração desconhecida: «{key}».",
+    "Rutas / pedidos por ciclo": "Rotas / pedidos por ciclo",
+    "Planificar A-checks": "Programar A-checks"
 }
 
 # Resolve new Portuguese source labels back to legacy keys for English rendering.
