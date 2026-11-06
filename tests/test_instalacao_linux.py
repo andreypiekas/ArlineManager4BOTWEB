@@ -139,7 +139,6 @@ def test_login_ssh_interativo_usa_stdin_e_senha_oculta(monkeypatch):
 
 def test_login_ssh_sem_stdin_interativo_usa_dev_tty(monkeypatch):
     import builtins
-    import io
     import sys
 
     class Terminal:
@@ -147,11 +146,22 @@ def test_login_ssh_sem_stdin_interativo_usa_dev_tty(monkeypatch):
         def isatty() -> bool:
             return False
 
-    tty = io.StringIO("segundo@example.com\\n".replace("\\n", "\n"))
-    # Evita fechar o stream simulado no bloco 'with'.
+    # Em /dev/tty real, escrever o prompt não sobrescreve a entrada.
     class TtyFake:
+        def __init__(self):
+            self.prompt = ""
+
+        def write(self, texto):
+            self.prompt += texto
+
+        def flush(self):
+            pass
+
+        def readline(self):
+            return "segundo@example.com\n"
+
         def __enter__(self):
-            return tty
+            return self
 
         def __exit__(self, *_):
             return False
