@@ -142,6 +142,39 @@ O instalador **não executa `git reset`**, não remove arquivos de dados e não 
 - Não atribua permissões globais ao `config/secrets.ini` e não exponha a porta web na internet.
 - O instalador é validado com testes de configuração e sintaxe; a navegação real do Selenium precisa ser conferida no dispositivo de destino.
 
+### ChromeDriver encerra inesperadamente (Ubuntu)
+
+Se os registros mostrarem `HTTPConnectionPool(host='localhost', port=...)` com `Connection refused`, o Selenium perdeu a comunicação com o **ChromeDriver local**. A porta aleatória é interna ao Selenium, não é a porta 8744 do painel e não envolve a regra UFW.
+
+Se a reinicialização falhar com `Service /usr/bin/chromedriver unexpectedly exited. Status code was: 1`, possíveis causas incluem Chromium Snap, uma sessão de usuário necessária ao Snap indisponível, incompatibilidade entre navegador/driver ou o encerramento do navegador por falta de memória. O código 1 sozinho não determina a causa.
+
+O bot atualizado captura a saída do processo ChromeDriver em **`data/logs/chromedriver.log`**, arquivo com permissões 0600. Em perfis adicionais, usa `profiles/NOME/data/logs/chromedriver.log`. O log pode conter detalhes de navegação: remova dados sensíveis antes de compartilhá-lo.
+
+Comandos para diagnóstico, executados no servidor como usuário da instalação:
+
+~~~bash
+cd ~/AirlineManager4Bot
+tail -n 80 data/logs/chromedriver.log
+chromedriver --version
+chromium-browser --version
+snap list chromium
+sudo systemctl status am4bot@principal --no-pager
+sudo journalctl -u am4bot@principal -n 120 --no-pager
+free -h
+df -h
+sudo journalctl -k --since "30 minutes ago" --no-pager | grep -Ei 'oom|out.of.memory|killed process|chrom|snap|apparmor'
+~~~
+
+No Ubuntu com Chromium Snap, verifique a disponibilidade do driver sem uma sessão interativa:
+
+~~~bash
+USUARIO=$(systemctl show am4bot@principal -p User --value)
+sudo -u "$USUARIO" -H chromedriver --version
+loginctl show-user "$USUARIO" -p Linger
+~~~
+
+Dependendo da configuração do Snap e do gerenciador de sessão, pode ser necessário habilitar o **linger** para o usuário do serviço, mas apenas se a investigação comprovar que essa é a causa. Não apague a sessão persistente do Chrome nem encerre todos os processos Chrome do servidor indiscriminadamente.
+
 ### Referências
 
 - [Raspberry Pi OS: Python e ambientes virtuais](https://www.raspberrypi.com/documentation/computers/os.html)

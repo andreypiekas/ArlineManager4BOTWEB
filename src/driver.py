@@ -6,6 +6,7 @@ its distribution chromedriver are used instead (``sudo apt install chromium chro
 """
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -18,6 +19,8 @@ from selenium.webdriver.remote.webdriver import WebDriver
 
 import paths
 
+log = logging.getLogger("am4bot.app")
+
 _LINUX_BROWSERS = ("/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome")
 
 
@@ -28,6 +31,28 @@ def _system_chrome() -> tuple[Optional[str], Optional[str]]:
     driver = shutil.which("chromedriver")
     browser = next((path for path in _LINUX_BROWSERS if Path(path).exists()), None)
     return (driver, browser) if driver and browser else (None, None)
+
+
+def _open_driver_log():
+    """Captura stderr/stdout do ChromeDriver, incluindo erros do wrapper Snap.
+
+    O arquivo é privado (0600) e separado por perfil.
+    """
+    path = paths.current().data / "logs" / "chromedriver.log"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
+        fd = os.open(path, flags, 0o600)
+        try:
+            if os.name != "nt":
+                os.fchmod(fd, 0o600)
+            return os.fdopen(fd, "ab", buffering=0), path
+        except BaseException:
+            os.close(fd)
+            raise
+    except OSError as exc:
+        log.warning("Não foi possível abrir o log do ChromeDriver (%s): %s.", path, exc)
+        return None, path
 
 
 def create_driver(url: str, keep_session: bool = False, headless: bool = False) -> WebDriver:
@@ -52,7 +77,25 @@ def create_driver(url: str, keep_session: bool = False, headless: bool = False) 
     chromedriver, browser = _system_chrome()
     if chromedriver:
         options.binary_location = browser
-        driver = webdriver.Chrome(service=Service(executable_path=chromedriver), options=options)
+        log.debug("Usando ChromeDriver do sistema: %s; navegador: %s.", chromedriver, browser)
+        output, log_path = _open_driver_log()
+        try:
+            service = Service(executable_path=chromedriver, log_output=output)
+            try:
+                driver = webdriver.Chrome(service=service, options=options)
+            except Exception:
+                log.error(
+                    "Falha ao iniciar ChromeDriver (%s). Confira %s e "
+                    "'sudo journalctl -k -n 100 --no-pager'. "
+                    "No Ubuntu Snap, teste 'chromedriver --version' com o usuário do serviço.",
+                    chromedriver, log_path,
+                )
+                raise
+        finally:
+            # O processo filho mantém seu descritor; não deixar o arquivo aberto
+            # no processo Python durante toda a execução.
+            if output is not None:
+                output.close()
     else:
         driver = webdriver.Chrome(options=options)
     try:
