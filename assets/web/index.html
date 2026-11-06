@@ -54,7 +54,8 @@ a { color: inherit; }
 .nav-list { margin: 38px 0 26px; display: grid; gap: 8px; }
 .nav-list a { display: flex; align-items: center; gap: 11px; padding: 12px 10px; border-left: 2px solid transparent;
   text-decoration: none; font-weight: 650; color: var(--muted); transition: background .18s, color .18s; }
-.nav-list a:hover, .nav-list a:focus-visible { background: var(--panel); color: var(--ink); border-left-color: var(--signal); }
+.nav-list a:hover, .nav-list a:focus-visible, .nav-list a.active { background: var(--panel); color: var(--ink); border-left-color: var(--signal); }
+.nav-list a.active .index { color: var(--signal); }
 .nav-list .index { width: 22px; font: 10px "Cascadia Mono", Consolas, monospace; color: var(--dim); }
 .side-actions { margin-top: auto; display: grid; gap: 8px; }
 .side-actions .eyebrow { margin-bottom: 6px; }
@@ -103,7 +104,7 @@ button.accent { background: var(--aqua); border-color: var(--aqua); color: #061b
 .bar { height: 3px; background: var(--track); margin-top: 14px; }
 .bar i { display: block; height: 100%; width: 0; background: var(--aqua); transition: width .5s ease; }
 .tile:last-child .bar i { background: var(--signal); }
-.grid { display: grid; grid-template-columns: minmax(0, 1.27fr) minmax(360px, 1fr); gap: 18px; align-items: start; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 284px; gap: 18px; align-items: start; }
 .card { min-width: 0; background: var(--panel); border: 1px solid var(--border); }
 .card-head { padding: 20px 21px 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
 .card-head h2 { margin: 0; font: 700 16px/1.2 "Bahnschrift", "Segoe UI", sans-serif; text-transform: uppercase; letter-spacing: .08em; }
@@ -154,7 +155,6 @@ footer strong { font-weight: 600; color: var(--aqua); }
 @media (max-width: 1330px) {
   .app-shell { grid-template-columns: 218px minmax(0, 1fr); }
   .side-panel { padding-left: 15px; padding-right: 15px; }
-  .grid { grid-template-columns: 1fr; }
   #log { height: 380px; min-height: 280px; }
   .panel { max-height: none; }
 }
@@ -186,6 +186,66 @@ footer strong { font-weight: 600; color: var(--aqua); }
   .panel { padding: 12px; }
   .card-head { padding: 14px; }
   footer { display: block; }
+}
+
+/* Operations and configuration have independent workspaces. */
+.config-audit { position: relative; min-height: 238px; }
+.config-audit .card-head h2 { font-size: 13px; }
+.audit-body { padding: 23px 22px; }
+.audit-body .eyebrow { color: var(--aqua); }
+.audit-message { font: 13px/1.65 "Cascadia Mono", Consolas, monospace; overflow-wrap: anywhere; margin: 18px 0 22px; min-height: 78px; color: var(--ink); }
+.audit-link { display: inline-flex; padding-bottom: 4px; border-bottom: 1px solid var(--signal); color: var(--signal);
+  font: 700 11px "Cascadia Mono", Consolas, monospace; text-decoration: none; text-transform: uppercase; letter-spacing: .04em; }
+.audit-link:hover { border-bottom-color: var(--aqua); color: var(--aqua); }
+.settings-back { display: inline-flex; margin-top: 25px; color: var(--signal); border-bottom: 1px solid var(--signal); text-decoration: none; font: 700 11px "Cascadia Mono", Consolas, monospace; padding-bottom: 4px; }
+.settings-workspace { min-width: 0; }
+.settings-hero { padding: clamp(28px, 4vw, 62px) 0 32px; border-bottom: 1px solid var(--border); margin-bottom: 29px; }
+.settings-hero .eyebrow { color: var(--signal); margin: 0 0 15px; }
+.settings-hero h1 { font: 700 clamp(38px, 5vw, 75px)/1 "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
+  margin: 0 0 19px; letter-spacing: -.055em; text-transform: uppercase; }
+.settings-hero h1 span { color: var(--signal); }
+.settings-hero p { color: var(--muted); max-width: 690px; margin: 0; }
+.settings-card { max-width: 1250px; }
+.settings-card .panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px;
+  max-height: none; min-height: 300px; background: var(--panel); align-items: start; padding: 26px; }
+.settings-group { min-width: 0; border: 1px solid var(--border); padding: 18px 22px 25px; }
+.settings-group:only-child { grid-column: 1 / -1; }
+.settings-group .section-title:first-child { margin: 0 0 14px; }
+.settings-group .row:last-of-type { border-bottom: 0; }
+.settings-group .row { min-height: 52px; }
+.settings-card .tabs { padding: 0 14px; }
+.settings-card .tabs button { padding: 18px; }
+.save-banner { display: flex; align-items: flex-start; gap: 15px; margin: 23px 26px 16px; padding: 19px 21px;
+  border: 1px solid var(--border-strong); background: #0e181d; min-height: 94px; }
+.save-icon { width: 12px; height: 12px; margin-top: 5px; border: 2px solid var(--dim); flex: none; }
+.save-banner[data-state="ok"] { border-color: #4c7848; }
+.save-banner[data-state="ok"] .save-icon { background: var(--signal); border-color: var(--signal); }
+.save-banner[data-state="pending"] { border-color: #877043; }
+.save-banner[data-state="pending"] .save-icon { border-color: var(--warn); }
+.save-banner[data-state="error"] { border-color: #834e49; }
+.save-banner[data-state="error"] .save-icon { background: var(--bad); border-color: var(--bad); }
+.save-meta { flex: 1; min-width: 0; }
+.save-meta .eyebrow { color: var(--aqua); margin-bottom: 7px; }
+.save-meta .msg { display: block; font-size: 12px; min-height: 20px; line-height: 1.6; overflow-wrap: anywhere; color: var(--ink); }
+.save-banner[data-state="error"] .msg { color: var(--bad); }
+.save-sub { color: var(--muted); font: 10px/1.5 "Cascadia Mono", Consolas, monospace; margin: 6px 0 0; }
+@media (max-width: 1100px) {
+  .grid { grid-template-columns: 1fr; }
+  .config-audit { min-height: auto; }
+  .audit-message { min-height: 0; }
+}
+@media (max-width: 950px) {
+  .settings-card .panel { grid-template-columns: 1fr; }
+}
+@media (max-width: 800px) {
+  .settings-hero { padding: 31px 0; }
+  .settings-hero h1 { font-size: clamp(33px, 8vw, 55px); }
+  .settings-card .panel { padding: 14px; gap: 14px; }
+  .settings-group { padding: 14px; }
+  .save-banner { margin: 14px; padding: 15px; }
+  .nav-list { display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0; }
+  .nav-list a { padding: 8px; font-size: 11px; }
+  .settings-back { margin-top: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
 </style>
@@ -242,18 +302,49 @@ footer strong { font-weight: 600; color: var(--aqua); }
     <div class="grid">
       <section class="card" id="activity" aria-label="Registro operacional">
         <div class="card-head">
-          <span class="serial">02A</span><h2><span data-t="Registros">Registros</span><small data-t="Fluxo de eventos em tempo real">Fluxo de eventos em tempo real</small></h2><span class="spacer"></span>
+          <span class="serial">02A</span><h2><span data-t="Registros">Registros</span><small data-t="Fluxo de eventos em tempo real">Fluxo de eventos em tempo real</small></h2><span class="spacer"></span><span class="msg" id="updated"></span>
           <select id="tagFilter" aria-label="Filtrar por categoria" title="Filtrar por categoria" data-t-title="Filtrar por categoria"><option value="" data-t="Todas as categorias">Todas as categorias</option></select>
         </div>
         <div id="log" role="log" aria-label="Eventos recentes" aria-live="off"></div>
       </section>
-      <section class="card" id="parameters" aria-label="Parâmetros operacionais">
-        <div class="card-head"><span class="serial">02B</span><h2><span data-t="Configurações">Configurações</span><small data-t="Parâmetros operacionais">Parâmetros operacionais</small></h2><span class="spacer"></span><span class="msg" id="updated"></span></div>
-        <div class="tabs" id="tabs" role="tablist" aria-label="Categorias de configurações"></div>
-        <div class="panel" id="panel" role="tabpanel"></div>
-      </section>
+      <aside class="card config-audit" aria-label="Última alteração das configurações">
+        <div class="card-head"><span class="serial">02B</span><h2><span data-t="Alterações">Alterações</span><small data-t="Histórico da sessão">Histórico da sessão</small></h2><span class="spacer"></span></div>
+        <div class="audit-body">
+          <span class="eyebrow" data-t="ÚLTIMA ATUALIZAÇÃO">ÚLTIMA ATUALIZAÇÃO</span>
+          <p class="audit-message" id="changeSummary" aria-live="polite" data-t="Nenhuma configuração alterada nesta sessão.">Nenhuma configuração alterada nesta sessão.</p>
+          <a class="audit-link" href="#parameters" data-t="Abrir configurações">Abrir configurações</a>
+        </div>
+      </aside>
     </div>
-    <footer><span data-t="As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.">As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.</span><strong>AM4 / CONTROL SYSTEM</strong></footer>
+    <footer><span data-t="Gerenciamento da companhia em tempo real.">Gerenciamento da companhia em tempo real.</span><strong>AM4 / CONTROL SYSTEM</strong></footer>
+  </main>
+  <main class="workspace settings-workspace" id="settingsView" hidden>
+    <div class="topline"><span class="path">AM4 / OPERATIONS / SETTINGS</span><span data-t="PAINEL DE PARÂMETROS">PAINEL DE PARÂMETROS</span><span class="live">● SYSTEM ONLINE</span></div>
+    <header class="settings-hero">
+      <span class="eyebrow" data-t="CONTROLE / AUTOMAÇÃO">CONTROLE / AUTOMAÇÃO</span>
+      <h1>CONFIGURAÇÕES<span>.</span></h1>
+      <p data-t="Gerencie as regras do bot em um espaço dedicado. As opções são salvas ao alterar; valores e modelos exigem o botão Salvar.">
+        Gerencie as regras do bot em um espaço dedicado. As opções são salvas ao alterar; valores e modelos exigem o botão Salvar.
+      </p>
+      <a href="#overview" class="settings-back" data-t="← Voltar ao painel">← Voltar ao painel</a>
+    </header>
+    <div class="section-bar"><span data-t="03 / PARÂMETROS DO SISTEMA">03 / PARÂMETROS DO SISTEMA</span><span class="counter">CONFIG / CONTROL</span></div>
+    <section class="card settings-card" id="parameters" aria-label="Parâmetros operacionais">
+      <div class="card-head">
+        <span class="serial">03A</span><h2><span data-t="Configurações">Configurações</span><small data-t="Parâmetros operacionais">Parâmetros operacionais</small></h2><span class="spacer"></span>
+      </div>
+      <div class="save-banner" id="saveBanner" data-state="idle" role="status" aria-live="polite">
+        <span class="save-icon" aria-hidden="true"></span>
+        <div class="save-meta">
+          <span class="eyebrow" data-t="STATUS DAS ALTERAÇÕES">STATUS DAS ALTERAÇÕES</span>
+          <span class="msg" id="msg" data-t="Nenhuma alteração pendente.">Nenhuma alteração pendente.</span>
+          <p class="save-sub" data-t="O resultado de cada salvamento será exibido aqui.">O resultado de cada salvamento será exibido aqui.</p>
+        </div>
+      </div>
+      <div class="tabs" id="tabs" role="tablist" aria-label="Categorias de configurações"></div>
+      <div class="panel" id="panel" role="tabpanel"></div>
+    </section>
+    <footer><span data-t="Configurações persistidas no perfil ativo.">Configurações persistidas no perfil ativo.</span><strong>AM4 / CONFIGURATION SYSTEM</strong></footer>
   </main>
 </div>
 <script>
@@ -273,6 +364,24 @@ const EN = {
   "🧪 Simulação": "🧪 Dry run", "Iniciar": "Start", "Parar": "Stop", "Verificar agora": "Check now",
   "⛽ Combustível": "⛽ Fuel", "🌿 CO₂": "🌿 CO₂", "💰 Dinheiro": "💰 Money", "⭐ Reputação": "⭐ Reputation", "🛩️ Frota": "🛩️ Fleet", "🎯 Meta": "🎯 Goal",
   "Registros": "Log", "Filtrar por categoria": "Filter by category", "Todas as categorias": "All categories",
+  "Alterações": "Changes", "Histórico da sessão": "Session activity", "← Voltar ao painel": "← Back to dashboard",
+  "ÚLTIMA ATUALIZAÇÃO": "LATEST UPDATE", "Nenhuma configuração alterada nesta sessão.": "No settings changed in this session.",
+  "Abrir configurações": "Open settings", "Gerenciamento da companhia em tempo real.": "Real-time airline management.",
+  "PAINEL DE PARÂMETROS": "SETTINGS CONSOLE", "CONTROLE / AUTOMAÇÃO": "CONTROL / AUTOMATION",
+  "Gerencie as regras do bot em um espaço dedicado. As opções são salvas ao alterar; valores e modelos exigem o botão Salvar.":
+    "Configure your bot in its own workspace. Switches save instantly; numbers and models require Save.",
+  "03 / PARÂMETROS DO SISTEMA": "03 / SYSTEM PARAMETERS",
+  "STATUS DAS ALTERAÇÕES": "CHANGE STATUS", "Nenhuma alteração pendente.": "No pending changes.",
+  "O resultado de cada salvamento será exibido aqui.": "Each save result will appear here.",
+  "Configurações persistidas no perfil ativo.": "Settings stored in the active profile.",
+  "Automações": "Automations", "Salvar alterações": "Save changes",
+  "Alteração pendente: {x}": "Unsaved change: {x}", "Clique em Salvar.": "Click Save.",
+  "Salvando alteração: {x}": "Saving change: {x}", "Salvando valores e modelos…": "Saving values and models…",
+  "Alteração salva: {x}": "Saved: {x}", "Alterações salvas com sucesso.": "Changes saved successfully.",
+  "Ativado": "Enabled", "Desativado": "Disabled",
+  "Falha ao salvar. Confira sua conexão e tente novamente.": "Save failed. Check your connection and try again.",
+  "Não foi possível carregar as configurações.": "Unable to load settings.",
+
   "Ir para o conteúdo": "Skip to content", "● SISTEMA / ESTADO": "● SYSTEM / STATUS",
   "Visão geral": "Overview", "Registro operacional": "Operations log", "Parâmetros": "Parameters",
   "COMANDOS / CONTROLE": "COMMAND / CONTROL", "SUA COMPANHIA EM TEMPO REAL": "YOUR AIRLINE IN REAL TIME",
@@ -392,6 +501,22 @@ $("tagFilter").addEventListener("change", () => {
 
 // ------------------------------------------------------------------ settings
 let settings = null, activeTab = 0;
+// Rascunhos não são perdidos quando o usuário troca entre Mercado/Frota/Aeronaves/Opções.
+const pendingDrafts = new Map();
+const draftKey = (kind, key) => kind + ":" + key;
+
+function showMsg(result) {
+  const message = result.message || tr("Resposta inválida");
+  const status = result.pending ? "pending" : result.ok ? "ok" : "error";
+  $("saveBanner").dataset.state = status;
+  const msg = $("msg");
+  msg.removeAttribute("data-t");
+  msg.textContent = message;
+  const summary = $("changeSummary");
+  summary.removeAttribute("data-t");
+  summary.textContent = message + " · " + timeText(Date.now() / 1000);
+}
+
 function field(key, label, help, input) {
   const row = document.createElement("div"); row.className = "row"; row.title = help || "";
   const lab = document.createElement("label"); lab.textContent = label; lab.htmlFor = "f_" + key;
@@ -399,72 +524,159 @@ function field(key, label, help, input) {
   row.append(lab, input);
   return row;
 }
+
 function renderSettings() {
+  if (!settings || !Array.isArray(settings.tabs)) { return; }
   const tabs = $("tabs"); tabs.textContent = "";
+  activeTab = Math.min(activeTab, settings.tabs.length - 1);
   settings.tabs.forEach((tab, i) => {
     const b = document.createElement("button");
-    b.textContent = tab.icon + " " + tab.name; b.className = i === activeTab ? "on" : ""; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(i === activeTab));
+    b.textContent = tab.icon + " " + tab.name; b.className = i === activeTab ? "on" : "";
+    b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(i === activeTab));
     b.onclick = () => { activeTab = i; renderSettings(); };
     tabs.appendChild(b);
   });
   const tab = settings.tabs[activeTab], panel = $("panel");
   panel.textContent = "";
+
   if (tab.switches.length) {
+    const switches = document.createElement("section"); switches.className = "settings-group";
+    const heading = document.createElement("div"); heading.className = "section-title";
+    heading.textContent = tr("Automações"); switches.appendChild(heading);
     for (const s of tab.switches) {
       const wrap = document.createElement("label"); wrap.className = "switch";
       const input = document.createElement("input"); input.type = "checkbox"; input.checked = s.value;
       input.onchange = async () => {
-        const r = await api("/api/settings", {options: {[s.key]: input.checked}});
-        showMsg(r); if (!r.ok) { input.checked = !input.checked; }
+        const enabled = input.checked;
+        input.disabled = true;
+        showMsg({pending: true, message: tr("Salvando alteração: {x}", s.label)});
+        try {
+          const result = await api("/api/settings", {options: {[s.key]: enabled}});
+          if (result.ok) {
+            s.value = enabled;
+            showMsg({ok: true, message: tr("Alteração salva: {x}", s.label) + " · " +
+              tr(enabled ? "Ativado" : "Desativado")});
+          } else {
+            input.checked = !enabled;
+            showMsg(result);
+          }
+        } catch (error) {
+          input.checked = !enabled;
+          showMsg({ok: false, message: tr("Falha ao salvar. Confira sua conexão e tente novamente.")});
+        } finally {
+          input.disabled = false;
+        }
       };
       wrap.append(input, document.createElement("span"));
       const row = field(s.key, s.label, s.help, wrap);
       row.querySelector("label").htmlFor = "";
-      row.onclick = e => { if (e.target === row.firstChild) { input.click(); } };
-      panel.appendChild(row);
+      row.onclick = e => { if (e.target === row.firstChild && !input.disabled) { input.click(); } };
+      switches.appendChild(row);
     }
+    panel.appendChild(switches);
   }
+
   const inputs = [];
+  const values = document.createElement("section"); values.className = "settings-group";
   if (tab.key === "Aeronaves" || tab.key === "Aviones") {
-    const t = document.createElement("div"); t.className = "section-title"; t.textContent = tr("Meta"); panel.appendChild(t);
+    const heading = document.createElement("div"); heading.className = "section-title";
+    heading.textContent = tr("Meta"); values.appendChild(heading);
     const list = document.createElement("datalist"); list.id = "goalList";
-    for (const name of settings.goal_options) { const o = document.createElement("option"); o.value = name; list.appendChild(o); }
-    panel.appendChild(list);
+    for (const name of settings.goal_options) {
+      const option = document.createElement("option"); option.value = name; list.appendChild(option);
+    }
+    values.appendChild(list);
     for (const s of settings.text) {
-      const input = document.createElement("input"); input.type = "text"; input.value = s.value || "";
-      if (s.key === "goal_model") { input.setAttribute("list", "goalList"); } else { input.placeholder = tr("vazio = mais rentável"); }
+      const input = document.createElement("input"); input.type = "text";
+      input.value = pendingDrafts.get(draftKey("text", s.key)) ?? (s.value || "");
+      if (s.key === "goal_model") { input.setAttribute("list", "goalList"); }
+      else { input.placeholder = tr("vazio = mais rentável"); }
+      input.oninput = () => {
+        pendingDrafts.set(draftKey("text", s.key), input.value);
+        showMsg({pending: true, message: tr("Alteração pendente: {x}", s.label) + " " + tr("Clique em Salvar.")});
+      };
       inputs.push(["text", s.key, input]);
-      panel.appendChild(field(s.key, s.label, s.help, input));
+      values.appendChild(field(s.key, s.label, s.help, input));
     }
   }
+
   if (tab.fields.length) {
-    const t = document.createElement("div"); t.className = "section-title"; t.textContent = tr("Valores"); panel.appendChild(t);
+    const heading = document.createElement("div"); heading.className = "section-title";
+    heading.textContent = tr("Valores"); values.appendChild(heading);
     for (const s of tab.fields) {
-      const input = document.createElement("input"); input.type = "number"; input.step = "1"; input.min = "0"; input.value = s.value;
+      const input = document.createElement("input"); input.type = "number"; input.step = "1"; input.min = "0";
+      input.value = pendingDrafts.get(draftKey("settings", s.key)) ?? s.value;
+      input.oninput = () => {
+        pendingDrafts.set(draftKey("settings", s.key), input.value);
+        showMsg({pending: true, message: tr("Alteração pendente: {x}", s.label) + " " + tr("Clique em Salvar.")});
+      };
       inputs.push(["settings", s.key, input]);
-      panel.appendChild(field(s.key, s.label, s.help, input));
+      values.appendChild(field(s.key, s.label, s.help, input));
     }
   }
+
   if (inputs.length) {
     const actions = document.createElement("div"); actions.className = "actions";
-    const save = document.createElement("button"); save.className = "accent"; save.textContent = tr("Salvar");
-    const msg = document.createElement("span"); msg.className = "msg"; msg.id = "msg";
+    const save = document.createElement("button"); save.className = "accent"; save.textContent = tr("Salvar alterações");
     save.onclick = async () => {
       const body = {settings: {}, text: {}};
       for (const [kind, key, input] of inputs) { body[kind][key] = input.value; }
-      const r = await api("/api/settings", body);
-      showMsg(r);
-      if (r.ok) { await loadSettings(); showMsg(r); }
+      save.disabled = true;
+      showMsg({pending: true, message: tr("Salvando valores e modelos…")});
+      try {
+        const result = await api("/api/settings", body);
+        if (result.ok) {
+          for (const [kind, key] of inputs) { pendingDrafts.delete(draftKey(kind, key)); }
+          await loadSettings();
+          showMsg({ok: true, message: tr("Alterações salvas com sucesso.")});
+        } else {
+          showMsg(result);
+        }
+      } catch (error) {
+        showMsg({ok: false, message: tr("Falha ao salvar. Confira sua conexão e tente novamente.")});
+      } finally {
+        save.disabled = false;
+      }
     };
-    actions.append(save, msg);
-    panel.appendChild(actions);
+    actions.appendChild(save);
+    values.appendChild(actions);
+    panel.appendChild(values);
   }
 }
-function showMsg(r) {
-  const msg = $("msg"); if (!msg) { return; }
-  msg.textContent = r.message || ""; msg.className = "msg" + (r.ok ? "" : " bad");
+
+async function loadSettings() {
+  try {
+    const result = await api("/api/settings");
+    if (!result || !Array.isArray(result.tabs)) { throw new Error("Invalid settings response"); }
+    settings = result;
+    setLanguage(settings.lang);
+    renderSettings();
+    return true;
+  } catch (error) {
+    showMsg({ok: false, message: tr("Não foi possível carregar as configurações.")});
+    return false;
+  }
 }
-async function loadSettings() { settings = await api("/api/settings"); setLanguage(settings.lang); renderSettings(); }
+
+function activateWorkspaceFromHash() {
+  const target = location.hash;
+  const isSettings = target === "#parameters";
+  $("overview").hidden = isSettings;
+  $("settingsView").hidden = !isSettings;
+  const current = isSettings ? "#parameters" : target === "#activity" ? "#activity" : "#overview";
+  for (const link of document.querySelectorAll(".nav-list a")) {
+    const selected = link.getAttribute("href") === current;
+    link.classList.toggle("active", selected);
+    if (selected) { link.setAttribute("aria-current", "page"); }
+    else { link.removeAttribute("aria-current"); }
+  }
+  requestAnimationFrame(() => {
+    if (current === "#activity") { $("activity").scrollIntoView({block: "start"}); }
+    else { window.scrollTo(0, 0); }
+  });
+}
+window.addEventListener("hashchange", activateWorkspaceFromHash);
+activateWorkspaceFromHash();
 
 // ------------------------------------------------------------------ controls and polling
 for (const [id, action] of [["btnStart", "start"], ["btnStop", "stop"], ["btnNow", "run_now"]]) {
