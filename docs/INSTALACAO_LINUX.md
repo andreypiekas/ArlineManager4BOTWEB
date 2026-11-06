@@ -33,6 +33,31 @@ http://192.168.1.50:8744/?token=TOKEN_GERADO_AUTOMATICAMENTE
 
 Esse endereço funciona **somente na rede local** quando foi usado `--rede-local`. O token é secreto: **não compartilhe**, não exponha a porta 8744 na internet e não publique o arquivo `config/secrets.ini`. Sem `--rede-local`, o painel fica disponível apenas em `http://127.0.0.1:8744/` no próprio Linux (pode acessar por túnel SSH).
 
+### Firewall UFW no Ubuntu e Debian
+
+Ao usar `--rede-local`, o instalador agora verifica automaticamente se o **UFW está ativo**. Se estiver, identifica a sub-rede da interface de rede do IP do servidor e cria uma regra de entrada **TCP restrita àquela rede**, para a porta real do perfil (por padrão, 8744). Por exemplo, um servidor com `192.168.101.234/24` recebe a regra equivalente a:
+
+```bash
+sudo ufw allow from 192.168.101.0/24 to any port 8744 proto tcp
+```
+
+Não é necessário executar esse comando manualmente quando a detecção automática funcionar. O instalador **não ativa o UFW**, não abre a porta para `any`/`0.0.0.0/0`, não remove regras já existentes e não modifica o SSH. Reexecutar a instalação mantém as configurações do bot e usa a verificação de regras duplicadas do próprio UFW.
+
+Se o servidor possuir várias interfaces, VPNs ou redes Docker, indique a sub-rede que poderá acessar o painel (deve ser um CIDR IPv4 privado):
+
+```bash
+bash instalar.sh --rede-local --ufw-rede 192.168.101.0/24
+```
+
+Se preferir administrar o firewall por conta própria, use `--sem-ufw`. Se a detecção de rede falhar, o script **não abre nenhuma porta**: apresenta um aviso e solicita a opção `--ufw-rede`. Consulte:
+
+```bash
+sudo ufw status numbered
+sudo ss -lntp | grep ':8744'
+```
+
+Uma regra antiga que já permita `8744/tcp` a partir de `Anywhere` **continua existindo**, pois o instalador não apaga regras do administrador. Revise e remova regras públicas desnecessárias de forma consciente. Não encaminhe a porta do painel no roteador para a internet.
+
 A senha do jogo **não é solicitada por padrão**. Para configurá-la sem mostrá-la no terminal, execute o instalador com `--configurar-login`, ou rode depois:
 
 ```bash
@@ -75,7 +100,9 @@ Cada perfil possui seus próprios dados, credenciais, ajustes e sessão Chromium
 
 | Opção | Resultado |
 | --- | --- |
-| `--rede-local` | Habilita acesso pela LAN e gera token aleatório seguro se necessário |
+| `--rede-local` | Habilita acesso LAN, gera token e ajusta o UFW ativo apenas para a sub-rede detectada |
+| `--ufw-rede 192.168.101.0/24` | Define explicitamente a sub-rede privada autorizada no UFW (requer `--rede-local`) |
+| `--sem-ufw` | Não altera o UFW, mesmo quando o painel é habilitado na LAN |
 | `--configurar-login` | Solicita e-mail/senha por meio de um terminal interativo |
 | `--perfil companhia2` | Configura serviço para outro perfil |
 | `--sem-iniciar` | Registra e habilita o serviço sem ligá-lo imediatamente |
@@ -106,6 +133,7 @@ O instalador **não executa `git reset`**, não remove arquivos de dados e não 
 ### Diagnóstico
 
 - Confirme o sistema: `bash instalar.sh --verificar`.
+- Se o painel responder no próprio servidor mas der timeout em outros computadores, confirme `--rede-local`, a porta do perfil e o UFW com `sudo ufw status numbered`. Caso necessário, execute `bash instalar.sh --rede-local --ufw-rede 192.168.101.0/24`, ajustando a faixa à sua rede.
 - Confira os eventos: `sudo journalctl -u am4bot@principal -n 100 --no-pager`.
 - Se o Chromium ou o ChromeDriver não iniciar, confira `chromium --version` (Raspberry Pi OS) ou `chromium-browser --version` (Ubuntu) e `chromedriver --version`. No Ubuntu, confirme `snap list chromium`.
 - No Ubuntu minimal ou contêiner, `snapd` exige serviços do sistema ativos; instalações sem `systemd` não são suportadas.
