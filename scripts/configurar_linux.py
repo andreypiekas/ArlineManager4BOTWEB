@@ -120,7 +120,8 @@ def configurar(root: Path, perfil: str, rede_local: bool, login: bool) -> tuple[
     if rede_local:
         definir(settings, "web", "host", "0.0.0.0")
         token = segredos.get("web", "token", fallback="").strip()
-        if not token:
+        if not token or token == "change-me-to-a-long-random-string":
+            # Impede expor na LAN o token público de config/secrets.example.ini.
             definir(segredos, "web", "token", secrets.token_urlsafe(32))
 
     if login:

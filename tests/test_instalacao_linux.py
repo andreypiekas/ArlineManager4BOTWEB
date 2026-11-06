@@ -101,3 +101,14 @@ def test_bash_sintaxe_e_ajuda_sem_efeitos_colaterais():
     assert "--rede-local" in ajuda.stdout
     assert "--sem-iniciar" in ajuda.stdout
     assert "SIMULAÇÃO" in ajuda.stdout
+
+def test_token_de_exemplo_nao_pode_ser_usado_na_lan(projeto: Path):
+    segredos = ConfigParser(interpolation=None)
+    segredos.add_section("web")
+    segredos.set("web", "token", "change-me-to-a-long-random-string")
+    modulo.salvar_privado(projeto / "config/secrets.ini", segredos)
+
+    modulo.configurar(projeto, "principal", True, False)
+    token = ler_cfg(projeto / "config/secrets.ini").get("web", "token")
+    assert token != "change-me-to-a-long-random-string"
+    assert len(token) >= 32
