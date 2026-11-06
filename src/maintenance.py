@@ -82,14 +82,14 @@ def run_maintenance(bot: "Bot") -> None:
     fleet = read_fleet(bot)
     bot.update_stats(fleet_size=len(fleet))
     if not fleet:
-        log.info("Mantenimiento: no hay aviones.")
+        log.info("Manutenção: não há aeronaves.")
         bot.close_popup()
         return
 
     worst = max(fleet, key=lambda a: a.wear)
     soonest = min(fleet, key=lambda a: a.hours_to_check)
     log.info(
-        "Flota: %d aviones | mayor desgaste %.1f%% (%s) | próximo A-check en %d h (%s)",
+        "Frota: %d aeronaves | maior desgaste %.1f%% (%s) | próximo A-check em %d h (%s)",
         len(fleet), worst.wear, worst.reg, soonest.hours_to_check, soonest.reg,
     )
 
@@ -128,43 +128,43 @@ def check_hangar(bot: "Bot") -> None:
     data = bot.js(_HANGAR_JS) or {}
     capacity, free = to_int(data.get("capacity")), to_int(data.get("free"))
     if free is None:
-        log.debug("No he podido leer los huecos del hangar.")
+        log.debug("Não consegui consultar as vagas do hangar.")
         return
     bot.update_stats(hangar_free=free, hangar_capacity=capacity)
     keep_free = max(1, bot.config.get_int("settings", "hangar_min_free", 2))
     if free >= keep_free or not bot.config.get_bool("options", "auto_hangar"):
-        log.debug("Hangar: %s huecos libres de %s.", free, capacity)
+        log.debug("Hangar: %s vagas livres de %s.", free, capacity)
         return
     buttons = panel.find_elements(By.XPATH, ".//button[contains(@onclick, 'mode=upgrade&amount=1&')]")
     if not buttons or "not-active" in (buttons[0].get_attribute("class") or ""):
-        log.info("Hangar: %d huecos libres y la ampliación no está disponible ahora (quizá ya hay una en curso).", free)
+        log.info("Hangar: %d vagas livres; a ampliação não está disponível agora (pode haver outra em andamento).", free)
         return
     # The largest number on the button is the price (a "+1" slot count may come first).
     cost = max((to_int(number) for number in re.findall(r"\d[\d,]*", buttons[0].text)), default=None)
-    if not bot.can_spend(cost, "ampliar el hangar"):
+    if not bot.can_spend(cost, "ampliar o hangar"):
         return
-    detail = f"hangar +1 hueco por ${fmt(cost)} (quedaban {free} libres de {fmt(capacity)})"
+    detail = f"hangar +1 vaga por ${fmt(cost)} (restavam {free} livres de {fmt(capacity)})"
     if bot.dry_run:
-        log.info("[SIMULACIÓN] Ampliaría el %s.", detail)
+        log.info("[SIMULAÇÃO] Ampliaria o %s.", detail)
         return
     before = bot.read_money()
     bot.click_element(buttons[0])
     bot.pause(1.0, 1.5)
-    if not bot.confirm_purchase(before, cost, "la ampliación del hangar"):
+    if not bot.confirm_purchase(before, cost, "a ampliação do hangar"):
         return
     bot.spent(cost, invest=True)
     bot.count("hangar")
     bot.update_stats(hangar_capacity=(capacity or 0) + 1)
-    log.info("Ampliado el %s. Estará listo en unos minutos.", detail)
+    log.info("Ampliação concluída: %s. Estará pronto em alguns minutos.", detail)
     bot.notify(f"🏗️ <b>Hangar ampliado</b>: {esc(detail)}.", silent=True)
 
 
 def plan(bot: "Bot", aircraft: Aircraft, kind: str) -> bool:
-    label = "reparación" if kind == "repair" else "A-check"
+    label = "reparo" if kind == "repair" else "A-check"
     panel = bot.ajax(f"maint_plan_do.php?type={kind}&id={aircraft.id}", "maintPlanAction")
     sections = panel.find_elements(By.ID, "typeRepair" if kind == "repair" else "typeCheck")
     if not sections:
-        log.warning("%s: el panel de %s no ha cargado.", aircraft.reg, label)
+        log.warning("%s: o painel de %s não foi carregado.", aircraft.reg, label)
         return False
     section = sections[0]
     cost = section_cost(section)
@@ -173,20 +173,20 @@ def plan(bot: "Bot", aircraft: Aircraft, kind: str) -> bool:
         # The game shows a green alert when there is nothing to repair and a red one when the
         # aircraft is away from base (classes instead of text: works in any game language).
         if section.find_elements(By.CSS_SELECTOR, ".alert-success"):
-            reason = "ya está reparado del todo"
+            reason = "a aeronave já está totalmente reparada"
         elif section.find_elements(By.CSS_SELECTOR, ".alert-danger"):
-            reason = "no está en una base ni volando hacia ella"
+            reason = "não está em uma base nem voando em direção a ela"
         else:
-            reason = "el juego no ofrece la acción"
-        log.info("%s: %s no es posible ahora (%s).", aircraft.reg, label, reason)
+            reason = "o jogo não oferece essa ação"
+        log.info("%s: %s não é possível agora (%s).", aircraft.reg, label, reason)
         return False
     if not bot.can_spend(cost, f"la {label} de {aircraft.reg}", essential=True):
         return False
     detail = (f"{label} de {aircraft.reg} ({aircraft.model}, desgaste {aircraft.wear:.1f}%, "
               f"{aircraft.hours_to_check} h hasta el check) por ${fmt(cost)}")
     if bot.dry_run:
-        log.info("[SIMULACIÓN] Planificaría %s.", detail)
-        bot.notify(f"🧪 SIMULACIÓN: planificaría {esc(detail)}.", silent=True)
+        log.info("[SIMULAÇÃO] Programaria %s.", detail)
+        bot.notify(f"🧪 SIMULAÇÃO: programaria {esc(detail)}.", silent=True)
         return True
     before = bot.read_money()
     bot.click_element(buttons[0])
@@ -195,6 +195,6 @@ def plan(bot: "Bot", aircraft: Aircraft, kind: str) -> bool:
         return False
     bot.spent(cost)
     bot.count("repairs" if kind == "repair" else "checks")
-    log.info("Planificado: %s. %s", detail, clean_response(response))
+    log.info("Programado: %s. %s", detail, clean_response(response))
     bot.notify(f"🔧 <b>Planificado: {esc(detail)}</b>.\n{esc(clean_response(response, 200))}".rstrip())
     return True

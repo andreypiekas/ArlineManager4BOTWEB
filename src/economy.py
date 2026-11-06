@@ -163,9 +163,9 @@ def fmt_money(value: Optional[int]) -> str:
 
 
 # ---------------------------------------------------------------------- growth ladder
-AUTO_GOAL_NAMES = ("auto", "automático", "automatico", "automático (escalera)", "escalera",
+AUTO_GOAL_NAMES = ("auto", "automático", "automatico", "automático (escalera)", "escalera", "automático (progressão)", "progressão",
                    "automatic", "automatic (ladder)", "ladder")
-AUTO_GOAL_LABEL = "Automático (escalera)"
+AUTO_GOAL_LABEL = "Automático (progressão)"
 
 
 def is_auto_goal(name: str) -> bool:

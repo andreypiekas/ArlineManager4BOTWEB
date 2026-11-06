@@ -239,7 +239,7 @@ def optimize_seats(bot: "Bot") -> None:
         bot.close_popup()
     due = [a for a in fleet if a.at_base and now - float(checked.get(a.id, 0)) >= RECHECK_SECONDS][:MAX_DETAILS]
     if not due:
-        log.debug("Taller: ningún avión en la base pendiente de revisar.")
+        log.debug("Oficina: nenhuma aeronave na base aguardando verificação.")
         return
 
     bot.open_popup("routes_main.php", "Routes", "nav_routes")
@@ -270,7 +270,7 @@ def optimize_seats(bot: "Bot") -> None:
                 reward = 0  # paid once: only one aircraft counts on it
             else:
                 plan.bonus = 0
-        log.debug("%s (%s, %s): %s -> %s, +%s/día, coste %s, %.1f h, se paga en %.1f días.", plan.reg, plan.model,
+        log.debug("%s (%s, %s): %s -> %s, +%s/dia, custo %s, %.1f h, retorno em %.1f dias.", plan.reg, plan.model,
                   plan.route, plan.old, plan.new, fmt_money(int(plan.gain)), fmt_money(plan.cost), plan.hours, plan.payback)
         if do_seats and worth_it(plan, max_payback):
             seat_plans.append(plan)
@@ -286,7 +286,7 @@ def optimize_seats(bot: "Bot") -> None:
 
     plans = sorted(seat_plans, key=lambda p: p.payback) + mod_plans
     if not plans:
-        log.info("Taller: revisados %d aviones en la base (ocupación prevista %.0f %%), ninguno gana bastante con "
+        log.info("Oficina: analisadas %d aeronaves na base (ocupação prevista %.0f %%); nenhuma apresenta ganho suficiente com "
                  "otros asientos ni con mejoras.", len(due), load * 100)
         return
     # Plans over this cycle's limit, or that fail (money, no longer at the base), stay unmarked: next time.
@@ -321,7 +321,7 @@ def apply_plan(bot: "Bot", plan: SeatPlan, max_payback: float, do_seats: bool = 
     panel = bot.ajax(f"maint_plan_do.php?type=modify&id={plan.aircraft_id}", "maintPlanAction")
     buttons = panel.find_elements(By.XPATH, ".//button[contains(@onclick, 'modifyAction')]")
     if not buttons:
-        log.info("%s: ahora no se puede modificar (no está en la base o ya está en el taller).", plan.reg)
+        log.info("%s: não pode ser modificada agora (não está na base ou já está na oficina).", plan.reg)
         return None
     seats_change = False
     if do_seats and plan.new != plan.old:
@@ -350,11 +350,11 @@ def apply_plan(bot: "Bot", plan: SeatPlan, max_payback: float, do_seats: bool = 
         chosen = choose_mods(gains, prices, installed, revenue, max_payback)
         mods_cost = sum(prices[mod] for mod in chosen)
         mods_gain = sum(gains[mod] for mod in chosen)
-        log.debug("%s: mejoras %s, ya instaladas %s, ganancia/día %s.", plan.reg,
+        log.debug("%s: melhorias %s, já instaladas %s, ganho/dia %s.", plan.reg,
                   {MODS[m]: round(prices.get(m, 0)) for m in MODS}, sorted(installed),
                   {MODS[m]: round(gains[m]) for m in MODS})
     if not seats_change and not chosen:
-        log.debug("%s: nada que cambiar en el taller.", plan.reg)
+        log.debug("%s: nenhuma alteração necessária na oficina.", plan.reg)
         return 0
 
     cost = (plan.cost if seats_change else 0) + int(round(mods_cost))
@@ -369,13 +369,13 @@ def apply_plan(bot: "Bot", plan: SeatPlan, max_payback: float, do_seats: bool = 
     if chosen:
         parts.append("mejoras " + ", ".join(MODS[mod] for mod in chosen))
     payback = max(0.0, cost + revenue / 24 * hours - bonus) / gain if gain > 0 else float("inf")
-    detail = (f"{plan.reg} ({plan.model}, {plan.route}): {'; '.join(parts)}, +{fmt_money(int(gain))}/día estimado, "
-              f"coste ${fmt(cost)}, {hours:.1f} h en el taller, se paga en {payback:.1f} días")
+    detail = (f"{plan.reg} ({plan.model}, {plan.route}): {'; '.join(parts)}, +{fmt_money(int(gain))}/dia estimado, "
+              f"custo ${fmt(cost)}, {hours:.1f} h na oficina, retorno em {payback:.1f} dias")
     if not bot.can_spend(cost, f"el taller de {plan.reg}"):
         return None
     if bot.dry_run:
-        log.info("[SIMULACIÓN] Haría en el taller: %s.", detail)
-        bot.notify(f"🧪 SIMULACIÓN: haría en el taller {esc(detail)}.", silent=True)
+        log.info("[SIMULAÇÃO] Executaria na oficina: %s.", detail)
+        bot.notify(f"🧪 SIMULAÇÃO: executaria na oficina {esc(detail)}.", silent=True)
         return 1
     # Same request the game's own Modify button sends after moving the seat slider and ticking the modifications.
     bot.js("window.eSeat = arguments[0]; window.bSeat = arguments[1]; window.fSeat = arguments[2];"
@@ -396,7 +396,7 @@ def apply_plan(bot: "Bot", plan: SeatPlan, max_payback: float, do_seats: bool = 
         known = dict(bot.recall("mods_installed", {}))
         known[plan.aircraft_id] = sorted(set(known.get(plan.aircraft_id, [])) | set(chosen))
         bot.remember("mods_installed", known)
-    log.info("Taller: %s. %s", detail, clean_response(response))
+    log.info("Oficina: %s. %s", detail, clean_response(response))
     icon = "💺" if seats_change else "🛠️"
-    bot.notify(f"{icon} <b>Taller</b>: {esc(detail)}.\n{esc(clean_response(response, 200))}".rstrip())
+    bot.notify(f"{icon} <b>Oficina</b>: {esc(detail)}.\n{esc(clean_response(response, 200))}".rstrip())
     return 1

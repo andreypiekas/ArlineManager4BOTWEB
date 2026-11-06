@@ -126,22 +126,22 @@ class WebDashboard:
         host = self.cfg.get("web", "host", "127.0.0.1") or "127.0.0.1"
         port = self.cfg.get_int("web", "port", 8744)
         if not _is_loopback(host) and not self.cfg.web_token:
-            log.warning("Web: para abrirla a la red local hace falta [web] token en config/secrets.ini; "
-                        "de momento solo escucha en 127.0.0.1.")
+            log.warning("Web: para permitir acesso pela rede local, configure [web] token em config/secrets.ini; "
+                        "por enquanto, somente 127.0.0.1 será utilizado.")
             host = "127.0.0.1"
         try:
             self.server = _ExclusiveServer((host, port), self._handler())
         except OSError as exc:
             if running_instance(self.cfg):
-                log.warning("Ya hay otro Airline Manager 4 Bot en marcha (panel web en http://127.0.0.1:%s/).", port)
+                log.warning("Já existe outro Airline Manager 4 Bot em execução (painel web em http://127.0.0.1:%s/).", port)
             else:
-                log.warning("Web: no puedo abrir el puerto %s (%s).", port, exc.strerror or exc)
+                log.warning("Web: não foi possível abrir a porta %s (%s).", port, exc.strerror or exc)
             return False
         self.server.daemon_threads = True
         threading.Thread(target=self.server.serve_forever, name="am4web", daemon=True).start()
         shown = "127.0.0.1" if host in ("0.0.0.0", "::") else host
         self.url = f"http://{shown}:{port}/"
-        log.info("Panel web en %s%s", self.url, " (también desde la red local, con token)" if not _is_loopback(host) else "")
+        log.info("Painel web em %s%s", self.url, " (acessível também pela rede local mediante token)" if not _is_loopback(host) else "")
         return True
 
     def stop(self) -> None:
@@ -205,7 +205,7 @@ class WebDashboard:
             value = str(value).strip()[:80]
             self.cfg.set("settings", key, "auto" if key == "goal_model" and is_auto_goal(value) else value)
         self.cfg.save()
-        log.info("Ajustes guardados desde el panel web.")
+        log.info("Configurações salvas pelo painel web.")
         return True, t("Guardado.")
 
     def control(self, action: str) -> tuple[bool, str]:
@@ -217,14 +217,14 @@ class WebDashboard:
         if action == "stop":
             if not self.bot.is_alive():
                 return False, t("El bot ya está parado.")
-            log.info("Parando tras el paso actual (desde el panel web) ...")
+            log.info("Interrompendo após a etapa atual (pelo painel web) ...")
             self.bot.stop()
             return True, t("Parando ...")
         if action == "run_now":
             self.bot.run_now()
             return True, t("Revisando ahora.")
         if action == "quit" and self.on_quit is not None:
-            log.info("Cerrando el programa (pedido desde el panel web) ...")
+            log.info("Fechando o programa (solicitação pelo painel web) ...")
             self.on_quit()
             return True, t("Cerrando ...")
         return False, t("Acción desconocida.")
@@ -267,7 +267,7 @@ class WebDashboard:
                 self._send(status, json.dumps(data, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
 
             def _deny(self) -> None:
-                self._send(HTTPStatus.FORBIDDEN, "Acceso denegado: abre la página con ?token=...".encode("utf-8"),
+                self._send(HTTPStatus.FORBIDDEN, "Acesso negado: abra a página com ?token=...".encode("utf-8"),
                            "text/plain; charset=utf-8")
 
             def do_GET(self) -> None:  # noqa: N802 - http.server API
@@ -298,13 +298,13 @@ class WebDashboard:
                     return self._deny()
                 length = parse_int(self.headers.get("Content-Length", "0")) or 0
                 if length > MAX_BODY:
-                    return self._json({"ok": False, "message": "Petición demasiado grande."}, 413)
+                    return self._json({"ok": False, "message": "Solicitação muito grande."}, 413)
                 try:
                     payload = json.loads(self.rfile.read(length) or b"{}")
                 except ValueError:
-                    return self._json({"ok": False, "message": "JSON no válido."}, 400)
+                    return self._json({"ok": False, "message": "JSON inválido."}, 400)
                 if not isinstance(payload, dict):
-                    return self._json({"ok": False, "message": "JSON no válido."}, 400)
+                    return self._json({"ok": False, "message": "JSON inválido."}, 400)
                 path = urlparse(self.path).path
                 if path == "/api/settings":
                     ok, message = dashboard.update_settings(payload)

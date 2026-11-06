@@ -3,8 +3,7 @@
 The bot runs in its own daemon thread. The GUI only reads ``state``, ``stats()``
 and ``next_cycle_at``; it never touches the WebDriver. The maintenance and fleet
 features live in ``maintenance.py`` and ``fleet.py`` and use the public helpers
-of this class (``ajax``, ``js``, ``open_popup`` ...). User-facing messages are
-in Spanish; code and comments stay in English.
+of this class (``ajax``, ``js``, ``open_popup`` ...). User-facing messages are localized for Brazilian Portuguese; code and comments stay in English.
 """
 from __future__ import annotations
 
@@ -209,18 +208,18 @@ class Bot:
         the route of an aircraft already bought) may use it, everything else stays above it.
         """
         if cost is None:
-            log_money.warning("No he podido leer el coste de %s, lo salto.", what)
+            log_money.warning("Não consegui ler o custo de %s; operação ignorada.", what)
             return False
         money = self.stats().money
         if money is None:
-            log_money.warning("Saldo desconocido, salto %s.", what)
+            log_money.warning("Saldo desconhecido; ignorando %s.", what)
             return False
         reserve = 0 if essential else self.config.get_int("settings", "cash_reserve", 0)
         if money - cost < reserve:
             if essential:
-                log_money.info("Salto %s: cuesta $%s y el saldo es $%s.", what, fmt(cost), fmt(money))
+                log_money.info("Ignorando %s: custa $%s e o saldo é $%s.", what, fmt(cost), fmt(money))
             else:
-                log_money.info("Salto %s: $%s dejaría el saldo por debajo de la reserva de $%s (saldo $%s).",
+                log_money.info("Ignorando %s: $%s deixaria o saldo abaixo da reserva de $%s (saldo $%s).",
                                what, fmt(cost), fmt(reserve), fmt(money))
             return False
         return True
@@ -259,7 +258,7 @@ class Bot:
         """
         answer = (self.js(_ANSWER_JS, container) or {}) if container else {}
         if answer.get("refused"):
-            log_money.warning("El juego ha rechazado %s: %s", what, clean_response(answer["refused"]) or "sin detalles")
+            log_money.warning("O jogo recusou %s: %s", what, clean_response(answer["refused"]) or "sem detalhes")
             return False
         if answer.get("ok") or before is None or not cost:
             return True
@@ -271,8 +270,8 @@ class Bot:
             if time.time() >= deadline or self._stop.is_set():
                 break
             self._stop.wait(0.5)
-        log_money.warning("No veo el cargo de %s en el saldo (sigue en $%s): no lo cuento y lo vuelvo a mirar en la "
-                          "próxima revisión.", what, fmt(before))
+        log_money.warning("Não identifiquei a cobrança de %s no saldo (ainda $%s): não vou contabilizar e verificarei na "
+                          "próxima verificação.", what, fmt(before))
         return False
 
     def fuel_cost_basis(self) -> int:
@@ -322,7 +321,7 @@ class Bot:
         value = measured if not isinstance(current, (int, float)) else 0.8 * current + 0.2 * measured
         self._state["load_factor"] = round(max(0.1, min(1.0, value)), 3)
         self._save_state()
-        log_flights.debug("Ocupación medida %.0f %% (media %.0f %%).", measured * 100, value * 100)
+        log_flights.debug("Ocupação medida %.0f %% (média %.0f %%).", measured * 100, value * 100)
 
     # ------------------------------------------------------------------ notifications and counters
     def notify(self, text: str, silent: bool = False) -> None:
@@ -366,7 +365,7 @@ class Bot:
             records[kind] = [int(price), int(t)]
             self._save_state()
             if best is not None:
-                tlog.info("¡Nuevo mínimo de %s: $%s (antes $%s)!", "CO2" if kind == "co2" else "fuel", fmt(price), fmt(best[0]))
+                tlog.info("Novo menor preço de %s: $%s (anterior $%s)!", "CO2" if kind == "co2" else "fuel", fmt(price), fmt(best[0]))
 
     def _bought_in_window(self, kind: str, window: int) -> bool:
         # Persisted so that a restart inside the same 30-minute price window does not buy twice.
@@ -393,7 +392,7 @@ class Bot:
             write_atomic(state_file(), json.dumps(self._state, indent=1))
         except OSError as exc:  # full disk, permissions ...: say it once, the bot keeps the state in memory
             if not self._state_save_failed:
-                log.warning("No puedo guardar %s: %s", state_file(), exc)
+                log.warning("Não foi possível salvar %s: %s", state_file(), exc)
             self._state_save_failed = True
         else:
             self._state_save_failed = False
@@ -411,31 +410,31 @@ class Bot:
         delta = ""
         if stats.money is not None and isinstance(start, int):
             diff = stats.money - start
-            delta = f" ({'+' if diff >= 0 else '-'}${fmt(abs(diff))} desde el último resumen)"
+            delta = f" ({'+' if diff >= 0 else '-'}${fmt(abs(diff))} desde o último resumo)"
         lines = [
-            f"📊 <b>Resumen diario</b> {time.strftime('%d/%m/%Y', now)}",
+            f"📊 <b>Resumo diário</b> {time.strftime('%d/%m/%Y', now)}",
             f"💰 Saldo: ${fmt(stats.money)}{esc(delta)}",
-            f"⛽ Fuel: {fmt(stats.fuel)} / {fmt(stats.fuel_capacity)} a ${fmt(stats.fuel_price)} | comprado {fmt(counters['fuel_bought'])} lbs (${fmt(counters['fuel_spent'])})",
-            f"🌿 CO2: {fmt(stats.co2)} / {fmt(stats.co2_capacity)} a ${fmt(stats.co2_price)} | comprado {fmt(counters['co2_bought'])} cuotas (${fmt(counters['co2_spent'])})",
-            f"✈️ Flota: {fmt(stats.fleet_size)} aviones, {fmt(stats.inflight)} volando, {fmt(stats.parked)} aparcados | despegues: {counters['departures']}",
-            f"🛫 Rutas creadas: {counters['routes']} | 🛒 Aviones pedidos: {counters['aircraft']} | 🔧 Reparaciones: {counters['repairs']}, A-checks: {counters['checks']}",
+            f"⛽ Combustível: {fmt(stats.fuel)} / {fmt(stats.fuel_capacity)} a ${fmt(stats.fuel_price)} | comprado {fmt(counters['fuel_bought'])} libras (${fmt(counters['fuel_spent'])})",
+            f"🌿 CO2: {fmt(stats.co2)} / {fmt(stats.co2_capacity)} a ${fmt(stats.co2_price)} | comprado {fmt(counters['co2_bought'])} cotas (${fmt(counters['co2_spent'])})",
+            f"✈️ Frota: {fmt(stats.fleet_size)} aeronaves, {fmt(stats.inflight)} em voo, {fmt(stats.parked)} estacionadas | decolagens: {counters['departures']}",
+            f"🛫 Rotas criadas: {counters['routes']} | 🛒 Aeronaves encomendadas: {counters['aircraft']} | 🔧 Reparos: {counters['repairs']}, A-checks: {counters['checks']}",
         ]
         if stats.reputation is not None or counters["campaigns"] or counters["seats"]:
-            lines.append(f"📣 Reputación: {fmt(stats.reputation)} % | campañas: {counters['campaigns']} (${fmt(counters['campaign_spent'])})"
-                         f" | 💺 cambios de asientos: {counters['seats']} (${fmt(counters['seats_spent'])})"
-                         f" | 🛠️ mejoras: {counters['mods']} (${fmt(counters['mods_spent'])})")
+            lines.append(f"📣 Reputação: {fmt(stats.reputation)} % | campanhas: {counters['campaigns']} (${fmt(counters['campaign_spent'])})"
+                         f" | 💺 ajustes de assentos: {counters['seats']} (${fmt(counters['seats_spent'])})"
+                         f" | 🛠️ melhorias: {counters['mods']} (${fmt(counters['mods_spent'])})")
         if stats.income_day is not None:
-            lines.append(f"📈 Ingresos netos estimados: ~${fmt(stats.income_day)}/día")
+            lines.append(f"📈 Receita líquida estimada: ~${fmt(stats.income_day)}/dia")
         goal = self.config.get("settings", "goal_model")
         if self.config.get_bool("options", "save_for_goal") and goal and stats.goal_price:
             progress = goal_progress(stats.goal_price, stats.money, self.config.get_int("settings", "cash_reserve", 0), stats.income_day)
             if progress:
-                lines.append(f"🎯 Objetivo {esc(goal)}: {progress['pct']:.0f}% ({fmt_money(progress['have'])} de "
-                             f"{fmt_money(stats.goal_price)}), llegada {fmt_days(progress['eta_days'])}")
+                lines.append(f"🎯 Meta {esc(goal)}: {progress['pct']:.0f}% ({fmt_money(progress['have'])} de "
+                             f"{fmt_money(stats.goal_price)}); previsão {fmt_days(progress['eta_days'])}")
         if self.dry_run:
-            lines.append("🧪 La simulación está activada: no se ha comprado ni planificado nada de verdad.")
+            lines.append("🧪 Simulação ativa: nenhuma compra ou programação foi realizada.")
         self.notify("\n".join(lines))
-        log_telegram.info("Resumen diario enviado.")
+        log_telegram.info("Resumo diário enviado.")
         self._state["last_summary_date"] = today
         self._state["money_day_start"] = stats.money
         self._state["counters"] = {}
@@ -448,9 +447,9 @@ class Bot:
             self.config.reload_secrets()
             self.telegram = Telegram(*self.config.telegram)
             if self.config.get_bool("options", "telegram") and not self.telegram.enabled:
-                log_telegram.info("Las notificaciones están activadas pero faltan bot_token / chat_id en config/secrets.ini.")
-            self.notify(f"🟢 <b>Bot iniciado</b>{' (simulación)' if self.dry_run else ''}", silent=True)
-            log.info("Abriendo Chrome ...")
+                log_telegram.info("As notificações estão ativadas, mas faltam bot_token / chat_id em config/secrets.ini.")
+            self.notify(f"🟢 <b>Bot iniciado</b>{' (simulação)' if self.dry_run else ''}", silent=True)
+            log.info("Abrindo Chrome ...")
             self.driver = create_driver(
                 url=self.config.get("app", "url", "https://www.airlinemanager.com/"),
                 keep_session=self.config.get_bool("options", "keep_session"),
@@ -458,7 +457,7 @@ class Bot:
             )
             self.state = BotState.LOGGING_IN
             if not self._login():
-                raise RuntimeError("El inicio de sesión falló o agotó el tiempo")
+                raise RuntimeError("O login falhou ou excedeu o tempo limite")
             self.state = BotState.RUNNING
             while not self._stop.is_set():
                 self._cycle()
@@ -472,9 +471,9 @@ class Bot:
             else:
                 self.state = BotState.ERROR
                 self.last_error = (str(exc).splitlines() or [exc.__class__.__name__])[0]
-                log.error("El bot se ha detenido por un error: %s", self.last_error)
+                log.error("O bot foi interrompido por um erro: %s", self.last_error)
                 log.debug("Traceback:", exc_info=True)
-                self.notify(f"🔴 <b>Bot detenido por un error</b>: {esc(self.last_error)}")
+                self.notify(f"🔴 <b>Bot interrompido por erro</b>: {esc(self.last_error)}")
         else:
             log.info("Bot parado.")
             self.notify("⏹ Bot parado.", silent=True)
@@ -487,19 +486,19 @@ class Bot:
     def _cycle(self) -> None:
         self._ensure_session()
         opt = lambda key: self.config.get_bool("options", key)  # noqa: E731
-        log.info("Revisando la aerolínea ...%s", " [SIMULACIÓN: no se compra ni se planifica nada]" if self.dry_run else "")
+        log.info("Verificando a companhia aérea ...%s", " [SIMULAÇÃO: nenhuma compra ou planejamento é executado]" if self.dry_run else "")
         self._next_event = None
         self._guard(self._check_tutorial, "comprobar el tutorial")
         self._guard(self._read_mode, "leer el modo de juego")
         # The game account only follows a language the user picked in the sidebar ([app] language), never the default.
         if (not self._language_checked and self.config.get("app", "language")
                 and self.config.get_bool("options", "sync_game_language", True)):
-            self._guard(self._sync_game_language, "cambiar el idioma del juego")
-        self._guard(self._read_header, "leer dinero y puntos")
-        self._guard(self._read_flights, "leer la lista de vuelos")
+            self._guard(self._sync_game_language, "alterar o idioma do jogo")
+        self._guard(self._read_header, "consultar saldo e pontos")
+        self._guard(self._read_flights, "consultar a lista de voos")
         # Campaigns go before departures: the passengers of a flight are counted when it departs.
         if opt("auto_marketing") or opt("marketing_eco"):
-            self._guard(lambda: run_marketing(self), "revisar las campañas de marketing")
+            self._guard(lambda: run_marketing(self), "verificar campanhas de marketing")
         # Maintenance and seat changes go before departures: a landed aircraft can only be repaired,
         # checked or modified while it sits at the base, so plan it before "Depart all" sends it away again.
         if opt("auto_repair") or opt("auto_check"):
@@ -525,14 +524,14 @@ class Bot:
         try:
             action()
         except _SOFT_ERRORS as exc:
-            log.warning("Problema al %s: %s. Lo dejo para el siguiente ciclo.", what, exc.__class__.__name__)
+            log.warning("Problema ao %s: %s. Será retomado no próximo ciclo.", what, exc.__class__.__name__)
             log.debug("Detalles:", exc_info=True)
             self.close_popup(quiet=True)
         except Exception as exc:  # noqa: BLE001 - an optional step (marketing, checklist ...) must not stop departures
             if self._stop.is_set() or not self._browser_alive():
                 raise
             detail = (str(exc).splitlines() or [""])[0][:160]
-            log.error("Error inesperado al %s: %s%s. Sigo con el resto del ciclo.", what, exc.__class__.__name__,
+            log.error("Erro inesperado ao %s: %s%s. Continuando as demais etapas do ciclo.", what, exc.__class__.__name__,
                       f" ({detail})" if detail else "")
             log.debug("Traceback:", exc_info=True)
             self.close_popup(quiet=True)
@@ -553,7 +552,7 @@ class Bot:
             seconds = max(60.0, self._next_event[0] + 20)
             reason = f" (me adelanto por {self._next_event[1]})"
         self.next_cycle_at = time.time() + seconds
-        log.info("Próxima revisión en %d min %02d s%s.", seconds // 60, seconds % 60, reason)
+        log.info("Próxima verificação em %d min %02d s%s.", seconds // 60, seconds % 60, reason)
         self._wake.wait(seconds)
         self._wake.clear()
         self.next_cycle_at = None
@@ -570,24 +569,24 @@ class Bot:
         self.driver.current_url  # noqa: B018
         if self._is_logged_in(timeout=5):
             return
-        log_login.warning("Sesión perdida, vuelvo a iniciar sesión ...")
+        log_login.warning("Sessão perdida; tentando entrar novamente ...")
         self.state = BotState.LOGGING_IN
         self.driver.get(self.config.get("app", "url", "https://www.airlinemanager.com/"))
         if not self._login():
-            raise RuntimeError("No he podido volver a iniciar sesión")
+            raise RuntimeError("Não foi possível realizar login novamente")
         self.state = BotState.RUNNING
 
     # ------------------------------------------------------------------ login
     def _login(self) -> bool:
         if self._is_logged_in(timeout=5):
-            log_login.info("Sesión ya iniciada (restaurada).")
+            log_login.info("Sessão já iniciada (restaurada).")
             return True
 
         username, password = self.config.credentials
         timeout = max(30, self.config.get_int("settings", "login_timeout", 300))
 
         if username and password:
-            log_login.info("Iniciando sesión como %s ...", _mask_email(username))
+            log_login.info("Fazendo login como %s ...", _mask_email(username))
             self._open_login_form()
             self._type(self._sel("login_email"), username)
             self._type(self._sel("login_password"), password)
@@ -597,17 +596,17 @@ class Bot:
                 self.click_element(remember)  # styled checkbox: the input itself is not clickable
             self._click(self._sel("login_submit"))
         else:
-            log_login.warning("Sin credenciales: inicia sesión a mano en la ventana de Chrome.")
+            log_login.warning("Sem credenciais: faça login manualmente na janela do Chrome.")
 
         started = time.time()
         warned = False
         while not self._stop.is_set() and time.time() - started < timeout:
             if self._is_logged_in(timeout=3):
-                log_login.info("Sesión iniciada.")
+                log_login.info("Login realizado.")
                 return True
             if not warned and time.time() - started > 20:
                 log_login.warning(
-                    "Todavía sin sesión. Si la web muestra un captcha o un error, termina el login a mano "
+                    "Ainda sem sessão. Se o site apresentar um CAPTCHA ou erro, conclua o login manualmente "
                     "(espero hasta %d s).",
                     timeout,
                 )
@@ -639,8 +638,8 @@ class Bot:
         intro = self.js("return (typeof intro === 'undefined') ? null : Number(intro);")
         if intro:
             log.warning(
-                "El tutorial del juego está activo (intro=%s): la web ignora despegues y compras hasta "
-                "terminarlo. Complétalo o ciérralo en la ventana del navegador.",
+                "O tutorial do jogo está ativo (intro=%s): o site bloqueia decolagens e compras até "
+                "a conclusão. Finalize ou feche o tutorial na janela do navegador.",
                 intro,
             )
 
@@ -657,26 +656,40 @@ class Bot:
         self.open_popup("user_settings.php", "Settings", "nav_settings")
         current = self.js("var s = document.getElementById('langSelection'); return s ? s.value : null;")
         if current is None:
-            log.warning("No encuentro el selector de idioma en los ajustes del juego.")
+            log.warning("Não encontrei o seletor de idioma nas configurações do jogo.")
             self.close_popup()
             return
+        if wanted in ("pt_BR", "pt-BR", "pt"):
+            # Only select Brazilian Portuguese if the game actually offers it.
+            # Never send an unsupported language code to the game's settings form.
+            wanted = self.js("""
+                var s = document.getElementById('langSelection');
+                if (!s) return null;
+                var accepted = ['pt-BR', 'pt_BR', 'pt', 'br'];
+                var options = Array.from(s.options).map(o => o.value);
+                return accepted.find(v => options.includes(v)) || null;
+            """)
+            if not wanted:
+                log.info("O jogo não oferece português (Brasil) nas opções de idioma; o idioma atual será mantido.")
+                self.close_popup()
+                return
         if current == wanted:
-            log.debug("El juego ya está en el idioma de la interfaz (%s).", wanted)
+            log.debug("O jogo já está no idioma da interface (%s).", wanted)
             self.close_popup()
             return
         if self.dry_run:
-            log.info("[SIMULACIÓN] Cambiaría el idioma del juego de «%s» a «%s».", current, wanted)
+            log.info("[SIMULAÇÃO] Alteraria o idioma do jogo de «%s» para «%s».", current, wanted)
             self.close_popup()
             return
         self.js("$('#langSelection').val(arguments[0]).trigger('change'); $('#btnSave').click();", wanted)
         self._stop.wait(3)
         self.driver.get(self.config.get("app", "url", "https://www.airlinemanager.com/"))  # the page reloads in the new language
         if self._is_logged_in(timeout=20):
-            log.info("Idioma del juego cambiado de «%s» a «%s».", current, wanted)
+            log.info("Idioma do jogo alterado de «%s» para «%s».", current, wanted)
         else:
             self._language_checked = False
-            log.warning("He cambiado el idioma del juego, pero la página no ha vuelto a cargar; lo compruebo en la "
-                        "próxima revisión.")
+            log.warning("Alterei o idioma do jogo, mas a página não recarregou; verificarei na "
+                        "próxima verificação.")
 
     def _read_mode(self) -> None:
         # The page's `difficulty` is the flight speed multiplier: 1.5 in easy mode, 1 in realism (gamemode.py).
@@ -684,7 +697,7 @@ class Bot:
         if mode is None:
             return
         if mode is not self.mode or self.stats().mode is None:
-            log.info("Modo de juego: %s (los vuelos van a x%s la velocidad del avión).", mode.label, f"{mode.speed:g}")
+            log.info("Modo de jogo: %s (voos com velocidade x%s da aeronave).", mode.label, f"{mode.speed:g}")
         self.mode = mode
         self.update_stats(mode=mode.label)
 
@@ -697,8 +710,8 @@ class Bot:
             self._save_state()
         rate = self.income_per_day()
         self.update_stats(income_day=rate)
-        rate_note = f" | ingresos netos ~${fmt(rate)}/día" if rate is not None else ""
-        log_money.info("Dinero: $%s | Puntos: %s%s", fmt(money), fmt(points), rate_note)
+        rate_note = f" | receita líquida ~${fmt(rate)}/dia" if rate is not None else ""
+        log_money.info("Dinheiro: $%s | Pontos: %s%s", fmt(money), fmt(points), rate_note)
 
     def _read_flights(self) -> None:
         # The status list keeps a live countdown per in-flight aircraft even while hidden.
@@ -708,23 +721,23 @@ class Bot:
         remaining = [seconds for seconds in (timer_seconds(t) for t in texts) if seconds is not None]
         self.update_stats(inflight=len(texts))
         if remaining:
-            self.note_event(min(remaining), "el próximo aterrizaje")
-            log_flights.info("%d aviones en vuelo, próximo aterrizaje en %s.", len(texts), fmt_duration(min(remaining)))
+            self.note_event(min(remaining), "o próximo pouso")
+            log_flights.info("%d aeronaves em voo; próximo pouso em %s.", len(texts), fmt_duration(min(remaining)))
 
     def _depart_all(self) -> None:
         self.open_popup("routes_main.php", "Routes", "nav_routes")
         button = self._find(self._sel("depart_all"), timeout=5)
         if button is None:
-            log_flights.info("Ningún avión listo para despegar.")
+            log_flights.info("Nenhuma aeronave pronta para decolar.")
         elif not button.is_displayed() or not button.is_enabled() or "not-active" in (button.get_attribute("class") or ""):
-            log_flights.info("Nada que despegar ahora mismo.")
+            log_flights.info("Nenhuma decolagem disponível no momento.")
         else:
             self.pause()
             self.click_element(button)
-            log_flights.info("Todos los aviones han despegado.")
+            log_flights.info("Todas as aeronaves decolaram.")
             self.count("departures")
             if self.config.get_bool("options", "telegram_departures"):
-                self.notify("✈️ Aviones despegados.", silent=True)
+                self.notify("✈️ Aeronaves decolaram.", silent=True)
             self._stop.wait(2)
         self.close_popup()
 
@@ -764,10 +777,10 @@ class Bot:
                 free = capacity - holding
         change_in = timer_seconds(self._text(self._sel(f"{kind}_timer"), timeout=2))
         self.update_stats(**{f"{kind}_price": price, kind: holding, f"{kind}_capacity": capacity})
-        self.note_event(change_in, f"el cambio de precio de {label}")
+        self.note_event(change_in, f"a mudança do preço de {label}")
 
         if price is None:
-            tlog.warning("No he podido leer el precio de %s.", label)
+            tlog.warning("Não consegui consultar o preço de %s.", label)
             return
 
         # --- price history: the popup embeds the last 10 prices (one per 30-minute window)
@@ -795,21 +808,21 @@ class Bot:
                 top = self.history.summary(kind, days, min(top_pct, pct))["threshold"] if top_pct > 0 else None
                 buy_at, excellent_at = buy_thresholds(self.config.get_int("settings", f"{kind}_price_good"),
                                                       summary["threshold"], top)
-                history_note = (f" | histórico {days}d: mín {fmt(summary['min'])}, p{pct} {fmt(summary['threshold'])}, "
-                                f"mediana {fmt(summary['median'])} ({summary['samples']} muestras)")
+                history_note = (f" | histórico {days}d: mínimo {fmt(summary['min'])}, p{pct} {fmt(summary['threshold'])}, "
+                                f"mediana {fmt(summary['median'])} ({summary['samples']} amostras)")
                 if excellent_at is not None:
                     history_note += f", excepcional <= ${fmt(excellent_at)}"
             else:
-                history_note = f" | histórico corto ({len(self.history.recent(kind, days))} muestras), uso el precio fijo"
+                history_note = f" | histórico curto ({len(self.history.recent(kind, days))} amostras); usando o preço fixo"
         self.update_stats(**{f"{kind}_buy_at": buy_at})
 
         quantity = self.config.get_int("settings", f"{kind}_quantity_buy")
         use = self.usage_per_day(kind)
         storage = f" | tanque {fmt(holding)} / {fmt(capacity)}" if holding is not None and capacity is not None else ""
         if storage and use:
-            storage += f", para ~{holding / use:.1f} días"
-        timer = f" | el precio cambia en {change_in // 60:02d}:{change_in % 60:02d}" if change_in is not None else ""
-        tlog.info("Precio %s: $%s (compro a <= $%s)%s%s%s", label, fmt(price), fmt(buy_at), storage, timer, history_note)
+            storage += f", para ~{holding / use:.1f} dias"
+        timer = f" | preço muda em {change_in // 60:02d}:{change_in % 60:02d}" if change_in is not None else ""
+        tlog.info("Preço de %s: $%s (comprar a ≤ $%s)%s%s%s", label, fmt(price), fmt(buy_at), storage, timer, history_note)
 
         # --- how much: fill up at a good price, otherwise only top up a dangerously low stock.
         # An exceptional price (lowest percentile of the history) buys everything the tank and the
@@ -821,11 +834,11 @@ class Bot:
         topping_up = False
         if price <= buy_at and quantity > 0:
             target = quantity if free is None else min(quantity, free)
-            reason = "precio excepcional" if excellent else "buen precio"
+            reason = "preço excepcional" if excellent else "bom preço"
             limit = self._stock_limit(use, excellent)
             if limit is not None and holding is not None:
                 if holding >= limit:
-                    tlog.info("No compro %s (%s): ya tengo para ~%.1f días y el límite es %.0f días de consumo.",
+                    tlog.info("Não comprarei %s (%s): estoque para ~%.1f dias e limite de %.0f dias de consumo.",
                               label, reason, holding / use, limit / use)
                     return
                 target = min(target, limit - holding)
@@ -834,14 +847,14 @@ class Bot:
             if holding is None or capacity is None or min_stock_pct <= 0 or holding * 100 >= capacity * min_stock_pct:
                 return
             target = capacity * min_stock_pct // 100 - holding
-            reason = f"stock por debajo del {min_stock_pct}%"
+            reason = f"estoque abaixo de {min_stock_pct}%"
             topping_up = True
         if target <= 0:
-            tlog.info("El tanque de %s está lleno, nada que comprar.", label)
+            tlog.info("O tanque de %s está cheio; nada a comprar.", label)
             return
         window = int(time.time() // PRICE_WINDOW_SECONDS)
         if self._bought_in_window(kind, window) and not excellent:
-            tlog.info("%s ya comprado en esta ventana de precio.", label.capitalize())
+            tlog.info("%s já adquirido nesta janela de preço.", label.capitalize())
             return
         money = self.stats().money
         if money is not None:
@@ -852,15 +865,15 @@ class Bot:
             affordable = int(spendable * 1000 // price)  # prices are per 1,000 units
             if affordable < 1000:
                 if not self._bought_in_window(kind, window):
-                    tlog.info("No compro %s: los $%s que quedan sobre la reserva no dan (%s).", label, fmt(max(0, money - reserve)), reason)
+                    tlog.info("Não comprarei %s: os $%s disponíveis acima da reserva são insuficientes (%s).", label, fmt(max(0, money - reserve)), reason)
                 return
             target = min(target, affordable)
         quantity = target
         cost = price * quantity // 1000
         icon = "🌿" if kind == "co2" else "⛽"
         if self.dry_run:
-            tlog.info("[SIMULACIÓN] Compraría %s %s a $%s (unos $%s, %s).", fmt(quantity), label, fmt(price), fmt(cost), reason)
-            self.notify(f"🧪 SIMULACIÓN: compraría {fmt(quantity)} {label} a ${fmt(price)} (unos ${fmt(cost)}, {esc(reason)}).", silent=True)
+            tlog.info("[SIMULAÇÃO] Compraria %s %s a $%s (cerca de $%s, %s).", fmt(quantity), label, fmt(price), fmt(cost), reason)
+            self.notify(f"🧪 SIMULAÇÃO: compraria {fmt(quantity)} {label} a ${fmt(price)} (cerca de ${fmt(cost)}, {esc(reason)}).", silent=True)
             self._mark_bought(kind, window)
             return
 
@@ -877,7 +890,7 @@ class Bot:
         def tank_rose() -> bool:
             return holding is not None and (to_int(self._text(self._sel(f"{kind}_holding"), timeout=1)) or 0) > holding
 
-        if not self.confirm_purchase(before, cost, f"la compra de {label}", check=tank_rose):
+        if not self.confirm_purchase(before, cost, f"a compra de {label}", check=tank_rose):
             return
         bought = self._state.setdefault("bought", {})  # running total, for the measured use per day
         bought[kind] = int(bought.get(kind, 0)) + quantity
@@ -892,8 +905,8 @@ class Bot:
         self.spent(cost)
         self.count(f"{kind}_bought", quantity)
         self.count(f"{kind}_spent", cost)
-        tlog.info("Comprado: %s %s a $%s (unos $%s, %s).", fmt(quantity), label, fmt(price), fmt(cost), reason)
-        self.notify(f"{icon} <b>Comprado: {fmt(quantity)} {label}</b> a ${fmt(price)} (unos ${fmt(cost)}, {esc(reason)}).")
+        tlog.info("Comprado: %s %s a $%s (cerca de $%s, %s).", fmt(quantity), label, fmt(price), fmt(cost), reason)
+        self.notify(f"{icon} <b>Comprado: {fmt(quantity)} {label}</b> a ${fmt(price)} (cerca de ${fmt(cost)}, {esc(reason)}).")
         self._stop.wait(1.5)
 
     # ------------------------------------------------------------------ page helpers (used by fleet.py / maintenance.py)
@@ -908,7 +921,7 @@ class Bot:
             except WebDriverException:
                 self.js("arguments[0].click();", button)
         else:
-            log.debug("No encuentro el botón '%s', abro %s con el helper popup() de la web.", nav_selector, url)
+            log.debug("Não encontrei o botão '%s'; abrindo %s com o auxiliar popup() da web.", nav_selector, url)
             self.js("popup(arguments[0], arguments[1], false, true);", url, title)
 
         content = self._sel("popup_content")

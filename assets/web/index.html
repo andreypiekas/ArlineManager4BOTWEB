@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -84,47 +84,47 @@ footer { color: var(--muted); font-size: 12px; text-align: center; margin: 18px 
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">✈️ Airline Manager 4 Bot <small id="profile">panel web</small></div>
+    <div class="brand">✈️ Airline Manager 4 Bot <small id="profile">painel web</small></div>
     <span class="pill" id="pill"><span class="dot"></span><span id="state">…</span></span>
-    <span class="badge" id="dry" hidden data-t="🧪 Simulación">🧪 Simulación</span>
+    <span class="badge" id="dry" hidden data-t="🧪 Simulação">🧪 Simulação</span>
     <span class="next" id="next"></span>
     <span class="spacer"></span>
     <button class="primary" id="btnStart" data-t="Iniciar">Iniciar</button>
     <button class="danger" id="btnStop" data-t="Parar">Parar</button>
-    <button id="btnNow" data-t="Revisar ahora">Revisar ahora</button>
+    <button id="btnNow" data-t="Verificar agora">Verificar agora</button>
   </header>
 
   <section class="kpis">
-    <div class="tile"><div class="label" data-t="💰 Dinero">💰 Dinero</div><div class="value" id="kMoney">-</div><div class="sub" id="kMoneySub"></div></div>
-    <div class="tile"><div class="label" data-t="⭐ Reputación">⭐ Reputación</div><div class="value" id="kRep">-</div><div class="sub" id="kRepSub"></div><div class="bar"><i id="bRep"></i></div></div>
+    <div class="tile"><div class="label" data-t="💰 Dinheiro">💰 Dinheiro</div><div class="value" id="kMoney">-</div><div class="sub" id="kMoneySub"></div></div>
+    <div class="tile"><div class="label" data-t="⭐ Reputação">⭐ Reputação</div><div class="value" id="kRep">-</div><div class="sub" id="kRepSub"></div><div class="bar"><i id="bRep"></i></div></div>
     <div class="tile"><div class="label">⛽ Fuel</div><div class="value" id="kFuel">-</div><div class="sub" id="kFuelSub"></div><div class="bar"><i id="bFuel"></i></div></div>
     <div class="tile"><div class="label">🌿 CO2</div><div class="value" id="kCo2">-</div><div class="sub" id="kCo2Sub"></div><div class="bar"><i id="bCo2"></i></div></div>
-    <div class="tile"><div class="label" data-t="🛩️ Flota">🛩️ Flota</div><div class="value" id="kFleet">-</div><div class="sub" id="kFleetSub"></div></div>
-    <div class="tile"><div class="label" data-t="🎯 Objetivo">🎯 Objetivo</div><div class="value" id="kGoal">-</div><div class="sub" id="kGoalSub"></div><div class="bar"><i id="bGoal"></i></div></div>
+    <div class="tile"><div class="label" data-t="🛩️ Frota">🛩️ Frota</div><div class="value" id="kFleet">-</div><div class="sub" id="kFleetSub"></div></div>
+    <div class="tile"><div class="label" data-t="🎯 Meta">🎯 Meta</div><div class="value" id="kGoal">-</div><div class="sub" id="kGoalSub"></div><div class="bar"><i id="bGoal"></i></div></div>
   </section>
 
   <div class="grid">
     <section class="card">
       <div class="card-head">
-        <h2 data-t="Registro">Registro</h2><span class="spacer"></span>
-        <select id="tagFilter" title="Filtrar por categoría" data-t-title="Filtrar por categoría"><option value="" data-t="Todas las categorías">Todas las categorías</option></select>
+        <h2 data-t="Registros">Registros</h2><span class="spacer"></span>
+        <select id="tagFilter" title="Filtrar por categoria" data-t-title="Filtrar por categoria"><option value="" data-t="Todas as categorias">Todas as categorias</option></select>
       </div>
       <div id="log"></div>
     </section>
 
     <section class="card">
-      <div class="card-head"><h2 data-t="Ajustes">Ajustes</h2><span class="spacer"></span><span class="msg" id="updated"></span></div>
+      <div class="card-head"><h2 data-t="Configurações">Configurações</h2><span class="spacer"></span><span class="msg" id="updated"></span></div>
       <div class="tabs" id="tabs"></div>
       <div class="panel" id="panel"></div>
     </section>
   </div>
-  <footer data-t="Los interruptores se guardan al cambiarlos; los números con «Guardar». La ayuda completa está en el README.">Los interruptores se guardan al cambiarlos; los números con «Guardar». La ayuda completa está en el README.</footer>
+  <footer data-t="As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.">As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.</footer>
 </div>
 
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
-const nf = new Intl.NumberFormat("en-US");
+const nf = new Intl.NumberFormat("pt-BR");
 const money = v => v == null ? "-" : "$" + nf.format(v);
 const compact = v => v == null ? "?" : v >= 1e6 ? "$" + (v / 1e6).toFixed(1) + "M" : v >= 1e4 ? "$" + Math.round(v / 1e3) + "k" : "$" + nf.format(v);
 const pct = v => v == null ? "-" : Math.round(v) + " %";
@@ -135,27 +135,27 @@ const setText = (id, text) => { const e = $(id); e.textContent = text; e.title =
 
 // ------------------------------------------------------------------ language (follows the bot's interface language)
 const EN = {
-  "🧪 Simulación": "🧪 Dry run", "Iniciar": "Start", "Parar": "Stop", "Revisar ahora": "Check now",
-  "💰 Dinero": "💰 Money", "⭐ Reputación": "⭐ Reputation", "🛩️ Flota": "🛩️ Fleet", "🎯 Objetivo": "🎯 Goal",
-  "Registro": "Log", "Filtrar por categoría": "Filter by category", "Todas las categorías": "All categories",
-  "Ajustes": "Settings", "Los interruptores se guardan al cambiarlos; los números con «Guardar». La ayuda completa está en el README.":
+  "🧪 Simulação": "🧪 Dry run", "Iniciar": "Start", "Parar": "Stop", "Verificar agora": "Check now",
+  "💰 Dinheiro": "💰 Money", "⭐ Reputação": "⭐ Reputation", "🛩️ Frota": "🛩️ Fleet", "🎯 Meta": "🎯 Goal",
+  "Registros": "Log", "Filtrar por categoria": "Filter by category", "Todas as categorias": "All categories",
+  "Configurações": "Settings", "As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.":
     "Switches are saved as you change them; numbers with “Save”. The full help is in the README.",
-  "panel web": "web dashboard", "perfil {x}": "profile {x}", "modo {x}": "{x} mode", "Error: {x}": "Error: {x}",
-  "Próxima revisión en {x}": "Next check in {x}", "Reinicio automático en {x}": "Automatic restart in {x}",
-  "Revisando…": "Checking…", "+{x}/día": "+{x}/day", "{x} puntos": "{x} points", "campaña {x}": "campaign {x}",
-  "sin campaña activa": "no campaign running", "compra ≤ {x}": "buy ≤ {x}", "mín. visto {x}": "lowest seen {x}",
-  "{x} en vuelo": "{x} flying", "{x} aparc.": "{x} parked", "{x} pend.": "{x} pending",
-  "hangar {x} libres": "hangar {x} free", "llega {x}": "arrives {x}", "Actualizado {x}": "Updated {x}",
-  "Objetivo": "Goal", "Valores": "Values", "Guardar": "Save", "vacío = más rentable": "empty = most profitable",
-  "Sin conexión con el bot": "No connection with the bot", "Respuesta no válida": "Invalid answer",
+  "painel web": "web dashboard", "perfil {x}": "profile {x}", "modo {x}": "{x} mode", "Erro: {x}": "Error: {x}",
+  "Próxima verificação em {x}": "Next check in {x}", "Reinício automático em {x}": "Automatic restart in {x}",
+  "Verificando…": "Checking…", "+{x}/dia": "+{x}/day", "{x} pontos": "{x} points", "campanha {x}": "campaign {x}",
+  "sem campanha ativa": "no campaign running", "compra ≤ {x}": "buy ≤ {x}", "menor preço {x}": "lowest seen {x}",
+  "{x} em voo": "{x} flying", "{x} estacionadas": "{x} parked", "{x} pendentes": "{x} pending",
+  "hangar {x} vagas": "hangar {x} free", "previsão {x}": "arrives {x}", "Atualizado {x}": "Updated {x}",
+  "Meta": "Goal", "Valores": "Values", "Salvar": "Save", "vazio = mais rentável": "empty = most profitable",
+  "Sem conexão com o bot": "No connection with the bot", "Resposta inválida": "Invalid answer",
 };
-let LANG = "es";
+let LANG = "pt_BR";
 const tr = (text, x) => { const s = LANG === "en" ? (EN[text] || text) : text; return x === undefined ? s : s.replace("{x}", x); };
-const timeText = seconds => new Date(seconds * 1000).toLocaleTimeString(LANG === "en" ? "en-GB" : "es-ES");
+const timeText = seconds => new Date(seconds * 1000).toLocaleTimeString(LANG === "en" ? "en-GB" : "pt-BR");
 function setLanguage(lang) {
   if (!lang || lang === LANG) { return false; }
   LANG = lang;
-  document.documentElement.lang = lang;
+  document.documentElement.lang = lang === "pt_BR" ? "pt-BR" : lang;
   for (const e of document.querySelectorAll("[data-t]")) { e.textContent = tr(e.dataset.t); }
   for (const e of document.querySelectorAll("[data-t-title]")) { e.title = tr(e.dataset.tTitle); }
   return true;
@@ -165,7 +165,7 @@ async function api(path, body) {
   const options = body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json", "X-AM4": "1"},
                                            body: JSON.stringify(body)};
   const response = await fetch(path, options);
-  const data = await response.json().catch(() => ({ok: false, message: tr("Respuesta no válida")}));
+  const data = await response.json().catch(() => ({ok: false, message: tr("Resposta inválida")}));
   if (!response.ok && data.ok === undefined) { data.ok = false; }
   return data;
 }
@@ -175,44 +175,44 @@ let alive = false;
 function renderStatus(s) {
   alive = s.alive;
   if (setLanguage(s.lang)) { loadSettings(); }
-  $("profile").textContent = [s.profile ? tr("perfil {x}", s.profile) : tr("panel web"), s.mode ? tr("modo {x}", s.mode) : null]
+  $("profile").textContent = [s.profile ? tr("perfil {x}", s.profile) : tr("painel web"), s.mode ? tr("modo {x}", s.mode) : null]
     .filter(Boolean).join(" · ");
   document.title = s.profile ? "AM4 Bot · " + s.profile : "AM4 Bot";
   const pill = $("pill");
   pill.className = "pill " + s.state_key;
-  $("state").textContent = s.state_key === "ERROR" && s.error ? tr("Error: {x}", s.error) : s.state;
+  $("state").textContent = s.state_key === "ERROR" && s.error ? tr("Erro: {x}", s.error) : s.state;
   $("dry").hidden = !s.dry_run;
-  $("next").textContent = s.next_cycle_in != null ? tr("Próxima revisión en {x}", clock(s.next_cycle_in))
-    : s.restart_in != null ? tr("Reinicio automático en {x}", clock(s.restart_in))
-    : s.alive && s.state_key === "RUNNING" ? tr("Revisando…") : "";
+  $("next").textContent = s.next_cycle_in != null ? tr("Próxima verificação em {x}", clock(s.next_cycle_in))
+    : s.restart_in != null ? tr("Reinício automático em {x}", clock(s.restart_in))
+    : s.alive && s.state_key === "RUNNING" ? tr("Verificando…") : "";
   $("btnStart").disabled = s.alive;
   $("btnStop").disabled = !s.alive || s.state_key === "STOPPING";
   $("btnNow").disabled = !(s.alive && s.next_cycle_in != null);
 
   $("kMoney").textContent = money(s.money);
-  setText("kMoneySub", [s.income_day != null ? tr("+{x}/día", compact(s.income_day)) : null,
-                        s.points != null ? tr("{x} puntos", nf.format(s.points)) : null].filter(Boolean).join(" · "));
+  setText("kMoneySub", [s.income_day != null ? tr("+{x}/dia", compact(s.income_day)) : null,
+                        s.points != null ? tr("{x} pontos", nf.format(s.points)) : null].filter(Boolean).join(" · "));
   $("kRep").textContent = pct(s.reputation);
-  setText("kRepSub", s.campaign_left != null ? tr("campaña {x}", clock(s.campaign_left)) : tr("sin campaña activa"));
+  setText("kRepSub", s.campaign_left != null ? tr("campanha {x}", clock(s.campaign_left)) : tr("sem campanha ativa"));
   setBar("bRep", s.reputation);
   for (const [kind, id] of [["fuel", "Fuel"], ["co2", "Co2"]]) {
     const t = s[kind];
     $("k" + id).textContent = pct(t.pct);
     setText("k" + id + "Sub", [t.price != null ? money(t.price) : null, t.buy_at != null ? tr("compra ≤ {x}", money(t.buy_at)) : null,
-                               t.record != null ? tr("mín. visto {x}", money(t.record)) : null].filter(Boolean).join(" · "));
+                               t.record != null ? tr("menor preço {x}", money(t.record)) : null].filter(Boolean).join(" · "));
     setBar("b" + id, t.pct);
   }
   const f = s.fleet;
   $("kFleet").textContent = f.size != null ? f.size : "-";
-  setText("kFleetSub", [f.inflight ? tr("{x} en vuelo", f.inflight) : null, f.parked ? tr("{x} aparc.", f.parked) : null,
-    f.pending ? tr("{x} pend.", f.pending) : null, f.hangar_free != null ? tr("hangar {x} libres", f.hangar_free + "/" + f.hangar_capacity) : null]
+  setText("kFleetSub", [f.inflight ? tr("{x} em voo", f.inflight) : null, f.parked ? tr("{x} estacionadas", f.parked) : null,
+    f.pending ? tr("{x} pendentes", f.pending) : null, f.hangar_free != null ? tr("hangar {x} vagas", f.hangar_free + "/" + f.hangar_capacity) : null]
     .filter(Boolean).join(" · "));
   const g = s.goal;
   $("kGoal").textContent = g.pct != null ? pct(g.pct) : "-";
-  setText("kGoalSub", [(g.name || "").replace(/^Auto: /, ""), g.price_text, g.eta_text ? tr("llega {x}", g.eta_text) : null]
+  setText("kGoalSub", [(g.name || "").replace(/^(?:Auto|Automático): /, ""), g.price_text, g.eta_text ? tr("previsão {x}", g.eta_text) : null]
     .filter(Boolean).join(" · "));
   setBar("bGoal", g.pct);
-  $("updated").textContent = s.updated_at ? tr("Actualizado {x}", timeText(s.updated_at)) : "";
+  $("updated").textContent = s.updated_at ? tr("Atualizado {x}", timeText(s.updated_at)) : "";
 }
 
 // ------------------------------------------------------------------ log
@@ -285,13 +285,13 @@ function renderSettings() {
   }
   const inputs = [];
   if (tab.key === "Aviones") {
-    const t = document.createElement("div"); t.className = "section-title"; t.textContent = tr("Objetivo"); panel.appendChild(t);
+    const t = document.createElement("div"); t.className = "section-title"; t.textContent = tr("Meta"); panel.appendChild(t);
     const list = document.createElement("datalist"); list.id = "goalList";
     for (const name of settings.goal_options) { const o = document.createElement("option"); o.value = name; list.appendChild(o); }
     panel.appendChild(list);
     for (const s of settings.text) {
       const input = document.createElement("input"); input.type = "text"; input.value = s.value || "";
-      if (s.key === "goal_model") { input.setAttribute("list", "goalList"); } else { input.placeholder = tr("vacío = más rentable"); }
+      if (s.key === "goal_model") { input.setAttribute("list", "goalList"); } else { input.placeholder = tr("vazio = mais rentável"); }
       inputs.push(["text", s.key, input]);
       panel.appendChild(field(s.key, s.label, s.help, input));
     }
@@ -306,7 +306,7 @@ function renderSettings() {
   }
   if (inputs.length) {
     const actions = document.createElement("div"); actions.className = "actions";
-    const save = document.createElement("button"); save.className = "accent"; save.textContent = tr("Guardar");
+    const save = document.createElement("button"); save.className = "accent"; save.textContent = tr("Salvar");
     const msg = document.createElement("span"); msg.className = "msg"; msg.id = "msg";
     save.onclick = async () => {
       const body = {settings: {}, text: {}};
@@ -335,7 +335,7 @@ async function tick() {
     const log = await api("/api/log?since=" + lastId);
     if (log.lines && log.lines.length) { addLines(log.lines); }
   } catch (e) {
-    $("state").textContent = tr("Sin conexión con el bot"); $("pill").className = "pill ERROR";
+    $("state").textContent = tr("Sem conexão com o bot"); $("pill").className = "pill ERROR";
   }
 }
 loadSettings();

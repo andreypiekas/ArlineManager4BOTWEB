@@ -1,126 +1,82 @@
-"""Help texts for the hover tooltips (one per control), in Spanish (HELP) and English (HELP_EN).
-The README "Guía de la app" says the same. Use ``i18n.tip(key)`` to get the one of the current language."""
+"""Contextual help in Brazilian Portuguese (default) and English."""
 
-HELP = {
-    # ---- sidebar
-    "language": "Idioma de la ventana y del panel web. También cambia el idioma de tu cuenta en el juego en la "
-                "siguiente revisión (el bot funciona con el juego en cualquier idioma). El registro y Telegram siguen "
-                "en español.",
-    "profile": "Cada perfil es una aerolínea (una cuenta del juego) con sus propios ajustes, credenciales, sesión de "
-               "Chrome, datos y panel web. Elige otro para abrirlo en otra ventana (pueden ir a la vez) o crea uno "
-               "nuevo: copia tus ajustes actuales y pone un acceso directo en el escritorio.",
-    "game_mode": "Modo de la cuenta en el juego, leído en cada revisión. En realista los vuelos van a la velocidad del "
-                 "avión y los billetes son más baratos que en fácil (x1,5); el bot ajusta sus cálculos de beneficio, "
-                 "rutas y asientos a cada modo.",
-    "account": "Tu correo y contraseña de Airline Manager. Si marcas «Recordar credenciales» se guardan en "
-               "config/secrets.ini, que no se sube a git. Si los dejas vacíos, inicia sesión a mano en Chrome.",
-    "remember": "Guarda el correo y la contraseña en config/secrets.ini para no escribirlos cada vez. "
-                "Al desmarcarlo se borra ese fichero.",
-    "btn_start": "Abre Chrome, inicia sesión y empieza a revisar la aerolínea en bucle. Guarda los ajustes antes de arrancar.",
-    "btn_stop": "Para el bot cuando termine el paso que esté haciendo y cierra Chrome.",
-    "btn_run_now": "Se salta la espera y hace una revisión completa ahora mismo.",
-    "status": "Estado del bot y cuenta atrás hasta la próxima revisión. Tras un error verás el motivo y la cuenta atrás del "
-              "reinicio automático.",
-    "theme": "Tema claro, oscuro o el del sistema.",
-    # ---- statistic tiles
-    "money": "Dinero de la aerolínea. Debajo, los ingresos netos estimados por día mientras el bot está en marcha (el "
-             "fuel y el CO2 cuentan al gastarse, no al comprarlos) y los puntos del juego (el bot no los gasta).",
-    "fuel": "Lo lleno que está el tanque de fuel. Debajo, el precio actual por 1.000 lbs y el precio por debajo del cual "
-            "compra ahora mismo.",
-    "co2": "Lo lleno que está el tanque de CO2. Debajo, el precio actual de 1.000 cuotas y el umbral de compra actual.",
-    "fleet": "Aviones de la flota. Debajo: en vuelo, aparcados sin ruta y pendientes (de entrega o en el taller cambiando "
-             "asientos).",
-    "reputation": "Reputación de la aerolínea, con las campañas que estén en marcha. Los aviones vuelan más o menos así de "
-                  "llenos. Entre paréntesis, lo que le queda a la primera campaña que acaba.",
-    "goal": "Progreso hacia el avión objetivo: dinero ahorrado por encima de la reserva y llegada estimada a tu ritmo de ingresos.",
-    # ---- market
-    "fuel_price_good": "Por debajo de este precio compra fuel siempre, diga lo que diga el histórico. "
-                       "Entre paréntesis, el precio más bajo que ha visto el bot.",
-    "co2_price_good": "Por debajo de este precio compra CO2 siempre, diga lo que diga el histórico. "
-                      "Entre paréntesis, el precio más bajo que ha visto el bot.",
-    "buy_percentile": "Con la compra inteligente, compra cuando el precio está entre el X % más barato de los últimos días. "
-                      "25 = el cuarto más barato. Más bajo compra menos veces pero más barato.",
-    "excellent_percentile": "Precio excepcional: si el precio está entre el X % más barato y además por debajo de tu precio fijo, "
-                            "llena el tanque con todo el dinero que haya por encima de la reserva y puede volver a comprar en "
-                            "la misma media hora. 0 lo desactiva.",
-    "history_days": "Cuántos días de precios usa para calcular los percentiles.",
-    "min_stock_pct": "Si el tanque baja de este porcentaje, repone hasta ese nivel a cualquier precio para que ningún avión se quede en tierra.",
-    "stock_days": "Como mucho compra fuel o CO2 para estos días de consumo (lo mide el bot); con precio excepcional, el "
-                  "doble. Así el dinero va a aviones nuevos en vez de quedarse semanas en el tanque. 0 = llena el tanque.",
-    "market_max_spend_pct": "Parte máxima del dinero disponible (por encima de la reserva) que gasta en una compra normal de fuel o CO2.",
-    "fuel_quantity_buy": "Cantidad máxima de fuel por compra. Con 9.999.999 llena lo que quepa.",
-    "co2_quantity_buy": "Cantidad máxima de CO2 por compra. Con 9.999.999 llena lo que quepa.",
-    "cycle_min_minutes": "Espera mínima entre revisiones. El bot elige un tiempo al azar entre el mínimo y el máximo.",
-    "cycle_max_minutes": "Espera máxima entre revisiones. Se adelanta solo si va a aterrizar un avión o a cambiar el precio.",
-    "smart_buy": "Usa el histórico de precios para decidir: compra cuando el precio está en la parte baja de los últimos días, "
-                 "no solo por debajo del precio fijo.",
-    # ---- fleet
-    "auto_repair": "Planifica la reparación de los aviones cuyo desgaste supere el umbral.",
-    "auto_check": "Planifica el A-check cuando a un avión le queden pocas horas.",
-    "auto_route": "Da ruta a los aviones aparcados: elige la ruta con más demanda que el avión puede volar y pone el precio automático del juego.",
-    "auto_hangar": "Si quedan pocos huecos en el hangar, compra uno más (unos $25.000) para que siempre se pueda comprar otro avión.",
-    "repair_wear_pct": "Desgaste a partir del cual se repara un avión.",
-    "check_hours_min": "Se planifica el A-check cuando quedan estas horas o menos.",
-    "cash_reserve": "Colchón para lo imprescindible: por debajo de esta cantidad solo paga reparaciones, A-checks, el fuel "
-                    "o CO2 de un tanque casi vacío y la ruta de un avión ya comprado. Nada de aviones, campañas, taller, "
-                    "hangar ni compras normales de fuel.",
-    "route_max_distance": "Distancia máxima al buscar ruta para aviones pequeños y medianos.",
-    "route_max_distance_big": "Distancia máxima al buscar ruta para aviones de 150 plazas o más. Las rutas largas pagan billetes más caros.",
-    "route_min_runway": "Pista mínima del aeropuerto de destino al buscar rutas.",
-    "hangar_min_free": "Huecos libres que intenta mantener en el hangar si «Ampliar el hangar» está activado.",
-    "fleet_actions_per_cycle": "Máximo de rutas nuevas y pedidos de aviones en cada revisión, para no gastar todo de golpe.",
-    "auto_seats": "Cuando un avión está en la base, mira la demanda de su ruta y le pone asientos first y business hasta "
-                  "cubrir esa demanda; el resto, turista. Por hueco, first paga más que business y business más que turista. "
-                  "Solo cambia si sale a cuenta (ver «amortizar en»).",
-    "seats_max_payback": "Solo cambia los asientos o instala una mejora si su coste, más lo que el avión deja de ganar en el "
-                         "taller, se recupera en estos días o menos.",
-    "auto_mods": "Cuando un avión está en la base, calcula cuánto ganaría con cada mejora del taller del juego: "
-                 "velocidad +10 % (más vuelos al día), fuel -10 % y CO2 -10 %. Instala solo las que se pagan en el plazo "
-                 "de «amortizar en». Son permanentes y cada una tiene el avión unos 13 minutos en el taller.",
-    # ---- aircraft and goal
-    "autobuy_aircraft": "Permite al bot comprar aviones. Nunca compra mientras haya aviones aparcados sin ruta.",
-    "save_for_goal": "Modo ahorro: junta dinero para el avión objetivo y lo compra en cuanto llega, sin tocar la reserva.",
-    "goal_model": "El avión que quieres conseguir. «Automático (escalera)» elige solo el siguiente escalón: el avión que "
-                  "más gana al día entre los que cuestan como mucho un día de ingresos y se pagan en 5 días o menos. "
-                  "Al crecer los ingresos, la escalera sube sola a aviones más grandes. También puedes elegir un modelo fijo.",
-    "goal_invest": "Mientras ahorra, compra un avión más pequeño solo si se amortiza en menos de la mitad del tiempo que falta "
-                   "para el objetivo: así el objetivo llega antes. Apagado, solo ahorra.",
-    "aircraft_model": "Sin objetivo: compra siempre este modelo en lugar del más rentable.",
-    "aircraft_max_price": "Sin objetivo: no compra aviones más caros que esto. 0 = sin límite.",
-    # ---- options
-    "auto_depart": "Despega todos los aviones que estén listos en cada revisión.",
-    "autobuy_fuel": "Compra fuel según las reglas de la pestaña Mercado.",
-    "autobuy_co2": "Compra CO2 según las reglas de la pestaña Mercado.",
-    "auto_marketing": "Mantiene en marcha una campaña de reputación: los aviones vuelan tan llenos como la reputación, "
-                      "así que cada despegue gana más. Solo la lanza si lo que trae en billetes (según tus ingresos "
-                      "medidos) supera su precio, y nunca baja de la reserva de caja.",
-    "marketing_eco": "Mantiene en marcha la campaña eco-friendly (12 h, +10 % de reputación, barata) mientras salga a "
-                     "cuenta. Solo funciona si tienes cuotas de CO2 en el tanque.",
-    "auto_checklist": "Lee el checklist del juego (abajo a la izquierda), avisa de las tareas que se completan y cobra "
-                      "las recompensas si el juego ofrece un botón.",
-    "marketing_campaign": "Qué campaña de reputación lanza: 1 (+5-10 %, la más barata) a 4 (+25-35 %). La 4 es la que "
-                          "más reputación da por cada dólar.",
-    "marketing_hours": "Duración de cada campaña de reputación: 4, 8, 12, 16, 20 o 24 h. Las largas salen algo más "
-                       "baratas por hora, pero siguen corriendo aunque pares el bot.",
-    "start_on_launch": "Arranca el bot nada más abrir la aplicación. Útil con el acceso directo en el inicio de Windows.",
-    "keep_session": "Guarda el perfil de Chrome en config/session. El juego pide login igualmente, pero conserva cookies y ajustes.",
-    "headless": "Chrome sin ventana. Más discreto; si el juego pide un captcha no podrás verlo.",
-    "telegram": "Envía a Telegram cada compra, ruta, pedido, reparación, error y un resumen diario.",
-    "telegram_departures": "Además, un mensaje en cada despegue. Suele ser demasiado ruido.",
-    "auto_restart": "Si el bot se para por un error, vuelve a arrancar solo a los 2 minutos (luego 4, 8... hasta 30).",
-    "dry_run": "Simulación: el bot hace todo igual pero no compra ni planifica nada; solo escribe en el registro lo que haría.",
-    "summary_hour": "Hora a partir de la cual se envía el resumen diario por Telegram.",
-    "telegram_test": "Manda un mensaje de prueba para comprobar el token y el chat id de config/secrets.ini.",
-    # ---- panels
-    "save": "Guarda los números de esta pestaña. Los interruptores se guardan solos al cambiarlos.",
-    "open_log": "Abre data/logs/am4bot.log con todo el detalle, incluido lo que no sale aquí.",
-    "clear_log": "Vacía el panel. El fichero de registro no se toca.",
+HELP: dict[str, str] = {
+    "language": "Idioma da interface: português brasileiro ou inglês. A alteração do idioma do jogo depende das opções disponíveis nele.",
+    "profile": "Cada perfil usa uma conta, configurações, dados e sessão do navegador independentes.",
+    "game_mode": "O bot identifica se a conta está no modo fácil ou realista e ajusta suas estimativas.",
+    "account": "Credenciais de acesso ao Airline Manager. Deixe em branco para fazer login manualmente no Chrome.",
+    "remember": "Armazena as credenciais localmente em config/secrets.ini, que não é enviado ao Git.",
+    "btn_start": "Abre o navegador e inicia os ciclos automáticos. Salve as configurações antes.",
+    "btn_stop": "Interrompe o bot após concluir a etapa atual e fecha o navegador.",
+    "btn_run_now": "Executa imediatamente uma nova verificação, sem aguardar o intervalo.",
+    "status": "Estado atual do bot, tempo para o próximo ciclo e informações de erro.",
+    "theme": "Escolha entre aparência clara, escura ou padrão do sistema.",
+    "money": "Saldo, renda líquida estimada por dia e pontos da companhia aérea.",
+    "fuel": "Estoque de combustível, preço por 1.000 libras e limite de compra.",
+    "co2": "Estoque de CO₂, preço por 1.000 cotas e limite de compra.",
+    "fleet": "Aeronaves em voo, estacionadas e pendentes de entrega ou manutenção.",
+    "reputation": "Reputação e campanhas ativas, que influenciam a ocupação dos voos.",
+    "goal": "Progresso financeiro e prazo estimado para adquirir a aeronave desejada.",
+    "fuel_price_good": "Compra combustível neste preço ou abaixo, mesmo que o histórico indique esperar.",
+    "co2_price_good": "Compra CO₂ neste preço ou abaixo, mesmo que o histórico indique esperar.",
+    "buy_percentile": "Compra nos percentis de preços mais baixos dos últimos dias.",
+    "excellent_percentile": "Preço excepcional pode liberar compras maiores e repetidas na mesma meia hora. Zero desativa.",
+    "history_days": "Quantidade de dias usada na análise do histórico de preços.",
+    "min_stock_pct": "Abaixo deste nível, repõe os insumos mesmo que o preço esteja alto.",
+    "stock_days": "Limita o estoque à previsão de consumo por dias. Zero permite encher completamente.",
+    "market_max_spend_pct": "Percentual máximo do saldo disponível acima da reserva por compra.",
+    "fuel_quantity_buy": "Quantidade máxima de combustível por compra. 9.999.999 libera o limite do tanque.",
+    "co2_quantity_buy": "Quantidade máxima de CO₂ por compra. 9.999.999 libera o limite do tanque.",
+    "cycle_min_minutes": "Tempo mínimo entre verificações automáticas.",
+    "cycle_max_minutes": "Tempo máximo entre verificações; pousos e preços podem antecipar o ciclo.",
+    "smart_buy": "Compra segundo os preços mais vantajosos do histórico.",
+    "auto_repair": "Programa reparos das aeronaves que atingirem o desgaste definido.",
+    "auto_check": "Programa o A-check quando restarem poucas horas.",
+    "auto_route": "Cria rotas com demanda adequada para aeronaves estacionadas.",
+    "auto_hangar": "Compra expansão do hangar quando estiver perto do limite.",
+    "repair_wear_pct": "Desgaste percentual a partir do qual deve reparar uma aeronave.",
+    "check_hours_min": "Horas restantes para iniciar a programação do A-check.",
+    "cash_reserve": "Valor protegido contra compras não essenciais, preservando a operação.",
+    "route_max_distance": "Distância máxima de rotas para aeronaves pequenas e médias.",
+    "route_max_distance_big": "Distância máxima de rotas para aeronaves de grande porte.",
+    "route_min_runway": "Comprimento mínimo da pista do aeroporto de destino.",
+    "hangar_min_free": "Quantidade de vagas que o bot tenta manter livres no hangar.",
+    "fleet_actions_per_cycle": "Limita novas rotas e pedidos de aeronaves por ciclo.",
+    "auto_seats": "Distribui assentos entre econômica, executiva e primeira classe conforme a demanda.",
+    "seats_max_payback": "Prazo máximo para recuperar o custo de melhorias e perda de receita durante a parada.",
+    "auto_mods": "Avalia melhorias de velocidade, consumo de combustível e emissões de CO₂.",
+    "autobuy_aircraft": "Permite comprar aeronaves, desde que não haja outras estacionadas sem rota.",
+    "save_for_goal": "Economiza para comprar a aeronave desejada sem comprometer a reserva.",
+    "goal_model": "Escolha um modelo ou a progressão automática, que evolui conforme o lucro da companhia.",
+    "goal_invest": "Compra aeronaves menores somente se ajudarem a atingir a meta mais cedo.",
+    "aircraft_model": "Modelo fixo a comprar quando não houver uma meta de aquisição.",
+    "aircraft_max_price": "Limite de preço sem meta definida; zero remove o limite.",
+    "auto_depart": "Decola as aeronaves disponíveis em cada ciclo.",
+    "autobuy_fuel": "Compra combustível conforme os critérios da aba Mercado.",
+    "autobuy_co2": "Compra CO₂ conforme os critérios da aba Mercado.",
+    "auto_marketing": "Inicia campanhas de reputação se o retorno justificar o custo.",
+    "marketing_eco": "Mantém campanha ecológica enquanto for vantajosa e houver CO₂.",
+    "auto_checklist": "Monitora tarefas e coleta recompensas disponíveis no jogo.",
+    "marketing_campaign": "Nível da campanha de reputação entre 1 e 4.",
+    "marketing_hours": "Duração das campanhas: 4, 8, 12, 16, 20 ou 24 horas.",
+    "start_on_launch": "Inicia automaticamente o bot ao abrir o aplicativo.",
+    "keep_session": "Mantém os cookies e os dados da sessão do Chrome.",
+    "headless": "Executa o navegador oculto; CAPTCHAs ainda exigem intervenção manual.",
+    "telegram": "Envia eventos importantes e um resumo diário para o Telegram.",
+    "telegram_departures": "Envia também avisos a cada decolagem.",
+    "auto_restart": "Reinicia automaticamente após falhas, com intervalo crescente.",
+    "dry_run": "Simula ações sem executar compras ou mudanças no jogo.",
+    "summary_hour": "Horário de envio do resumo diário pelo Telegram.",
+    "telegram_test": "Testa o envio para o chat configurado.",
+    "save": "Salva os valores desta aba; as opções são salvas imediatamente.",
+    "open_log": "Abre o arquivo de registro completo da operação.",
+    "clear_log": "Limpa o painel de registros sem alterar o arquivo."
 }
 
 HELP_EN = {
     # ---- sidebar
     "language": "Language of the window and the web dashboard. It also switches your game account to that language at "
-                "the next check (the bot works with the game in any language). The log and Telegram stay in Spanish.",
+                "the next check (the bot works with the game in any language). The bot reports messages in Brazilian Portuguese.",
     "profile": "Each profile is one airline (one game account) with its own settings, credentials, Chrome session, data "
                "and web dashboard. Pick another one to open it in another window (they can run at the same time) or "
                "create a new one: it copies your current settings and puts a shortcut on the desktop.",

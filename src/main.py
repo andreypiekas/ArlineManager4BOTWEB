@@ -44,7 +44,7 @@ def run_web_only() -> None:
     set_language(cfg.get("app", "language"))
     where = running_instance(cfg)
     if where:
-        print(f"Ya hay un Airline Manager 4 Bot de este perfil en marcha: http://{where}:{cfg.get_int('web', 'port', 8744)}/")
+        print(f"Já existe um Airline Manager 4 Bot deste perfil em execução: http://{where}:{cfg.get_int('web', 'port', 8744)}/")
         sys.exit(0)
     buffer = LogBuffer()
     console = logging.StreamHandler(sys.stdout)
@@ -83,12 +83,12 @@ def select_profile(args: list[str]) -> None:
         elif arg.startswith("--profile="):
             name = arg.split("=", 1)[1]
     if name and paths.normalize(name) != paths.MAIN_LABEL and not paths.valid_name(paths.normalize(name)):
-        print(f"Nombre de perfil no válido: «{name}» (letras, números, - y _; hasta 24).")
+        print(f"Nome de perfil inválido: «{name}» (letras, números, - e _; até 24).")
         sys.exit(2)
     profile = paths.activate(name)
     if not profile.exists():
         paths.create(profile.name)
-        print(f"Perfil «{profile.label}» creado en {profile.root} (panel web en el puerto {profile.port()}).")
+        print(f"Perfil «{profile.label}» criado em {profile.root} (painel web na porta {profile.port()}).")
 
 
 def main() -> None:

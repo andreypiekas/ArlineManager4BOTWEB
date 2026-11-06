@@ -157,7 +157,7 @@ def create(name: str, source: Optional[Profile] = None) -> Profile:
     launch off (the account is typed in first) and only the Telegram part of the secrets (same chat)."""
     name = normalize(name)
     if not valid_name(name):
-        raise ValueError(f"Nombre de perfil no válido: «{name}» (letras, números, - y _; hasta 24).")
+        raise ValueError(f"Nome de perfil inválido: «{name}» (letras, números, - e _; até 24).")
     profile = Profile(name)
     if profile.exists():
         raise ValueError(f"El perfil «{name}» ya existe.")

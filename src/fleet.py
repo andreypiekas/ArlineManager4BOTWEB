@@ -179,7 +179,7 @@ def manage_fleet(bot: "Bot") -> None:
     parked = to_int(bot.js("return $('#hParked').text();")) or 0
     pending = to_int(bot.js("return $('#hPending').text();")) or 0
     bot.update_stats(parked=parked, pending=pending)
-    log_fleet.info("%d aviones aparcados sin ruta, %d pendientes de entrega.", parked, pending)
+    log_fleet.info("%d aeronaves estacionadas sem rota, %d pendentes de entrega.", parked, pending)
 
     budget = max(1, cfg.get_int("settings", "fleet_actions_per_cycle", 2))
     if cfg.get_bool("options", "auto_route") and parked > 0:
@@ -188,7 +188,7 @@ def manage_fleet(bot: "Bot") -> None:
         parked -= created
     if cfg.get_bool("options", "autobuy_aircraft") and budget > 0:
         if parked > 0:
-            log_market.info("No compro aviones mientras haya %d aparcados sin ruta.", parked)
+            log_market.info("Não comprarei aeronaves enquanto houver %d estacionadas sem rota.", parked)
         else:
             buy_aircraft(bot)
     bot.close_popup()
@@ -241,7 +241,7 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
     cfg = bot.config
     parked = read_parked(bot)
     if not parked:
-        log.info("No hay aviones aparcados en la lista de flota.")
+        log.info("Não há aeronaves estacionadas na lista da frota.")
         return 0
     max_distance = cfg.get_int("settings", "route_max_distance", 2000)
     max_distance_big = cfg.get_int("settings", "route_max_distance_big", 6000)
@@ -264,7 +264,7 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
         bot.ajax("research_main.php", "routeAction")
         hub_id = bot.js("return $('#hubSelect').val() || (typeof depId !== 'undefined' ? String(depId) : null);")
         if not hub_id:
-            log.warning("No encuentro el hub de salida en la pantalla de búsqueda de rutas.")
+            log.warning("Não encontrei a base de origem na busca de rotas.")
             break
         outcome = "none"
         # If nothing suitable comes up (range, runway), retry with shorter searches.
@@ -278,12 +278,12 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
             enough = [c for c in candidates
                       if _route_demand(c, premium) >= _daily_seats_sold(aircraft, known, c.distance, bot.load_factor(), bot.mode)]
             if enough and len(enough) < len(candidates):
-                log.debug("%d de %d rutas tienen demanda para llenar el %s.", len(enough), len(candidates), aircraft.model)
+                log.debug("%d de %d rotas têm demanda suficiente para preencher o %s.", len(enough), len(candidates), aircraft.model)
             tries = (enough or candidates)[:MAX_ROUTE_TRIES]
             if not tries:
-                log.info("Sin rutas candidatas a menos de %d km (pista >= %d ft).", distance, min_runway)
+                log.info("Nenhuma rota candidata a até %d km (pista >= %d pés).", distance, min_runway)
                 continue
-            log.info("%s (%s, %d asientos): reviso las %d rutas con más demanda hasta %d km ...",
+            log.info("%s (%s, %d assentos): analisando as %d rotas com maior demanda até %d km ...",
                      aircraft.reg, aircraft.model, aircraft.seats, len(tries), distance)
             capable_found = False
             for candidate in tries:
@@ -292,12 +292,12 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 details = bot.ajax(f"route_research_route.php?dep={hub_id}&arr={candidate.arr_id}", "rDetails")
                 capable = details.find_elements(By.XPATH, f".//*[@id='capAc']/option[starts-with(@value, '{aircraft.id};')]")
                 if not capable:
-                    log.debug("%s no puede volar %s (alcance o pista).", aircraft.reg, candidate.name)
+                    log.debug("%s não pode voar para %s (alcance ou pista).", aircraft.reg, candidate.name)
                     continue
                 capable_found = True
                 on_route = to_int(bot.js(_ON_ROUTE_JS)) or 0
                 if on_route:
-                    log.debug("%s ya tiene %d aviones.", candidate.name, on_route)
+                    log.debug("%s já tem %d aeronaves.", candidate.name, on_route)
                     continue
                 outcome = create_route(bot, aircraft, candidate)
                 break
@@ -309,7 +309,7 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
         elif outcome == "stop":
             break
         else:
-            log.info("%s: ninguna ruta válida (alcance, pista o ya cubierta).", aircraft.reg)
+            log.info("%s: nenhuma rota válida (alcance, pista ou rota já utilizada).", aircraft.reg)
     return created
 
 
@@ -318,7 +318,7 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
     bot.js("if (typeof hideFlightInfo === 'function') { hideFlightInfo(); } arrId = arguments[0];", int(candidate.arr_id))
     panel = bot.ajax(f"new_route_info.php?id={aircraft.id}&airportId={candidate.arr_id}&mode=res", "newRouteInfo")
     fee = to_int(bot.js(_ROUTE_FEE_JS))
-    if not bot.can_spend(fee, f"la ruta {candidate.name}", essential=True):  # an aircraft without a route earns nothing
+    if not bot.can_spend(fee, f"a rota {candidate.name}", essential=True):  # an aircraft without a route earns nothing
         bot.js("$('#newRouteInfo').hide();")
         return "stop"
 
@@ -330,25 +330,25 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
         "return ['eSeat', 'bSeat', 'fSeat'].map(i => { const e = document.getElementById(i); return e ? e.value : ''; });"
     ) or ["", "", ""]
     if not prices[0]:
-        log.warning("El autoprecio no ha rellenado los billetes de %s, no creo la ruta.", candidate.name)
+        log.warning("O preço automático não preencheu as passagens de %s; a rota não será criada.", candidate.name)
         bot.js("$('#newRouteInfo').hide();")
         return "stop"
     reg = bot.js("return $('#routeReg').val();") or ""
     summary = (
         f"{candidate.name} ({candidate.distance:,.0f} km, demanda Y {candidate.y} / J {candidate.j} / F {candidate.f}) "
-        f"para {aircraft.reg} ({aircraft.model}), billetes ${prices[0]} / ${prices[1]} / ${prices[2]}, "
-        f"matrícula {reg}, tasa de ruta ${fmt(fee)}"
+        f"para {aircraft.reg} ({aircraft.model}), passagens ${prices[0]} / ${prices[1]} / ${prices[2]}, "
+        f"matrícula {reg}, taxa da rota ${fmt(fee)}"
     )
     if bot.dry_run:
-        log.info("[SIMULACIÓN] Crearía la ruta %s.", summary)
-        bot.notify(f"🧪 SIMULACIÓN: crearía la ruta {esc(summary)}.", silent=True)
+        log.info("[SIMULAÇÃO] Criaria a rota %s.", summary)
+        bot.notify(f"🧪 SIMULAÇÃO: criaria a rota {esc(summary)}.", silent=True)
         bot.js("$('#newRouteInfo').hide();")
         return "dry"
 
     before = bot.read_money()
     bot.click_element(panel.find_element(By.XPATH, ".//*[@id='btnCreateNewRoute']"))
     response = bot.wait_text("//*[@id='routeNewAction']", timeout=15)
-    if not bot.confirm_purchase(before, fee, f"la ruta {candidate.name}", "routeNewAction"):
+    if not bot.confirm_purchase(before, fee, f"a rota {candidate.name}", "routeNewAction"):
         bot.js("$('#newRouteInfo').hide();")
         return "stop"
     bot.spent(fee, invest=True)
@@ -399,7 +399,7 @@ def buy_aircraft(bot: "Bot") -> None:
         bot.pause(1.5, 2.0)
         models = read_models(bot)
     if not models:
-        log_market.warning("La lista del mercado de aviones está vacía.")
+        log_market.warning("A lista do mercado de aeronaves está vazia.")
         return
     score_models(bot, models)
     save_market([{"id": m.id, "name": m.name, "price": m.price, "capacity": m.capacity, "range": m.range_km,
@@ -408,7 +408,7 @@ def buy_aircraft(bot: "Bot") -> None:
 
     stats = bot.stats()
     if stats.money is None:
-        log_market.warning("Saldo desconocido, no compro aviones.")
+        log_market.warning("Saldo desconhecido; nenhuma aeronave será comprada.")
         return
     reserve = cfg.get_int("settings", "cash_reserve", 0)
     budget = stats.money - reserve
@@ -421,27 +421,27 @@ def buy_aircraft(bot: "Bot") -> None:
         return
 
     if hangar_free is not None and hangar_free < 1:
-        log_market.info("Hangar lleno: no hay hueco para otro avión.")
+        log_market.info("Hangar cheio: não há vaga para outra aeronave.")
         return
     preferred = cfg.get("settings", "aircraft_model")
     if preferred:
         wanted = [m for m in models if m.name.lower() == preferred.lower()] or \
                  [m for m in models if preferred.lower() in m.name.lower()]
         if not wanted:
-            log_market.warning("No encuentro el modelo '%s' en el mercado.", preferred)
+            log_market.warning("Não encontrei o modelo '%s' no mercado.", preferred)
             return
         choice = wanted[0]
         if choice.price > budget:
-            log_market.info("%s cuesta $%s, más de los $%s disponibles tras la reserva de caja.", choice.name, fmt(choice.price), fmt(budget))
+            log_market.info("%s custa $%s, acima dos $%s disponíveis após a reserva de caixa.", choice.name, fmt(choice.price), fmt(budget))
             return
     else:
         affordable = [m for m in models if 0 < m.price <= budget and (max_price == 0 or m.price <= max_price) and m.score > 0]
         if not affordable:
-            log_market.info("Ningún avión asequible con $%s tras la reserva de caja.", fmt(budget))
+            log_market.info("Nenhuma aeronave dentro dos $%s disponíveis após a reserva de caixa.", fmt(budget))
             return
         affordable.sort(key=lambda m: m.score, reverse=True)
         choice = affordable[0]
-        log_market.info("Aviones más rentables: %s", ", ".join(f"{m.name} ({m.score * 100:.0f}%/día, ${fmt(m.price)})" for m in affordable[:3]))
+        log_market.info("Aeronaves mais rentáveis: %s", ", ".join(f"{m.name} ({m.score * 100:.0f}%/dia, ${fmt(m.price)})" for m in affordable[:3]))
     order_aircraft(bot, choice)
 
 
@@ -459,51 +459,51 @@ def save_for_goal(bot: "Bot", models: list[AircraftModel], goal_name: str, budge
                            cfg.get_int("settings", "ladder_max_payback", 5), fallback_budget=max(budget, 0))
         goal = next((m for m in models if pick and m.name == pick["name"]), None)
         if goal is None:
-            log_market.info("Escalera: ningún avión cumple el presupuesto y la amortización ahora mismo.")
+            log_market.info("Progressão: nenhuma aeronave atende ao orçamento e ao prazo de retorno.")
             return
-        log_market.info("Escalera: siguiente avión %s (%s, %d plazas, gana ~%s/día, se paga en ~%.1f días).",
+        log_market.info("Progressão: próxima aeronave %s (%s, %d assentos, rende ~%s/dia e se paga em ~%.1f dias).",
                         goal.name, fmt_money(goal.price), goal.capacity, fmt_money(int(goal.profit)), payback_days(goal))
     else:
         goal = next((m for m in models if m.name.lower() == goal_name.lower()), None) or \
             next((m for m in models if goal_name.lower() in m.name.lower()), None)
     if goal is None:
-        log_market.warning("No encuentro el avión objetivo '%s' en el mercado: no compro nada hasta corregirlo.", goal_name)
+        log_market.warning("Não encontrei a aeronave desejada '%s' no mercado; nenhuma compra até corrigir a meta.", goal_name)
         return
     bot.update_stats(goal_price=goal.price)
     progress = goal_progress(goal.price, stats.money, reserve, stats.income_day)
     if progress is None:  # no price for the goal in the market list, or the balance is unknown
-        log_market.info("Objetivo %s: sin precio o sin saldo conocido, no compro nada en este ciclo.", goal.name)
+        log_market.info("Meta %s: sem preço ou saldo disponível; nenhuma compra neste ciclo.", goal.name)
         return
     status = (f"Objetivo {goal.name}: {fmt_money(progress['have'])} de {fmt_money(goal.price)} ({progress['pct']:.0f}%), "
               f"faltan {fmt_money(progress['missing'])}, llegada {fmt_days(progress['eta_days'])}")
 
     if progress["reached"]:
         if hangar_free is not None and hangar_free < 1:
-            log_market.info("%s. Hay dinero pero no hueco en el hangar; se ampliará en el próximo ciclo.", status)
+            log_market.info("%s. Há saldo, mas não há vaga no hangar; será ampliado no próximo ciclo.", status)
             return
-        log_market.info("🎯 ¡Objetivo alcanzado! %s", status)
+        log_market.info("🎯 Meta alcançada! %s", status)
         order_aircraft(bot, goal, goal=True)
         return
 
     if not bot.config.get_bool("options", "goal_invest"):
-        log_market.info("%s. Solo ahorro.", status)
+        log_market.info("%s. Apenas economizando.", status)
         return
     eta = progress["eta_days"]
     if eta is None:
-        log_market.info("%s. Aún no conozco el ritmo de ingresos: solo ahorro.", status)
+        log_market.info("%s. Ainda não conheço o ritmo da receita; apenas economizando.", status)
         return
     if hangar_free is not None and hangar_free < 2:
-        log_market.info("%s. Guardo el último hueco del hangar para el objetivo.", status)
+        log_market.info("%s. Reservando a última vaga do hangar para a meta.", status)
         return
     candidates = [m for m in models
                   if m.name != goal.name and 0 < m.price <= budget and (max_price == 0 or m.price <= max_price)
                   and payback_days(m) * GOAL_SAFETY < eta]
     if not candidates:
-        log_market.info("%s. Ningún otro avión asequible se amortiza antes, así que ahorro.", status)
+        log_market.info("%s. Nenhuma outra aeronave acessível oferece retorno antes da meta; economizando.", status)
         return
     candidates.sort(key=lambda m: m.score, reverse=True)
     choice = candidates[0]
-    log_market.info("%s. Compro un %s porque se amortiza en ~%.1f días y adelanta el objetivo.",
+    log_market.info("%s. Comprando um %s porque se paga em ~%.1f dias e antecipa a meta.",
                     status, choice.name, payback_days(choice))
     order_aircraft(bot, choice)
 
@@ -512,13 +512,13 @@ def order_aircraft(bot: "Bot", choice: AircraftModel, goal: bool = False) -> boo
     detail = bot.ajax(f"ac_orders.php?mode=detail&id={choice.id}&charter=0", "acModel")
     low = detail.find_elements(By.XPATH, ".//*[@id='accountLow']")
     if low and low[0].is_displayed():
-        log_market.info("El juego dice que el saldo no llega para un %s.", choice.name)
+        log_market.info("O jogo informa que não há saldo suficiente para um %s.", choice.name)
         return False
     reg = bot.js("return $('#acReg').val();") or ""
-    summary = f"1 x {choice.name} por ${fmt(choice.price)} (matrícula {reg}, {choice.capacity} pax, {fmt(choice.range_km)} km de alcance)"
+    summary = f"1 x {choice.name} por ${fmt(choice.price)} (matrícula {reg}, {choice.capacity} passageiros, {fmt(choice.range_km)} km de autonomia)"
     if bot.dry_run:
-        log_market.info("[SIMULACIÓN] Pediría %s.", summary)
-        bot.notify(f"🧪 SIMULACIÓN: pediría {esc(summary)}.", silent=True)
+        log_market.info("[SIMULAÇÃO] Encomendaria %s.", summary)
+        bot.notify(f"🧪 SIMULAÇÃO: encomendaria {esc(summary)}.", silent=True)
         return True
     before = bot.read_money()
     bot.click_element(detail.find_element(By.XPATH, ".//*[@id='btnPurchaseIntro']"))
@@ -531,6 +531,6 @@ def order_aircraft(bot: "Bot", choice: AircraftModel, goal: bool = False) -> boo
     if free is not None:
         bot.update_stats(hangar_free=max(0, free - 1))
     log_market.info("Pedido: %s. %s", summary, clean_response(response))
-    title = "🎯 <b>¡Objetivo conseguido! Avión pedido</b>" if goal else "🛒 <b>Avión pedido</b>"
+    title = "🎯 <b>Meta alcançada! Aeronave encomendada</b>" if goal else "🛒 <b>Aeronave encomendada</b>"
     bot.notify(f"{title}: {esc(summary)}.\n{esc(clean_response(response, 200))}".rstrip())
     return True

@@ -98,13 +98,13 @@ def run_marketing(bot: "Bot") -> None:
     bot.update_stats(reputation=reputation, campaign_ends=int(time.time() + ends_in) if ends_in else 0)
     if ends_in:
         plural = "s" if len(timers) > 1 else ""
-        running = (f"{len(timers)} campaña{plural} activa{plural}, la primera acaba en "
+        running = (f"{len(timers)} campanha{plural} ativa{plural}, a primeira termina em "
                    f"{ends_in // 3600}:{ends_in % 3600 // 60:02d} h")
-        bot.note_event(ends_in, "el fin de una campaña")
+        bot.note_event(ends_in, "o término de uma campanha")
     else:
-        running = "sin campañas activas"
+        running = "sem campanhas ativas"
     change = f" (antes {before} %)" if before is not None and reputation is not None and reputation != before else ""
-    log.info("Reputación %s %%%s | %s.", fmt(reputation), change, running)
+    log.info("Reputação %s %%%s | %s.", fmt(reputation), change, running)
     # Look again when a campaign ends, within the hour if one does not pay yet, and every cycle if one could
     # not start for lack of money.
     waits = [ends_in] if ends_in else []
@@ -137,42 +137,42 @@ def start_campaign(bot: "Bot", kind: int, reputation: Optional[int] = None) -> s
         cost = to_int(bot.js("var e = document.getElementById(arguments[0]); return e ? e.textContent : null;", f"c{level}"))
         found = page.find_elements(By.ID, f"c{level}Btn")
         button = found[0] if found else None
-        what = f"la campaña de reputación {level} ({hours} h)"
+        what = f"a campanha de reputação {level} ({hours} h)"
         points = REPUTATION_POINTS[level]
     else:
         co2 = bot.stats().co2  # unknown until the market is read; the bot keeps CO2 in stock anyway
         if co2 is not None and co2 <= 0:
-            log.info("No lanzo la campaña eco-friendly: solo funciona con cuotas de CO2 en el tanque.")
+            log.info("Não vou iniciar a campanha ecológica: são necessárias cotas de CO₂ no estoque.")
             return "skipped"
         button = buttons[0]
         cost = to_int(button.get_attribute("textContent"))
-        what = "la campaña eco-friendly (12 h, +10 % de reputación)"
+        what = "a campanha ecológica (12 h, +10 % de reputação)"
         hours, points = ECO_HOURS, ECO_POINTS
     if button is None:
-        log.warning("No encuentro el botón de %s.", what)
+        log.warning("Não encontrei o botão de %s.", what)
         return "skipped"
     # Does it pay? Until REVENUE_HOURS of income are measured only the cheap eco-friendly campaign goes ahead.
     revenue = bot.revenue_per_day(REVENUE_HOURS)
     gain = ""
     if not revenue and kind == REPUTATION:
-        log.info("Aún no conozco bien los ingresos (los mido %d h): espero para lanzar %s ($%s).",
+        log.info("Ainda não há histórico suficiente de receita (%d h): aguardando para iniciar %s ($%s).",
                  REVENUE_HOURS, what, fmt(cost))
         return "later"
     if revenue and cost:
         current = reputation if reputation else bot.load_factor() * 100
         extra = campaign_return(revenue, current, points, hours)
         if extra < cost * MIN_RETURN:
-            log.info("No lanzo %s: cuesta $%s y traería unos $%s más en billetes (ingresos ~$%s/día, reputación %.0f %%).",
+            log.info("Não vou iniciar %s: custa $%s e geraria cerca de $%s adicionais em passagens (receita ~$%s/dia, reputação %.0f %%).",
                      what, fmt(cost), fmt(int(extra)), fmt(revenue), current)
             return "later"
-        gain = f" (traerá unos ${fmt(int(extra))} más en billetes)"
+        gain = f" (deve render cerca de ${fmt(int(extra))} adicionais em passagens)"
     if "not-active" in (button.get_attribute("class") or ""):
-        log.info("El saldo no llega para %s ($%s).", what, fmt(cost))
+        log.info("Saldo insuficiente para %s ($%s).", what, fmt(cost))
         return "skipped"
     if not bot.can_spend(cost, what):
         return "skipped"
     if bot.dry_run:
-        log.info("[SIMULACIÓN] Lanzaría %s por $%s%s.", what, fmt(cost), gain)
+        log.info("[SIMULAÇÃO] Iniciaria %s por $%s%s.", what, fmt(cost), gain)
         return "dry"
     before = bot.read_money()
     bot.click_element(button)
@@ -182,6 +182,6 @@ def start_campaign(bot: "Bot", kind: int, reputation: Optional[int] = None) -> s
     bot.spent(cost)
     bot.count("campaigns")
     bot.count("campaign_spent", cost or 0)
-    log.info("Lanzada %s por $%s%s. %s", what, fmt(cost), gain, clean_response(response))
-    bot.notify(f"📣 <b>Lanzada {esc(what)}</b> por ${fmt(cost)}{esc(gain)}.")
+    log.info("Campanha iniciada: %s por $%s%s. %s", what, fmt(cost), gain, clean_response(response))
+    bot.notify(f"📣 <b>Iniciada {esc(what)}</b> por ${fmt(cost)}{esc(gain)}.")
     return "started"
