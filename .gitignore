@@ -1,0 +1,12 @@
+.venv/
+env/
+__pycache__/
+*.pyc
+config/session/
+config/settings.ini
+config/secrets.ini
+data/
+bin/
+test/
+profiles/
+*.tmp
