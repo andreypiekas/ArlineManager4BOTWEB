@@ -1,11 +1,18 @@
 <div align="center">
-  <img src="assets/logo.png" width="100px" alt="Logotipo do Airline Manager 4 Bot">
-  <h1>Airline Manager 4 Bot</h1>
+  <h1>AM / 04 · TORRE DE CONTROLE</h1>
+  <p><strong>Airline Manager 4 Bot / Flight Operations</strong></p>
   <p>Automação para o <a href="https://www.airlinemanager.com">Airline Manager 4</a> com painel desktop e web: decolagens, combustível, CO₂, manutenção, campanhas de marketing, rotas e compra de aeronaves.</p>
-  <img src="screenshots/desktop-mercado.png" alt="Painel do bot">
 </div>
 
 **Idioma padrão: Português (Brasil).** Inglês disponível como alternativa.
+
+## Novo centro de operações
+
+O painel web e o aplicativo desktop agora usam a identidade **AM/04 — Torre de Controle**: design técnico de alto contraste, telemetria com leitura rápida, console de eventos e comandos separados dos parâmetros. O painel web é responsivo e não depende de fontes, CSS ou serviços externos.
+
+**[Conheça a arquitetura visual e os contratos da interface](docs/IDENTIDADE_VISUAL.md)**
+
+As capturas históricas abaixo ainda mostram a interface anterior e serão atualizadas posteriormente em uma instalação real, sem dados fictícios de produção.
 
 ## Funcionalidades
 

@@ -353,8 +353,8 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
         return "stop"
     bot.spent(fee, invest=True)
     bot.count("routes")
-    log.info("Ruta creada: %s. %s", summary, clean_response(response))
-    bot.notify(f"🛫 <b>Ruta creada</b>: {esc(summary)}.\n{esc(clean_response(response, 200))}".rstrip())
+    log.info("Rota criada: %s. %s", summary, clean_response(response))
+    bot.notify(f"🛫 <b>Rota criada</b>: {esc(summary)}.\n{esc(clean_response(response, 200))}".rstrip())
     bot.js("$('#newRouteInfo').hide();")
     return "created"
 

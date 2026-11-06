@@ -14,8 +14,8 @@ def test_pt_br_is_default_and_spanish_is_not_available():
 
 def test_interface_and_help_in_portuguese():
     set_language("pt_BR")
-    assert t("Guardar ajustes") == "Salvar configurações"
-    assert t("Flota") == "Frota"
+    assert t("Salvar configurações") == "Salvar configurações"
+    assert t("Frota") == "Frota"
     assert "perfil" in tip("profile").lower()
     assert t(AUTO_GOAL_LABEL) == "Automático (progressão)"
     assert is_auto_goal(AUTO_GOAL_LABEL)
@@ -23,7 +23,7 @@ def test_interface_and_help_in_portuguese():
 
 def test_english_option_still_works():
     set_language("en")
-    assert t("Guardar ajustes") == "Save settings"
+    assert t("Salvar configurações") == "Save settings"
     assert t(AUTO_GOAL_LABEL) == "Automatic (ladder)"
     set_language("pt_BR")
 

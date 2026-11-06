@@ -1,8 +1,7 @@
-"""customtkinter GUI for Airline Manager 4 Bot (user-facing text in Spanish).
+"""Central de operações desktop para Airline Manager 4 Bot.
 
-Layout: a sidebar (account, start / stop, status), a strip of statistic tiles, the settings tabs at full
-width and the log, always visible, below. The same data, controls and settings are also served as a web
-dashboard (web.py) while the window is open.
+Design operacional sincronizado com o painel web, preservando controles,
+status, indicadores, configurações e registros em tempo real.
 """
 from __future__ import annotations
 
@@ -20,7 +19,6 @@ from pathlib import Path
 from typing import Optional
 
 import customtkinter as ctk
-from PIL import Image
 
 from bot import Bot, BotState
 from config import AppConfig
@@ -44,12 +42,12 @@ from widgets import ToolTip, add_tooltip
 log = logging.getLogger("am4bot.app")
 
 MAX_LOG_LINES = 800
-WINDOW_SIZE = (1280, 880)
+WINDOW_SIZE = (1480, 920)
 THEME_FILE = Path("assets/theme.json")
 
 # Palette shared with assets/theme.json: (light, dark)
-MUTED = ("#656d76", "#8b949e")
-BORDER = ("#d0d7de", "#30363d")
+MUTED = ("#70847a", "#899ba0")
+BORDER = ("#cfdbd4", "#26343b")
 PILL_COLORS = {
     BotState.IDLE: ("#8c959f", "#484f58"),
     BotState.STARTING: ("#bf8700", "#9e6a03"),
@@ -58,12 +56,12 @@ PILL_COLORS = {
     BotState.STOPPING: ("#bf8700", "#9e6a03"),
     BotState.ERROR: ("#cf222e", "#da3633"),
 }
-GREEN = (("#1f883d", "#238636"), ("#1a7f37", "#2ea043"))
-RED = (("#cf222e", "#da3633"), ("#a40e26", "#b62324"))
+GREEN = (("#1d5244", "#c8fc79"), ("#143f34", "#e0ffac"))
+RED = (("#6f312c", "#482523"), ("#8f403b", "#67302e"))
 
 # customtkinter needs the English appearance names; the menu shows them in the interface language.
-THEME_NAMES = {"Light": "Claro", "Dark": "Oscuro", "System": "Sistema"}
-PROFILE_NEW = "➕ Nuevo perfil…"
+THEME_NAMES = {"Light": "Claro", "Dark": "Escuro", "System": "Sistema"}
+PROFILE_NEW = "➕ Novo perfil…"
 
 
 def theme_labels() -> dict[str, str]:
@@ -73,12 +71,12 @@ def theme_labels() -> dict[str, str]:
 
 # Statistic tiles: (key for the help text, title, has a progress bar)
 TILES = [
-    ("money", "💰  DINERO", False),
-    ("reputation", "⭐  REPUTACIÓN", True),
-    ("fuel", "⛽  FUEL", True),
-    ("co2", "🌿  CO2", True),
-    ("fleet", "🛩  FLOTA", False),
-    ("goal", "🎯  OBJETIVO", True),
+    ("money", "💰  DINHEIRO", False),
+    ("reputation", "⭐  REPUTAÇÃO", True),
+    ("fuel", "⛽  COMBUSTÍVEL", True),
+    ("co2", "🌿  CO₂", True),
+    ("fleet", "🛩  FROTA", False),
+    ("goal", "🎯  META", True),
 ]
 # Tk draws the emoji variation selector (U+FE0F) as a gap, so the window uses the plain symbols.
 TAB_ICONS = {name: icon.replace(chr(0xFE0F), "") for name, icon, _fields, _switches in TABS}
@@ -111,17 +109,18 @@ class App(ctk.CTk):
         title = self.cfg.get("app", "title", "Airline Manager 4 Bot")
         self.title(title if self.cfg.profile.is_main else f"{title} · {self.cfg.profile.label}")
         self._set_icon()
-        self.minsize(1100, 720)
+        self.minsize(1100, 760)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
         family = "Segoe UI" if platform.system() == "Windows" else None
         font = (lambda **kw: ctk.CTkFont(family=family, **kw)) if family else (lambda **kw: ctk.CTkFont(**kw))
         self.font = font(size=13)
         self.font_bold = font(size=13, weight="bold")
-        self.font_title = font(size=15, weight="bold")
+        self.font_title = font(size=16, weight="bold")
+        self.font_brand = ctk.CTkFont(family="Bahnschrift" if platform.system() == "Windows" else "DejaVu Sans", size=30, weight="bold")
         self.font_small = font(size=11)
         self.font_caption = font(size=11, weight="bold")
-        self.font_value = font(size=21, weight="bold")
+        self.font_value = font(size=26, weight="bold")
         mono = {"Windows": "Consolas", "Darwin": "Menlo"}.get(platform.system(), "DejaVu Sans Mono")
         self.font_mono = ctk.CTkFont(family=mono, size=12)
 
@@ -193,7 +192,7 @@ class App(ctk.CTk):
         add_tooltip(switch, tip(key))
 
     def _save_button(self, parent, width: int = 150, **grid) -> None:
-        button = ctk.CTkButton(parent, text=t("Guardar ajustes"), font=self.font_bold, height=30, width=width,
+        button = ctk.CTkButton(parent, text=t("Salvar configurações"), font=self.font_bold, height=30, width=width,
                                command=self._save_settings)
         button.grid(**grid)
         add_tooltip(button, tip("save"))
@@ -211,17 +210,22 @@ class App(ctk.CTk):
 
     # ------------------------------------------------------------------ sidebar
     def _build_sidebar(self) -> None:
-        sidebar = ctk.CTkFrame(self, width=244, corner_radius=0, border_width=0)
+        sidebar = ctk.CTkFrame(self, width=255, corner_radius=0, border_width=0,
+                               fg_color=("#e8f0ea", "#0d1519"))
         sidebar.grid(row=0, column=0, rowspan=3, sticky="nsew")
         sidebar.grid_propagate(False)
         sidebar.grid_columnconfigure(0, weight=1)
         sidebar.grid_rowconfigure(12, weight=1)
 
         top = ctk.CTkFrame(sidebar, fg_color="transparent")
-        top.grid(row=0, column=0, padx=20, pady=(26, 16), sticky="ew")
+        top.grid(row=0, column=0, padx=20, pady=(35, 29), sticky="ew")
         top.grid_columnconfigure(0, weight=1)
-        banner = ctk.CTkImage(Image.open("assets/banner.png"), size=(196, 46))
-        ctk.CTkLabel(top, text="", image=banner).grid(row=0, column=0, pady=(0, 16))
+        brand = ctk.CTkFrame(top, fg_color="transparent")
+        brand.grid(row=0, column=0, sticky="ew", pady=(0, 27))
+        ctk.CTkLabel(brand, text="AM / 04", font=self.font_brand,
+                     text_color=("#1d5244", "#c8fc79"), anchor="w").grid(row=0, column=0, sticky="ew")
+        ctk.CTkLabel(brand, text="FLIGHT OPERATIONS  //  CONTROL ROOM",
+                     font=self.font_small, text_color=MUTED, anchor="w").grid(row=1, column=0, sticky="ew")
         profile_caption = ctk.CTkLabel(top, text=t("PERFIL"), font=self.font_caption, text_color=MUTED, anchor="w")
         profile_caption.grid(row=1, column=0, padx=2, sticky="ew")
         self.profile_menu = ctk.CTkOptionMenu(top, values=self._profile_values(), command=self._on_profile, font=self.font_bold)
@@ -233,13 +237,13 @@ class App(ctk.CTk):
         add_tooltip(profile_caption, tip("profile"))
         add_tooltip(self.profile_menu, tip("profile"))
 
-        account = ctk.CTkLabel(sidebar, text=t("CUENTA"), font=self.font_caption, text_color=MUTED, anchor="w")
+        account = ctk.CTkLabel(sidebar, text=t("CONTA"), font=self.font_caption, text_color=MUTED, anchor="w")
         account.grid(row=1, column=0, padx=22, sticky="ew")
         add_tooltip(account, tip("account"))
         username, password = self.cfg.credentials
-        self.entry_user = ctk.CTkEntry(sidebar, placeholder_text=t("Correo"), font=self.font, height=34)
+        self.entry_user = ctk.CTkEntry(sidebar, placeholder_text=t("E-mail"), font=self.font, height=34)
         self.entry_user.grid(row=2, column=0, padx=20, pady=(6, 6), sticky="ew")
-        self.entry_pass = ctk.CTkEntry(sidebar, placeholder_text=t("Contraseña"), show="•", font=self.font, height=34)
+        self.entry_pass = ctk.CTkEntry(sidebar, placeholder_text=t("Senha"), show="•", font=self.font, height=34)
         self.entry_pass.grid(row=3, column=0, padx=20, sticky="ew")
         # Inserting an empty string would hide the placeholder text.
         if username:
@@ -251,21 +255,22 @@ class App(ctk.CTk):
 
         self.var_remember = tk.BooleanVar(value=self.cfg.get_bool("options", "remember_credentials", True))
         remember = ctk.CTkCheckBox(
-            sidebar, text=t("Recordar credenciales"), variable=self.var_remember, font=self.font_small,
+            sidebar, text=t("Lembrar credenciais"), variable=self.var_remember, font=self.font_small,
             checkbox_width=18, checkbox_height=18, command=self._on_remember_toggle,
         )
         remember.grid(row=4, column=0, padx=22, pady=(10, 18), sticky="w")
         add_tooltip(remember, tip("remember"))
 
-        self.btn_start = ctk.CTkButton(sidebar, text=t("▶  INICIAR BOT"), font=self.font_bold, height=40,
-                                       fg_color=GREEN[0], hover_color=GREEN[1], command=self.start_bot)
+        self.btn_start = ctk.CTkButton(sidebar, text=t("▶  INICIAR BOT"), font=self.font_bold, height=43,
+                                       fg_color=GREEN[0], hover_color=GREEN[1],
+                                       text_color=("#ffffff", "#0b1014"), command=self.start_bot)
         self.btn_start.grid(row=5, column=0, padx=20, sticky="ew")
-        self.btn_stop = ctk.CTkButton(sidebar, text=t("■  PARAR BOT"), font=self.font_bold, height=40,
+        self.btn_stop = ctk.CTkButton(sidebar, text=t("■  PARAR BOT"), font=self.font_bold, height=43,
                                       fg_color=RED[0], hover_color=RED[1], state="disabled", command=self.stop_bot)
         self.btn_stop.grid(row=6, column=0, padx=20, pady=(8, 0), sticky="ew")
         self.btn_run_now = ctk.CTkButton(
-            sidebar, text=t("⟳  Ejecutar ciclo ahora"), font=self.font, height=32, fg_color="transparent", border_width=1,
-            border_color=BORDER, text_color=("#1f2328", "#e6edf3"), hover_color=("#eaeef2", "#21262d"),
+            sidebar, text=t("⟳  Executar ciclo agora"), font=self.font, height=32, fg_color="transparent", border_width=1,
+            border_color=BORDER, text_color=("#19342b", "#eff4ed"), hover_color=("#d9e8de", "#172128"),
             state="disabled", command=self.bot.run_now,
         )
         self.btn_run_now.grid(row=7, column=0, padx=20, pady=(8, 0), sticky="ew")
@@ -273,7 +278,7 @@ class App(ctk.CTk):
         add_tooltip(self.btn_stop, tip("btn_stop"))
         add_tooltip(self.btn_run_now, tip("btn_run_now"))
 
-        ctk.CTkLabel(sidebar, text=t("ESTADO"), font=self.font_caption, text_color=MUTED, anchor="w").grid(
+        ctk.CTkLabel(sidebar, text=t("STATUS"), font=self.font_caption, text_color=MUTED, anchor="w").grid(
             row=8, column=0, padx=22, pady=(24, 4), sticky="ew")
         self.status_pill = ctk.CTkLabel(sidebar, text=f"●  {t('Parado').upper()}", font=self.font_bold, height=30, corner_radius=15,
                                         fg_color=PILL_COLORS[BotState.IDLE], text_color="#ffffff")
@@ -288,7 +293,7 @@ class App(ctk.CTk):
         self.web_label.bind("<Button-1>", lambda _event: self.open_web())
         self.web_label.tooltip = ToolTip(self.web_label, "")
 
-        ctk.CTkLabel(sidebar, text=t("APARIENCIA"), font=self.font_caption, text_color=MUTED, anchor="w").grid(
+        ctk.CTkLabel(sidebar, text=t("APARÊNCIA"), font=self.font_caption, text_color=MUTED, anchor="w").grid(
             row=13, column=0, padx=22, sticky="ew"
         )
         self.theme_menu = ctk.CTkOptionMenu(sidebar, values=list(theme_labels().values()), command=self.change_theme,
@@ -309,12 +314,16 @@ class App(ctk.CTk):
     # ------------------------------------------------------------------ statistic tiles
     def _build_tiles(self) -> None:
         strip = ctk.CTkFrame(self, fg_color="transparent")
-        strip.grid(row=0, column=1, sticky="ew", padx=16, pady=(16, 10))
+        strip.grid(row=0, column=1, sticky="ew", padx=18, pady=(16, 10))
+        ctk.CTkLabel(strip, text="01 / TELEMETRIA DA COMPANHIA",
+                     font=self.font_caption, text_color=("#1d5244", "#76e8df"), anchor="w").grid(
+            row=0, column=0, columnspan=len(TILES), sticky="w", pady=(0, 10))
         self.tiles: dict[str, tuple[ctk.CTkLabel, ctk.CTkLabel, Optional[ctk.CTkProgressBar]]] = {}
         for column, (key, title, has_bar) in enumerate(TILES):
             strip.grid_columnconfigure(column, weight=1, uniform="tiles")
-            tile = ctk.CTkFrame(strip, border_width=1, border_color=BORDER)
-            tile.grid(row=0, column=column, sticky="nsew", padx=(0 if column == 0 else 10, 0))
+            tile = ctk.CTkFrame(strip, border_width=1, border_color=BORDER,
+                                fg_color=("#e9f5dd", "#203324") if key == "money" else None)
+            tile.grid(row=1, column=column, sticky="nsew", padx=(0 if column == 0 else 10, 0))
             tile.grid_columnconfigure(0, weight=1)
             head = ctk.CTkLabel(tile, text=t(title), font=self.font_caption, text_color=MUTED, anchor="w")
             head.grid(row=0, column=0, sticky="ew", padx=14, pady=(10, 0))
@@ -337,7 +346,7 @@ class App(ctk.CTk):
 
     # ------------------------------------------------------------------ settings tabs
     def _build_tabs(self) -> None:
-        self.tabs = tabs = ctk.CTkTabview(self, border_width=1, border_color=BORDER, height=262)
+        self.tabs = tabs = ctk.CTkTabview(self, border_width=1, border_color=BORDER, height=280)
         tabs.grid(row=1, column=1, sticky="nsew", padx=16, pady=(0, 10))
         for name, _icon, _fields, _switches in TABS:
             tabs.add(tab_title(name))
@@ -360,8 +369,8 @@ class App(ctk.CTk):
             self._switch(bottom, row, key, text)
         self._save_button(bottom, row=0, column=1, sticky="e")
 
-        # --- Flota: switches on the left, numbers in two columns on the right
-        fleet = tab("Flota")
+        # --- Frota: opções à esquerda e parâmetros numéricos à direita
+        fleet = tab("Frota")
         fleet.grid_columnconfigure(1, weight=1)
         switches = ctk.CTkFrame(fleet, fg_color="transparent")
         switches.grid(row=0, column=0, sticky="nw", padx=(0, 32))
@@ -372,8 +381,8 @@ class App(ctk.CTk):
         fields.grid(row=0, column=1, sticky="new")
         self._columns(fields, FLEET_FIELDS, 2, self._int_field)
 
-        # --- Aviones: purchases and the savings goal
-        aircraft = tab("Aviones")
+        # --- Aeronaves: aquisições e meta de crescimento
+        aircraft = tab("Aeronaves")
         aircraft.grid_columnconfigure(1, weight=1)
         left = ctk.CTkFrame(aircraft, fg_color="transparent")
         left.grid(row=0, column=0, sticky="nw", padx=(0, 24))
@@ -382,7 +391,7 @@ class App(ctk.CTk):
         form = ctk.CTkFrame(left, fg_color="transparent")
         form.grid(row=len(AIRCRAFT_SWITCHES), column=0, sticky="ew", pady=(6, 0))
         form.grid_columnconfigure(0, weight=1)
-        goal_label = ctk.CTkLabel(form, text=t("Avión objetivo"), font=self.font, anchor="w")
+        goal_label = ctk.CTkLabel(form, text=t("Aeronave desejada"), font=self.font, anchor="w")
         goal_label.grid(row=0, column=0, sticky="w", pady=2)
         self.goal_combo = ctk.CTkComboBox(form, width=180, height=28, font=self.font_bold, values=self._goal_values(),
                                           command=lambda _value: self._refresh_goal_panel())
@@ -391,9 +400,9 @@ class App(ctk.CTk):
         self.goal_combo.grid(row=0, column=1, sticky="e", pady=2, padx=(8, 0))
         self.goal_combo.bind("<KeyRelease>", lambda _e: self._refresh_goal_panel())
         add_tooltip(goal_label, tip("goal_model"))
-        model_label = ctk.CTkLabel(form, text=t("Modelo fijo sin objetivo"), font=self.font, anchor="w")
+        model_label = ctk.CTkLabel(form, text=t("Modelo fixo sem meta"), font=self.font, anchor="w")
         model_label.grid(row=1, column=0, sticky="w", pady=2)
-        self.entry_model = ctk.CTkEntry(form, width=180, height=28, font=self.font_bold, placeholder_text=t("vacío = más rentable"))
+        self.entry_model = ctk.CTkEntry(form, width=180, height=28, font=self.font_bold, placeholder_text=t("vazio = mais rentável"))
         model = self.cfg.get("settings", "aircraft_model")
         if model:
             self.entry_model.insert(0, model)
@@ -410,7 +419,7 @@ class App(ctk.CTk):
         panel = ctk.CTkFrame(right, corner_radius=10, border_width=1, border_color=BORDER)
         panel.grid(row=0, column=0, sticky="ew")
         panel.grid_columnconfigure(0, weight=1)
-        self.goal_title = ctk.CTkLabel(panel, text=t("🎯 Sin objetivo"), font=self.font_title, anchor="w")
+        self.goal_title = ctk.CTkLabel(panel, text=t("🎯 Sem meta"), font=self.font_title, anchor="w")
         self.goal_title.grid(row=0, column=0, sticky="ew", padx=12, pady=(8, 2))
         self.goal_bar = ctk.CTkProgressBar(panel, height=8)
         self.goal_bar.set(0)
@@ -422,7 +431,7 @@ class App(ctk.CTk):
         ideas = ctk.CTkFrame(right, fg_color="transparent")
         ideas.grid(row=1, column=0, sticky="ew", pady=(8, 0))
         ideas.grid_columnconfigure((0, 1), weight=1, uniform="ideas")
-        ctk.CTkLabel(ideas, text=t("IDEAS DE OBJETIVO · precio · plazas · rentabilidad estimada · llegada a tu ritmo"),
+        ctk.CTkLabel(ideas, text=t("SUGESTÕES DE META · preço · assentos · lucro estimado · previsão"),
                      font=self.font_caption, text_color=MUTED, anchor="w").grid(row=0, column=0, columnspan=2, sticky="w")
         self.goal_ideas = [ctk.CTkLabel(ideas, text="", font=self.font_small, anchor="w", justify="left", wraplength=260)
                            for _ in range(2)]
@@ -430,8 +439,8 @@ class App(ctk.CTk):
             label.grid(row=1, column=column, sticky="nw", padx=(0 if column == 0 else 12, 0))
         ideas.bind("<Configure>", lambda e: [label.configure(wraplength=max(160, e.width // 2 - 16)) for label in self.goal_ideas])
 
-        # --- Opciones: switches in three columns, then campaign numbers, summary hour and Telegram
-        options = tab("Opciones")
+        # --- Opções: controles, campanhas, resumo diário e Telegram
+        options = tab("Opções")
         self._columns(options, OPTION_SWITCHES, 3, self._switch)
         numbers = ctk.CTkFrame(options, fg_color="transparent")
         numbers.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(10, 0))
@@ -441,9 +450,9 @@ class App(ctk.CTk):
         foot.grid_columnconfigure(0, weight=1)
         self.telegram_label = ctk.CTkLabel(foot, text=self._telegram_status(), font=self.font_small, text_color=MUTED, anchor="w")
         self.telegram_label.grid(row=0, column=0, sticky="w")
-        self.btn_telegram_test = ctk.CTkButton(foot, text=t("Probar Telegram"), font=self.font, height=30, width=130,
+        self.btn_telegram_test = ctk.CTkButton(foot, text=t("Testar Telegram"), font=self.font, height=30, width=130,
                                                fg_color="transparent", border_width=1, border_color=BORDER,
-                                               text_color=("#1f2328", "#e6edf3"), hover_color=("#eaeef2", "#21262d"),
+                                               text_color=("#19342b", "#eff4ed"), hover_color=("#d9e8de", "#172128"),
                                                command=self.send_telegram_test)
         self.btn_telegram_test.grid(row=0, column=1, sticky="e", padx=(0, 8))
         add_tooltip(self.btn_telegram_test, tip("telegram_test"))
@@ -462,14 +471,14 @@ class App(ctk.CTk):
         header = ctk.CTkFrame(frame, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=16, pady=(12, 6))
         header.grid_columnconfigure(1, weight=1)
-        ctk.CTkLabel(header, text=t("📜  Registro"), font=self.font_title, anchor="w").grid(row=0, column=0, sticky="w")
-        self.updated_label = ctk.CTkLabel(header, text=t("Sin datos todavía"), font=self.font_small, text_color=MUTED, anchor="w")
+        ctk.CTkLabel(header, text=t("📜  Registros"), font=self.font_title, anchor="w").grid(row=0, column=0, sticky="w")
+        self.updated_label = ctk.CTkLabel(header, text=t("Ainda sem dados"), font=self.font_small, text_color=MUTED, anchor="w")
         self.updated_label.grid(row=0, column=1, sticky="w", padx=(14, 0))
         small_button = dict(height=28, font=self.font_small, fg_color="transparent", border_width=1, border_color=BORDER,
                             text_color=("#1f2328", "#e6edf3"), hover_color=("#eaeef2", "#21262d"))
-        open_button = ctk.CTkButton(header, text=t("Abrir fichero"), width=100, command=self.open_log_file, **small_button)
+        open_button = ctk.CTkButton(header, text=t("Abrir arquivo"), width=100, command=self.open_log_file, **small_button)
         open_button.grid(row=0, column=2, padx=(0, 6))
-        clear_button = ctk.CTkButton(header, text=t("Limpiar"), width=70, command=self.clear_logs, **small_button)
+        clear_button = ctk.CTkButton(header, text=t("Limpar"), width=70, command=self.clear_logs, **small_button)
         clear_button.grid(row=0, column=3)
         add_tooltip(open_button, tip("open_log"))
         add_tooltip(clear_button, tip("clear_log"))
@@ -495,8 +504,8 @@ class App(ctk.CTk):
                 if not best or lowest < best[0]:
                     best = [lowest, seen_at]
             if best:
-                label.configure(text=t("(mín. visto ${price})", price=fmt(best[0])))
-                label.tooltip.text = time.strftime(t("Precio más bajo visto: ${price} el %d/%m/%Y a las %H:%M",
+                label.configure(text=t("(menor preço registrado ${price})", price=fmt(best[0])))
+                label.tooltip.text = time.strftime(t("Menor preço registrado: ${price} em %d/%m/%Y às %H:%M",
                                                      price=fmt(best[0])), time.localtime(best[1]))
             else:
                 label.configure(text="")
@@ -569,7 +578,7 @@ class App(ctk.CTk):
         state = self.bot.state
         alive = self.bot.is_alive()
         mode = self.bot.stats().mode
-        self.mode_label.configure(text=t("Juego en modo {mode}", mode=t(mode)) if mode else "")
+        self.mode_label.configure(text=t("Jogo no modo {mode}", mode=t(mode)) if mode else "")
         self.status_pill.configure(text=f"●  {t(state.value).upper()}", fg_color=PILL_COLORS[state])
 
         self.btn_start.configure(state="disabled" if alive else "normal")
@@ -582,11 +591,11 @@ class App(ctk.CTk):
             entry.configure(state="disabled" if alive else "normal")
 
         if waiting and next_at is not None:
-            self.next_label.configure(text=t("Próxima revisión en {time}", time=fmt_clock(max(0, int(next_at - time.time())))))
+            self.next_label.configure(text=t("Próxima verificação em {time}", time=fmt_clock(max(0, int(next_at - time.time())))))
         elif alive and state is BotState.RUNNING:
-            self.next_label.configure(text=t("Revisando ..."))
+            self.next_label.configure(text=t("Verificando ..."))
         elif self.restart.restart_at is not None:
-            text = t("Reinicio automático en {time}", time=fmt_clock(self.restart.restart_in))
+            text = t("Reinício automático em {time}", time=fmt_clock(self.restart.restart_in))
             if state is BotState.ERROR and self.bot.last_error:
                 text = f"{self.bot.last_error}\n{text}"
             self.next_label.configure(text=text)
@@ -610,12 +619,12 @@ class App(ctk.CTk):
 
         money, income = snap["money"], snap["income_day"]
         show("money", f"${fmt(money)}" if money is not None else "-",
-             " · ".join(part for part in (t("+{money}/día", money=fmt_money(income)) if income is not None else "",
-                                          t("{n} puntos", n=fmt(snap["points"])) if snap["points"] is not None else "")
+             " · ".join(part for part in (t("+{money}/dia", money=fmt_money(income)) if income is not None else "",
+                                          t("{n} pontos", n=fmt(snap["points"])) if snap["points"] is not None else "")
                         if part))
         reputation = snap["reputation"]
         show("reputation", f"{reputation} %" if reputation is not None else "-",
-             t("campaña {time}", time=fmt_clock(snap["campaign_left"])) if snap["campaign_left"] else t("sin campaña activa"),
+             t("campanha {time}", time=fmt_clock(snap["campaign_left"])) if snap["campaign_left"] else t("sem campanha ativa"),
              (reputation or 0) / 100)
         for kind in ("fuel", "co2"):
             tank = snap[kind]
@@ -624,16 +633,16 @@ class App(ctk.CTk):
             show(kind, f"{tank['pct']:.0f} %" if tank["pct"] is not None else "-", " · ".join(p for p in parts if p),
                  (tank["pct"] or 0) / 100)
         fleet = snap["fleet"]
-        parts = [t("{n} en vuelo", n=fleet["inflight"]) if fleet["inflight"] else "",
-                 t("{n} aparc.", n=fleet["parked"]) if fleet["parked"] else "",
-                 t("{n} pend.", n=fleet["pending"]) if fleet["pending"] else ""]
+        parts = [t("{n} em voo", n=fleet["inflight"]) if fleet["inflight"] else "",
+                 t("{n} estacionadas", n=fleet["parked"]) if fleet["parked"] else "",
+                 t("{n} pendentes", n=fleet["pending"]) if fleet["pending"] else ""]
         show("fleet", fmt(fleet["size"]) if fleet["size"] is not None else "-", " · ".join(p for p in parts if p))
         goal = snap["goal"]
-        name = (goal["name"] or "").removeprefix(t("Auto: {name}", name=""))
+        name = (goal["name"] or "").removeprefix(t("Automático: {name}", name=""))
         show("goal", f"{goal['pct']:.0f} %" if goal["pct"] is not None else "-",
              " · ".join(p for p in (name, goal["eta_text"] or "") if p), (goal["pct"] or 0) / 100)
         if snap["updated_at"]:
-            self.updated_label.configure(text=t("actualizado {time}", time=time.strftime("%H:%M:%S", time.localtime(snap["updated_at"]))))
+            self.updated_label.configure(text=t("atualizado {time}", time=time.strftime("%H:%M:%S", time.localtime(snap["updated_at"]))))
 
     # -- values used by the goal panel
     def _money(self) -> Optional[int]:
@@ -654,38 +663,37 @@ class App(ctk.CTk):
         saving = self.option_vars["save_for_goal"].get()
         stats = self.bot.stats()
         if not name:
-            self.goal_title.configure(text=t("🎯 Elige un avión objetivo"))
+            self.goal_title.configure(text=t("🎯 Escolha uma aeronave desejada"))
             self.goal_bar.set(0)
-            self.goal_detail.configure(text=t("Escribe o elige un modelo en «Avión objetivo» y pulsa Guardar ajustes."))
+            self.goal_detail.configure(text=t("Digite ou selecione um modelo em «Aeronave desejada» e clique em Salvar configurações."))
         elif not price:
             self.goal_title.configure(text=f"🎯 {name}")
             self.goal_bar.set(0)
-            self.goal_detail.configure(text=t("No encuentro ese modelo en el mercado guardado. Revisa el nombre o espera a "
-                                              "que el bot consulte el mercado."))
+            self.goal_detail.configure(text=t("Modelo não encontrado no mercado salvo. Confira o nome ou aguarde a próxima consulta ao mercado."))
         else:
             self.goal_title.configure(text=f"🎯 {name} · {fmt_money(price)}")
             lines = []
             if progress:
                 self.goal_bar.set(progress["pct"] / 100)
-                lines.append(t("Ahorrado {have} ({pct}%), la reserva aparte.", have=fmt_money(progress["have"]),
+                lines.append(t("Economizado {have} ({pct}%), sem contar a reserva.", have=fmt_money(progress["have"]),
                                 pct=f"{progress['pct']:.0f}"))
                 if progress["reached"]:
-                    lines.append(t("¡Ya llega! Lo pedirá en la próxima revisión si hay hueco en el hangar."))
+                    lines.append(t("Meta alcançada! O pedido será feito na próxima verificação se houver vaga no hangar."))
                 else:
                     rate = self._income()
-                    rate_text = t("{money}/día", money=fmt_money(rate)) if rate is not None else t("ritmo aún sin medir")
-                    lines.append(t("Faltan {missing} · {rate} · llegada {eta}", missing=fmt_money(progress["missing"]),
+                    rate_text = t("{money}/dia", money=fmt_money(rate)) if rate is not None else t("ritmo ainda não calculado")
+                    lines.append(t("Faltam {missing} · {rate} · previsão {eta}", missing=fmt_money(progress["missing"]),
                                    rate=rate_text, eta=fmt_days(progress["eta_days"])))
             else:
                 self.goal_bar.set(0)
             if stats.hangar_free is not None:
-                lines.append(t("Hangar: {free} huecos libres de {total}", free=stats.hangar_free, total=fmt(stats.hangar_capacity)))
+                lines.append(t("Hangar: {free} vagas disponíveis de {total}", free=stats.hangar_free, total=fmt(stats.hangar_capacity)))
             if not saving:
-                lines.append(t("Modo ahorro apagado: compra el avión más rentable que pueda."))
+                lines.append(t("Modo economia desligado: compra a aeronave mais rentável disponível."))
             elif self.option_vars["goal_invest"].get():
-                lines.append(t("Compra pequeños solo si se amortizan antes de llegar."))
+                lines.append(t("Compra aeronaves menores apenas se houver retorno antes da meta."))
             else:
-                lines.append(t("Solo ahorra: no compra otros aviones."))
+                lines.append(t("Apenas economiza: não compra outras aeronaves."))
             self.goal_detail.configure(text="\n".join(lines))
         for label, lines in zip(self.goal_ideas, self._goal_ideas()):
             label.configure(text="\n".join(lines))
@@ -694,10 +702,10 @@ class App(ctk.CTk):
         """Left: the next steps of the growth ladder as income grows. Right: big 'whim' aircraft and their payback."""
         priced = [m for m in self._market if m.get("price") and m.get("profit")]
         if not priced:
-            return [t("El bot guardará la lista del mercado la próxima vez que lo consulte.")], []
+            return [t("O bot salvará a lista do mercado na próxima consulta.")], []
 
         def line(m: dict) -> str:
-            return t("{name} · {price} · {seats} pax · gana {profit}/día · se paga en {days} d", name=m["name"],
+            return t("{name} · {price} · {seats} pax · rende {profit}/dia · retorno em {days} dias", name=m["name"],
                      price=fmt_money(m["price"]), seats=m["capacity"], profit=fmt_money(m["profit"]),
                      days=f"{m['price'] / m['profit']:.1f}")
 
@@ -707,8 +715,8 @@ class App(ctk.CTk):
             step = ladder_step(self.cfg, self._market, int(rate * factor), self._money()) if rate else None
             if step and step not in ladder:
                 ladder.append(step)
-        left = [t("Escalera (a tu ritmo actual y al crecer):")] + [line(m) for m in ladder] if ladder else []
-        right = [t("Caprichos:")] + [line(m) for name in ICONIC_GOALS if (m := find_model(priced, name))]
+        left = [t("Progressão (no ritmo atual e com crescimento):")] + [line(m) for m in ladder] if ladder else []
+        right = [t("Aeronaves dos sonhos:")] + [line(m) for name in ICONIC_GOALS if (m := find_model(priced, name))]
         return left, right
 
     # -- files written by the bot: prices, state (purchases, money samples), market
@@ -850,8 +858,7 @@ class App(ctk.CTk):
             self._open_profile(paths.Profile("" if choice == paths.MAIN_LABEL else choice))
 
     def _new_profile(self) -> None:
-        dialog = ctk.CTkInputDialog(title=t("Nuevo perfil"), text=t("Nombre del perfil nuevo (por ejemplo «realismo»).\n"
-                                                                    "Tendrá su propia cuenta, ajustes, datos y panel web."))
+        dialog = ctk.CTkInputDialog(title=t("Novo perfil"), text=t("Nome do novo perfil (por exemplo, «realismo»).\nEle terá sua própria conta, configurações, dados e painel web."))
         name = (dialog.get_input() or "").strip()
         if not name:
             return
@@ -888,8 +895,8 @@ class App(ctk.CTk):
         self.cfg.reload_secrets()
         token, chat_id = self.cfg.telegram
         if token and chat_id:
-            return t("Telegram configurado para el chat {chat} (config/secrets.ini).", chat=chat_id)
-        return t("Telegram sin configurar: añade bot_token y chat_id en la sección [telegram] de config/secrets.ini.")
+            return t("Telegram configurado para o chat {chat} (config/secrets.ini).", chat=chat_id)
+        return t("Telegram não configurado: informe bot_token e chat_id na seção [telegram] de config/secrets.ini.")
 
     def send_telegram_test(self) -> None:
         self.telegram_label.configure(text=self._telegram_status())
@@ -911,8 +918,8 @@ class App(ctk.CTk):
 
     def _show_web_link(self) -> None:
         if self.web is not None and self.web.url:
-            self.web_label.configure(text=t("🌐  Abrir el panel web"))
-            self.web_label.tooltip.text = t("Abre {url} en el navegador: las mismas estadísticas, registro y ajustes.",
+            self.web_label.configure(text=t("🌐  Abrir o painel web"))
+            self.web_label.tooltip.text = t("Abra {url} no navegador para ver as mesmas estatísticas, registros e configurações.",
                                             url=self.web.url)
 
     def change_language(self, label: str) -> None:

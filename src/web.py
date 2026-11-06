@@ -185,13 +185,13 @@ class WebDashboard:
         for key, raw in (payload.get("settings") or {}).items():
             value = parse_int(raw)
             if key not in known_fields or value is None:
-                return False, t("«{key}» debe ser un número entero.", key=key)
+                return False, t("«{key}» deve ser um número inteiro.", key=key)
             numbers[key] = value
         options = payload.get("options") or {}
         texts = payload.get("text") or {}
         unknown = [k for k in options if k not in known_switches] + [k for k in texts if k not in dict(TEXT_SETTINGS)]
         if unknown:
-            return False, t("Ajuste desconocido «{key}».", key=unknown[0])
+            return False, t("Configuração desconhecida: «{key}».", key=unknown[0])
         if numbers:
             current = {k: self.cfg.get_int("settings", k) for k in ("cycle_min_minutes", "cycle_max_minutes")}
             numbers = clamp_settings({**current, **numbers})
@@ -206,28 +206,28 @@ class WebDashboard:
             self.cfg.set("settings", key, "auto" if key == "goal_model" and is_auto_goal(value) else value)
         self.cfg.save()
         log.info("Configurações salvas pelo painel web.")
-        return True, t("Guardado.")
+        return True, t("Salvo.")
 
     def control(self, action: str) -> tuple[bool, str]:
         if action == "start":
             if self.bot.is_alive():
-                return False, t("El bot ya está en marcha.")
+                return False, t("O bot já está em execução.")
             self.start_bot()
-            return True, t("Iniciando el bot ...")
+            return True, t("Iniciando o bot ...")
         if action == "stop":
             if not self.bot.is_alive():
-                return False, t("El bot ya está parado.")
+                return False, t("O bot já está parado.")
             log.info("Interrompendo após a etapa atual (pelo painel web) ...")
             self.bot.stop()
             return True, t("Parando ...")
         if action == "run_now":
             self.bot.run_now()
-            return True, t("Revisando ahora.")
+            return True, t("Verificando agora.")
         if action == "quit" and self.on_quit is not None:
             log.info("Fechando o programa (solicitação pelo painel web) ...")
             self.on_quit()
-            return True, t("Cerrando ...")
-        return False, t("Acción desconocida.")
+            return True, t("Fechando ...")
+        return False, t("Ação desconhecida.")
 
     # ------------------------------------------------------------------ HTTP
     def _handler(self):
