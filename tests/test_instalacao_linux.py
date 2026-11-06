@@ -26,7 +26,7 @@ def projeto(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def teste_cfg(path: Path) -> ConfigParser:
+def ler_cfg(path: Path) -> ConfigParser:
     cfg = ConfigParser(interpolation=None)
     cfg.read(path, encoding="utf-8")
     return cfg
@@ -34,7 +34,7 @@ def teste_cfg(path: Path) -> ConfigParser:
 
 def test_nova_instalacao_eh_simulacao_e_privada(projeto: Path):
     porta, novo, login = modulo.configurar(projeto, "principal", False, False)
-    cfg = teste_cfg(projeto / "config/settings.ini")
+    cfg = ler_cfg(projeto / "config/settings.ini")
     assert (porta, novo, login) == (8744, True, False)
     assert cfg.getboolean("options", "headless")
     assert cfg.getboolean("options", "start_on_launch")
@@ -46,8 +46,9 @@ def test_nova_instalacao_eh_simulacao_e_privada(projeto: Path):
 
 def test_reinstalacao_preserva_credenciais_e_simulacao_desligada(projeto: Path):
     modulo.configurar(projeto, "principal", False, False)
-    cfg = teste_cfg(projeto / "config/settings.ini")
+    cfg = ler_cfg(projeto / "config/settings.ini")
     cfg.set("options", "dry_run", "off")
+    cfg.add_section("settings")
     cfg.set("settings", "cash_reserve", "987654")
     modulo.salvar_privado(projeto / "config/settings.ini", cfg)
 
@@ -58,8 +59,8 @@ def test_reinstalacao_preserva_credenciais_e_simulacao_desligada(projeto: Path):
     modulo.salvar_privado(projeto / "config/secrets.ini", segredos)
 
     porta, novo, login = modulo.configurar(projeto, "principal", False, False)
-    cfg2 = teste_cfg(projeto / "config/settings.ini")
-    sec2 = teste_cfg(projeto / "config/secrets.ini")
+    cfg2 = ler_cfg(projeto / "config/settings.ini")
+    sec2 = ler_cfg(projeto / "config/secrets.ini")
     assert (porta, novo, login) == (8744, False, True)
     assert cfg2.get("settings", "cash_reserve") == "987654"
     assert not cfg2.getboolean("options", "dry_run")
@@ -69,12 +70,12 @@ def test_reinstalacao_preserva_credenciais_e_simulacao_desligada(projeto: Path):
 def test_rede_local_gera_token_e_reinstalacao_nao_troca(projeto: Path, capsys):
     modulo.configurar(projeto, "principal", True, False)
     sec_file = projeto / "config/secrets.ini"
-    token = teste_cfg(sec_file).get("web", "token")
+    token = ler_cfg(sec_file).get("web", "token")
     assert len(token) >= 32
     assert (os.stat(sec_file).st_mode & 0o777) == 0o600
-    assert teste_cfg(projeto / "config/settings.ini").get("web", "host") == "0.0.0.0"
+    assert ler_cfg(projeto / "config/settings.ini").get("web", "host") == "0.0.0.0"
     modulo.configurar(projeto, "principal", True, False)
-    assert teste_cfg(sec_file).get("web", "token") == token
+    assert ler_cfg(sec_file).get("web", "token") == token
     modulo.mostrar_acesso(projeto, "principal", "192.168.1.17")
     assert f"http://192.168.1.17:8744/?token={token}" in capsys.readouterr().out
 
