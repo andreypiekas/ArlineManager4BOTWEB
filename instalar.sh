@@ -10,6 +10,8 @@ INICIAR=1
 CONFIGURAR_LOGIN=0
 DIRETORIO=""
 MODO_VERIFICAR=0
+UFW_REDE=""
+SEM_UFW=0
 
 avisar() { printf '\n\033[1;36m[AM4]\033[0m %s\n' "$*"; }
 erro() { printf '\n[AM4] ERRO: %s\n' "$*" >&2; exit 1; }
@@ -22,7 +24,9 @@ INSTALADOR - Airline Manager 4 Bot (Raspberry Pi OS e Ubuntu)
 
 Uso: bash instalar.sh [opções]
 
-  --rede-local          Permite painel na rede local e gera token seguro.
+  --rede-local          Habilita painel na LAN, gera token e ajusta UFW ativo.
+  --ufw-rede CIDR       Origem permitida no UFW (ex.: 192.168.101.0/24).
+  --sem-ufw             Não altera o UFW (mesmo com --rede-local).
   --perfil NOME         Perfil da companhia (padrão: principal).
   --configurar-login    Solicita e-mail e senha no terminal (senha oculta).
   --sem-iniciar         Habilita serviço, mas não o inicia agora.
@@ -40,6 +44,13 @@ TEXTO
 while (($#)); do
     case "$1" in
         --rede-local) REDE_LOCAL=1 ;;
+        --sem-ufw) SEM_UFW=1 ;;
+        --ufw-rede)
+            shift
+            (($#)) || erro "Falta a rede CIDR após --ufw-rede."
+            UFW_REDE="$1"
+            ;;
+        --ufw-rede=*) UFW_REDE="${1#--ufw-rede=}" ;;
         --configurar-login) CONFIGURAR_LOGIN=1 ;;
         --sem-iniciar) INICIAR=0 ;;
         --verificar) MODO_VERIFICAR=1 ;;
@@ -54,6 +65,9 @@ while (($#)); do
     esac
     shift
 done
+
+[[ -z "$UFW_REDE" || "$REDE_LOCAL" -eq 1 ]] || erro "--ufw-rede exige --rede-local."
+[[ "$SEM_UFW" -eq 0 || -z "$UFW_REDE" ]] || erro "Não combine --sem-ufw e --ufw-rede."
 
 [[ "$(uname -s)" == "Linux" ]] || erro "Este instalador funciona apenas no Linux."
 [[ -r /etc/os-release ]] || erro "Não encontrei /etc/os-release."
@@ -125,7 +139,7 @@ else
     avisar "Repositório existente detectado; código e arquivos preservados."
 fi
 cd -- "$APP_DIR"
-[[ -f "requirements.txt" && -f "scripts/configurar_linux.py" ]] ||
+[[ -f "requirements.txt" && -f "scripts/configurar_linux.py" && -f "scripts/configurar_ufw.py" ]] ||
     erro "O repositório não contém os arquivos necessários do instalador."
 
 avisar "Criando ambiente virtual Python..."
@@ -177,6 +191,12 @@ fi
 
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 IP="${IP:-IP-DA-MAQUINA}"
+if ((REDE_LOCAL && ! SEM_UFW)); then
+    avisar "Verificando o firewall UFW (sem abrir portas para toda a internet)..."
+    ARG_UFW=(--diretorio "$APP_DIR" --perfil "$PERFIL" --ip "$IP")
+    if [[ -n "$UFW_REDE" ]]; then ARG_UFW+=(--rede "$UFW_REDE"); fi
+    .venv/bin/python scripts/configurar_ufw.py "${ARG_UFW[@]}"
+fi
 avisar "Instalação finalizada!"
 .venv/bin/python scripts/configurar_linux.py --diretorio "$APP_DIR" --perfil "$PERFIL" --mostrar-acesso --ip "$IP"
 printf 'Serviço: %s\n' "$SERVICO"
