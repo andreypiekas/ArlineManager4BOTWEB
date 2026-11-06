@@ -412,25 +412,25 @@ class Bot:
             diff = stats.money - start
             delta = f" ({'+' if diff >= 0 else '-'}${fmt(abs(diff))} desde o último resumo)"
         lines = [
-            f"📊 <b>Resumen diario</b> {time.strftime('%d/%m/%Y', now)}",
+            f"📊 <b>Resumo diário</b> {time.strftime('%d/%m/%Y', now)}",
             f"💰 Saldo: ${fmt(stats.money)}{esc(delta)}",
-            f"⛽ Fuel: {fmt(stats.fuel)} / {fmt(stats.fuel_capacity)} a ${fmt(stats.fuel_price)} | comprado {fmt(counters['fuel_bought'])} lbs (${fmt(counters['fuel_spent'])})",
-            f"🌿 CO2: {fmt(stats.co2)} / {fmt(stats.co2_capacity)} a ${fmt(stats.co2_price)} | comprado {fmt(counters['co2_bought'])} cuotas (${fmt(counters['co2_spent'])})",
-            f"✈️ Flota: {fmt(stats.fleet_size)} aviones, {fmt(stats.inflight)} volando, {fmt(stats.parked)} aparcados | despegues: {counters['departures']}",
-            f"🛫 Rutas creadas: {counters['routes']} | 🛒 Aviones pedidos: {counters['aircraft']} | 🔧 Reparaciones: {counters['repairs']}, A-checks: {counters['checks']}",
+            f"⛽ Combustível: {fmt(stats.fuel)} / {fmt(stats.fuel_capacity)} a ${fmt(stats.fuel_price)} | comprado {fmt(counters['fuel_bought'])} libras (${fmt(counters['fuel_spent'])})",
+            f"🌿 CO2: {fmt(stats.co2)} / {fmt(stats.co2_capacity)} a ${fmt(stats.co2_price)} | comprado {fmt(counters['co2_bought'])} cotas (${fmt(counters['co2_spent'])})",
+            f"✈️ Frota: {fmt(stats.fleet_size)} aeronaves, {fmt(stats.inflight)} em voo, {fmt(stats.parked)} estacionadas | decolagens: {counters['departures']}",
+            f"🛫 Rotas criadas: {counters['routes']} | 🛒 Aeronaves encomendadas: {counters['aircraft']} | 🔧 Reparos: {counters['repairs']}, A-checks: {counters['checks']}",
         ]
         if stats.reputation is not None or counters["campaigns"] or counters["seats"]:
             lines.append(f"📣 Reputação: {fmt(stats.reputation)} % | campanhas: {counters['campaigns']} (${fmt(counters['campaign_spent'])})"
-                         f" | 💺 cambios de asientos: {counters['seats']} (${fmt(counters['seats_spent'])})"
-                         f" | 🛠️ mejoras: {counters['mods']} (${fmt(counters['mods_spent'])})")
+                         f" | 💺 ajustes de assentos: {counters['seats']} (${fmt(counters['seats_spent'])})"
+                         f" | 🛠️ melhorias: {counters['mods']} (${fmt(counters['mods_spent'])})")
         if stats.income_day is not None:
             lines.append(f"📈 Receita líquida estimada: ~${fmt(stats.income_day)}/dia")
         goal = self.config.get("settings", "goal_model")
         if self.config.get_bool("options", "save_for_goal") and goal and stats.goal_price:
             progress = goal_progress(stats.goal_price, stats.money, self.config.get_int("settings", "cash_reserve", 0), stats.income_day)
             if progress:
-                lines.append(f"🎯 Objetivo {esc(goal)}: {progress['pct']:.0f}% ({fmt_money(progress['have'])} de "
-                             f"{fmt_money(stats.goal_price)}), llegada {fmt_days(progress['eta_days'])}")
+                lines.append(f"🎯 Meta {esc(goal)}: {progress['pct']:.0f}% ({fmt_money(progress['have'])} de "
+                             f"{fmt_money(stats.goal_price)}); previsão {fmt_days(progress['eta_days'])}")
         if self.dry_run:
             lines.append("🧪 Simulação ativa: nenhuma compra ou programação foi realizada.")
         self.notify("\n".join(lines))
@@ -777,10 +777,10 @@ class Bot:
                 free = capacity - holding
         change_in = timer_seconds(self._text(self._sel(f"{kind}_timer"), timeout=2))
         self.update_stats(**{f"{kind}_price": price, kind: holding, f"{kind}_capacity": capacity})
-        self.note_event(change_in, f"el cambio de precio de {label}")
+        self.note_event(change_in, f"a mudança do preço de {label}")
 
         if price is None:
-            tlog.warning("No he podido leer el precio de %s.", label)
+            tlog.warning("Não consegui consultar o preço de %s.", label)
             return
 
         # --- price history: the popup embeds the last 10 prices (one per 30-minute window)
@@ -808,8 +808,8 @@ class Bot:
                 top = self.history.summary(kind, days, min(top_pct, pct))["threshold"] if top_pct > 0 else None
                 buy_at, excellent_at = buy_thresholds(self.config.get_int("settings", f"{kind}_price_good"),
                                                       summary["threshold"], top)
-                history_note = (f" | histórico {days}d: mín {fmt(summary['min'])}, p{pct} {fmt(summary['threshold'])}, "
-                                f"mediana {fmt(summary['median'])} ({summary['samples']} muestras)")
+                history_note = (f" | histórico {days}d: mínimo {fmt(summary['min'])}, p{pct} {fmt(summary['threshold'])}, "
+                                f"mediana {fmt(summary['median'])} ({summary['samples']} amostras)")
                 if excellent_at is not None:
                     history_note += f", excepcional <= ${fmt(excellent_at)}"
             else:
@@ -821,8 +821,8 @@ class Bot:
         storage = f" | tanque {fmt(holding)} / {fmt(capacity)}" if holding is not None and capacity is not None else ""
         if storage and use:
             storage += f", para ~{holding / use:.1f} dias"
-        timer = f" | el precio cambia en {change_in // 60:02d}:{change_in % 60:02d}" if change_in is not None else ""
-        tlog.info("Precio %s: $%s (compro a <= $%s)%s%s%s", label, fmt(price), fmt(buy_at), storage, timer, history_note)
+        timer = f" | preço muda em {change_in // 60:02d}:{change_in % 60:02d}" if change_in is not None else ""
+        tlog.info("Preço de %s: $%s (comprar a ≤ $%s)%s%s%s", label, fmt(price), fmt(buy_at), storage, timer, history_note)
 
         # --- how much: fill up at a good price, otherwise only top up a dangerously low stock.
         # An exceptional price (lowest percentile of the history) buys everything the tank and the
@@ -834,11 +834,11 @@ class Bot:
         topping_up = False
         if price <= buy_at and quantity > 0:
             target = quantity if free is None else min(quantity, free)
-            reason = "precio excepcional" if excellent else "buen precio"
+            reason = "preço excepcional" if excellent else "bom preço"
             limit = self._stock_limit(use, excellent)
             if limit is not None and holding is not None:
                 if holding >= limit:
-                    tlog.info("No compro %s (%s): ya tengo para ~%.1f dias y el límite es %.0f dias de consumo.",
+                    tlog.info("Não comprarei %s (%s): estoque para ~%.1f dias e limite de %.0f dias de consumo.",
                               label, reason, holding / use, limit / use)
                     return
                 target = min(target, limit - holding)
@@ -847,14 +847,14 @@ class Bot:
             if holding is None or capacity is None or min_stock_pct <= 0 or holding * 100 >= capacity * min_stock_pct:
                 return
             target = capacity * min_stock_pct // 100 - holding
-            reason = f"stock por debajo del {min_stock_pct}%"
+            reason = f"estoque abaixo de {min_stock_pct}%"
             topping_up = True
         if target <= 0:
             tlog.info("O tanque de %s está cheio; nada a comprar.", label)
             return
         window = int(time.time() // PRICE_WINDOW_SECONDS)
         if self._bought_in_window(kind, window) and not excellent:
-            tlog.info("%s ya comprado en esta ventana de precio.", label.capitalize())
+            tlog.info("%s já adquirido nesta janela de preço.", label.capitalize())
             return
         money = self.stats().money
         if money is not None:
@@ -865,7 +865,7 @@ class Bot:
             affordable = int(spendable * 1000 // price)  # prices are per 1,000 units
             if affordable < 1000:
                 if not self._bought_in_window(kind, window):
-                    tlog.info("No compro %s: los $%s que quedan sobre la reserva no dan (%s).", label, fmt(max(0, money - reserve)), reason)
+                    tlog.info("Não comprarei %s: os $%s disponíveis acima da reserva são insuficientes (%s).", label, fmt(max(0, money - reserve)), reason)
                 return
             target = min(target, affordable)
         quantity = target
@@ -890,7 +890,7 @@ class Bot:
         def tank_rose() -> bool:
             return holding is not None and (to_int(self._text(self._sel(f"{kind}_holding"), timeout=1)) or 0) > holding
 
-        if not self.confirm_purchase(before, cost, f"la compra de {label}", check=tank_rose):
+        if not self.confirm_purchase(before, cost, f"a compra de {label}", check=tank_rose):
             return
         bought = self._state.setdefault("bought", {})  # running total, for the measured use per day
         bought[kind] = int(bought.get(kind, 0)) + quantity

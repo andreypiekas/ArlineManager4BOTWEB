@@ -354,7 +354,7 @@ def apply_plan(bot: "Bot", plan: SeatPlan, max_payback: float, do_seats: bool = 
                   {MODS[m]: round(prices.get(m, 0)) for m in MODS}, sorted(installed),
                   {MODS[m]: round(gains[m]) for m in MODS})
     if not seats_change and not chosen:
-        log.debug("%s: nada que cambiar en el taller.", plan.reg)
+        log.debug("%s: nenhuma alteração necessária na oficina.", plan.reg)
         return 0
 
     cost = (plan.cost if seats_change else 0) + int(round(mods_cost))

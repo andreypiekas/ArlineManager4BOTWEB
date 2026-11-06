@@ -128,12 +128,12 @@ def check_hangar(bot: "Bot") -> None:
     data = bot.js(_HANGAR_JS) or {}
     capacity, free = to_int(data.get("capacity")), to_int(data.get("free"))
     if free is None:
-        log.debug("No he podido leer los huecos del hangar.")
+        log.debug("Não consegui consultar as vagas do hangar.")
         return
     bot.update_stats(hangar_free=free, hangar_capacity=capacity)
     keep_free = max(1, bot.config.get_int("settings", "hangar_min_free", 2))
     if free >= keep_free or not bot.config.get_bool("options", "auto_hangar"):
-        log.debug("Hangar: %s huecos libres de %s.", free, capacity)
+        log.debug("Hangar: %s vagas livres de %s.", free, capacity)
         return
     buttons = panel.find_elements(By.XPATH, ".//button[contains(@onclick, 'mode=upgrade&amount=1&')]")
     if not buttons or "not-active" in (buttons[0].get_attribute("class") or ""):
@@ -141,9 +141,9 @@ def check_hangar(bot: "Bot") -> None:
         return
     # The largest number on the button is the price (a "+1" slot count may come first).
     cost = max((to_int(number) for number in re.findall(r"\d[\d,]*", buttons[0].text)), default=None)
-    if not bot.can_spend(cost, "ampliar el hangar"):
+    if not bot.can_spend(cost, "ampliar o hangar"):
         return
-    detail = f"hangar +1 hueco por ${fmt(cost)} (quedaban {free} libres de {fmt(capacity)})"
+    detail = f"hangar +1 vaga por ${fmt(cost)} (restavam {free} livres de {fmt(capacity)})"
     if bot.dry_run:
         log.info("[SIMULAÇÃO] Ampliaria o %s.", detail)
         return

@@ -100,7 +100,7 @@ def run_marketing(bot: "Bot") -> None:
         plural = "s" if len(timers) > 1 else ""
         running = (f"{len(timers)} campanha{plural} ativa{plural}, a primeira termina em "
                    f"{ends_in // 3600}:{ends_in % 3600 // 60:02d} h")
-        bot.note_event(ends_in, "el fin de una campanha")
+        bot.note_event(ends_in, "o término de uma campanha")
     else:
         running = "sem campanhas ativas"
     change = f" (antes {before} %)" if before is not None and reputation is not None and reputation != before else ""
@@ -137,16 +137,16 @@ def start_campaign(bot: "Bot", kind: int, reputation: Optional[int] = None) -> s
         cost = to_int(bot.js("var e = document.getElementById(arguments[0]); return e ? e.textContent : null;", f"c{level}"))
         found = page.find_elements(By.ID, f"c{level}Btn")
         button = found[0] if found else None
-        what = f"la campanha de reputación {level} ({hours} h)"
+        what = f"a campanha de reputação {level} ({hours} h)"
         points = REPUTATION_POINTS[level]
     else:
         co2 = bot.stats().co2  # unknown until the market is read; the bot keeps CO2 in stock anyway
         if co2 is not None and co2 <= 0:
-            log.info("No lanzo la campanha eco-friendly: solo funciona con cuotas de CO2 en el tanque.")
+            log.info("Não vou iniciar a campanha ecológica: são necessárias cotas de CO₂ no estoque.")
             return "skipped"
         button = buttons[0]
         cost = to_int(button.get_attribute("textContent"))
-        what = "la campanha eco-friendly (12 h, +10 % de reputación)"
+        what = "a campanha ecológica (12 h, +10 % de reputação)"
         hours, points = ECO_HOURS, ECO_POINTS
     if button is None:
         log.warning("Não encontrei o botão de %s.", what)

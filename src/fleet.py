@@ -278,7 +278,7 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
             enough = [c for c in candidates
                       if _route_demand(c, premium) >= _daily_seats_sold(aircraft, known, c.distance, bot.load_factor(), bot.mode)]
             if enough and len(enough) < len(candidates):
-                log.debug("%d de %d rutas tienen demanda para llenar el %s.", len(enough), len(candidates), aircraft.model)
+                log.debug("%d de %d rotas têm demanda suficiente para preencher o %s.", len(enough), len(candidates), aircraft.model)
             tries = (enough or candidates)[:MAX_ROUTE_TRIES]
             if not tries:
                 log.info("Nenhuma rota candidata a até %d km (pista >= %d pés).", distance, min_runway)
@@ -292,12 +292,12 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 details = bot.ajax(f"route_research_route.php?dep={hub_id}&arr={candidate.arr_id}", "rDetails")
                 capable = details.find_elements(By.XPATH, f".//*[@id='capAc']/option[starts-with(@value, '{aircraft.id};')]")
                 if not capable:
-                    log.debug("%s no puede volar %s (alcance o pista).", aircraft.reg, candidate.name)
+                    log.debug("%s não pode voar para %s (alcance ou pista).", aircraft.reg, candidate.name)
                     continue
                 capable_found = True
                 on_route = to_int(bot.js(_ON_ROUTE_JS)) or 0
                 if on_route:
-                    log.debug("%s ya tiene %d aviones.", candidate.name, on_route)
+                    log.debug("%s já tem %d aeronaves.", candidate.name, on_route)
                     continue
                 outcome = create_route(bot, aircraft, candidate)
                 break
@@ -318,7 +318,7 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
     bot.js("if (typeof hideFlightInfo === 'function') { hideFlightInfo(); } arrId = arguments[0];", int(candidate.arr_id))
     panel = bot.ajax(f"new_route_info.php?id={aircraft.id}&airportId={candidate.arr_id}&mode=res", "newRouteInfo")
     fee = to_int(bot.js(_ROUTE_FEE_JS))
-    if not bot.can_spend(fee, f"la ruta {candidate.name}", essential=True):  # an aircraft without a route earns nothing
+    if not bot.can_spend(fee, f"a rota {candidate.name}", essential=True):  # an aircraft without a route earns nothing
         bot.js("$('#newRouteInfo').hide();")
         return "stop"
 
@@ -336,7 +336,7 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
     reg = bot.js("return $('#routeReg').val();") or ""
     summary = (
         f"{candidate.name} ({candidate.distance:,.0f} km, demanda Y {candidate.y} / J {candidate.j} / F {candidate.f}) "
-        f"para {aircraft.reg} ({aircraft.model}), billetes ${prices[0]} / ${prices[1]} / ${prices[2]}, "
+        f"para {aircraft.reg} ({aircraft.model}), passagens ${prices[0]} / ${prices[1]} / ${prices[2]}, "
         f"matrícula {reg}, taxa da rota ${fmt(fee)}"
     )
     if bot.dry_run:
@@ -348,7 +348,7 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
     before = bot.read_money()
     bot.click_element(panel.find_element(By.XPATH, ".//*[@id='btnCreateNewRoute']"))
     response = bot.wait_text("//*[@id='routeNewAction']", timeout=15)
-    if not bot.confirm_purchase(before, fee, f"la ruta {candidate.name}", "routeNewAction"):
+    if not bot.confirm_purchase(before, fee, f"a rota {candidate.name}", "routeNewAction"):
         bot.js("$('#newRouteInfo').hide();")
         return "stop"
     bot.spent(fee, invest=True)
@@ -432,7 +432,7 @@ def buy_aircraft(bot: "Bot") -> None:
             return
         choice = wanted[0]
         if choice.price > budget:
-            log_market.info("%s cuesta $%s, acima dos $%s disponíveis após a reserva de caixa.", choice.name, fmt(choice.price), fmt(budget))
+            log_market.info("%s custa $%s, acima dos $%s disponíveis após a reserva de caixa.", choice.name, fmt(choice.price), fmt(budget))
             return
     else:
         affordable = [m for m in models if 0 < m.price <= budget and (max_price == 0 or m.price <= max_price) and m.score > 0]
@@ -441,7 +441,7 @@ def buy_aircraft(bot: "Bot") -> None:
             return
         affordable.sort(key=lambda m: m.score, reverse=True)
         choice = affordable[0]
-        log_market.info("Aeronaves mais rentáveis: %s", ", ".join(f"{m.name} ({m.score * 100:.0f}%/día, ${fmt(m.price)})" for m in affordable[:3]))
+        log_market.info("Aeronaves mais rentáveis: %s", ", ".join(f"{m.name} ({m.score * 100:.0f}%/dia, ${fmt(m.price)})" for m in affordable[:3]))
     order_aircraft(bot, choice)
 
 
