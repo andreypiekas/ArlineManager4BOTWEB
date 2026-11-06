@@ -25,7 +25,7 @@
 - ✔️ Watches the game's checklist: logs the open tasks, reports the completed ones and collects rewards when the game offers a button. While "fly your first 1st class passenger" ($100,000) is open, the seat step counts that reward on the first aircraft it can give first-class seats.
 - ✔️ Exceptional prices (lowest percentile of the history) fill the tanks with all the cash above the reserve.
 - ✔️ The lowest fuel and CO2 prices ever seen appear next to the price boxes, as a reference of what "cheap" really is.
-- ✔️ Hover tooltips on every button and setting; the full guide is below, in Spanish like the app.
+- ✔️ Hover tooltips on every button and setting; the full guide in Brazilian Portuguese is below.
 - ✔️ Dry run mode: logs every purchase, repair, route or order it would make without spending anything.
 - ✔️ Dashboard window: statistic tiles (money and income, reputation and campaign time left, fuel and CO2 tanks with prices, fleet, savings goal), the settings tabs and a colour-coded, tagged log that is always visible. Dark and light themes.
 - ✔️ Web dashboard: the same tiles, log, controls and settings in a browser, also on your phone from the home network (with a token). It can also run without the desktop window (`python src/main.py --web`), for a machine that stays on all day.
@@ -51,7 +51,7 @@ The images use sample figures and an example account. To refresh all of them aft
 
 Works in both game modes: the bot reads the mode of each account (easy: flights at 1.5x speed; realism: real speed and cheaper tickets) and adapts its profit, route and seat calculations to it.
 
-The window and the web dashboard speak English (default) or Spanish (**Idioma / Language** in the sidebar, switched live). Your game account is left alone until you pick a language there; from then on it follows that language at the next check (`[options] sync_game_language = off` to keep them apart). The log and the Telegram messages are in Spanish for now. The game itself can be in any language: the bot finds everything by ids, classes and click handlers, never by visible text (tested with the game in English and in Spanish).
+The desktop app and web dashboard use Brazilian Portuguese (pt-BR) by default, with English as an option in **Idioma / Language**. Operational logs and Telegram notifications are localized to Portuguese. The game can use a different language: when selected, the bot only attempts to sync Brazilian Portuguese if the game's language selector supports it; otherwise, it preserves the game's existing language. Set `[options] sync_game_language = off` to always keep both language settings independent.
 
 ## Requirements
 

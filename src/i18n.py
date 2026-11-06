@@ -1,10 +1,10 @@
-"""Desktop and web interface languages: Brazilian Portuguese (default) or English.
+"""Desktop and web interface languages: Brazilian Portuguese (default) and English.
 
-Legacy source text is the lookup key: ``t("Guardar ajustes")`` returns it as is in Spanish and the English entry of
-``EN`` in English, so the code keeps reading naturally. Texts with placeholders use ``str.format`` names:
-``t("Próxima revisión en {time}", time="02:05")``. Help texts live in help_texts.py (``tip(key)``).
-The bot is localized for Brazilian Portuguese.
+Upstream Spanish text remains supported as an internal lookup key for backwards
+compatibility. PT_BR translates it to Portuguese; EN translates it to English.
+Formatted texts preserve their named placeholders. Tooltips use help_texts.py.
 """
+
 from __future__ import annotations
 
 LANGUAGES = {"pt_BR": "Português (Brasil)", "en": "English"}

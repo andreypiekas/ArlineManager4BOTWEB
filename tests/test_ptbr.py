@@ -32,3 +32,14 @@ def test_web_document_declares_pt_br():
     html = (Path(__file__).resolve().parents[1] / "assets/web/index.html").read_text(encoding="utf-8")
     assert '<html lang="pt-BR">' in html
     assert 'let LANG = "pt_BR"' in html
+
+
+def test_settings_schema_labels_are_translated():
+    from settings_schema import FLEET_SWITCHES, FLEET_FIELDS
+    switches = dict(FLEET_SWITCHES)
+    fields = dict(FLEET_FIELDS)
+    assert switches["auto_check"] == "Programar A-checks"
+    assert fields["fleet_actions_per_cycle"] == "Rotas / pedidos por ciclo"
+    set_language("en")
+    assert t(switches["auto_check"]) == "Plan A-checks"
+    set_language("pt_BR")

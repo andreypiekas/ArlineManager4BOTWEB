@@ -76,7 +76,7 @@ HELP: dict[str, str] = {
 HELP_EN = {
     # ---- sidebar
     "language": "Language of the window and the web dashboard. It also switches your game account to that language at "
-                "the next check (the bot works with the game in any language). The log and Telegram stay in Spanish.",
+                "the next check (the bot works with the game in any language). The bot reports messages in Brazilian Portuguese.",
     "profile": "Each profile is one airline (one game account) with its own settings, credentials, Chrome session, data "
                "and web dashboard. Pick another one to open it in another window (they can run at the same time) or "
                "create a new one: it copies your current settings and puts a shortcut on the desktop.",
