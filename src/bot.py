@@ -472,6 +472,13 @@ class Bot:
                 self.state = BotState.ERROR
                 self.last_error = (str(exc).splitlines() or [exc.__class__.__name__])[0]
                 log.error("O bot foi interrompido por um erro: %s", self.last_error)
+                if ("HTTPConnectionPool" in self.last_error or "chromedriver" in self.last_error.lower()
+                        or "Connection refused" in self.last_error):
+                    log.warning(
+                        "Falha na comunicação com Chrome/ChromeDriver. Verifique "
+                        "data/logs/chromedriver.log, os recursos do servidor e "
+                        "sudo journalctl -k -n 100 --no-pager (possível OOM)."
+                    )
                 log.debug("Traceback:", exc_info=True)
                 self.notify(f"🔴 <b>Bot interrompido por erro</b>: {esc(self.last_error)}")
         else:
@@ -550,7 +557,7 @@ class Bot:
         reason = ""
         if self._next_event is not None and self._next_event[0] + 20 < seconds:
             seconds = max(60.0, self._next_event[0] + 20)
-            reason = f" (me adelanto por {self._next_event[1]})"
+            reason = f" (verificação antecipada: {self._next_event[1]})"
         self.next_cycle_at = time.time() + seconds
         log.info("Próxima verificação em %d min %02d s%s.", seconds // 60, seconds % 60, reason)
         self._wake.wait(seconds)
