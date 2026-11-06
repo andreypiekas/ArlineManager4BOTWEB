@@ -59,11 +59,11 @@ def check_checklist(bot: "Bot") -> None:
         return
     if any(task["claim"] for task in tasks):
         if bot.dry_run:
-            log.info("[SIMULACIÓN] Cobraría las recompensas del checklist.")
+            log.info("[SIMULAÇÃO] Coletaria as recompensas da lista de tarefas.")
         else:
             claimed = bot.js(_CLAIM_JS) or 0
             bot.pause(1.5, 2.0)
-            log.info("Checklist: recompensa cobrada (%d botón/es pulsados).", claimed)
+            log.info("Lista de tarefas: recompensa coletada (%d botões acionados).", claimed)
             bot.notify("🎁 <b>Checklist</b>: recompensa cobrada.")
             bot.ajax("welcome.php", "welcomeContent")
             tasks = bot.js(_TASKS_JS) or tasks
@@ -72,14 +72,14 @@ def check_checklist(bot: "Bot") -> None:
     previous = last.get("open")
     for task in previous or []:
         if task not in open_tasks:
-            log.info("✅ Checklist: tarea completada «%s».", task)
+            log.info("✅ Lista de tarefas: atividade concluída «%s».", task)
             bot.notify(f"✅ <b>Checklist</b>: tarea completada «{esc(task)}».")
     if open_tasks != previous:
         if open_tasks:
-            log.info("Checklist: %d de %d tareas pendientes: %s.", len(open_tasks), len(tasks),
+            log.info("Lista de tarefas: %d de %d atividades pendentes: %s.", len(open_tasks), len(tasks),
                      "; ".join(f"«{task}»" for task in open_tasks))
         else:
-            log.info("Checklist: ¡todas las tareas completadas!")
+            log.info("Lista de tarefas: todas as atividades foram concluídas!")
     # The ids of the open tasks' cells (claim_7 = first 1st class passenger) tell other steps what is left to do.
     open_ids = [task["id"] for task in tasks if not task["done"] and task.get("id")]
     bot.remember("checklist", {"count": count, "checked": int(time.time()), "open": open_tasks, "open_ids": open_ids})

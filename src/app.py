@@ -142,7 +142,7 @@ class App(ctk.CTk):
         self._center()
         self._cfg_seen = self.cfg.version
 
-        log.info("Interfaz cargada.")
+        log.info("Interface carregada.")
         self.web: Optional[WebDashboard] = None
         if self.cfg.get_bool("web", "enabled", True):
             self.web = WebDashboard(self.bot, self.cfg, self.log_buffer, lambda: self.restart.restart_in,
@@ -530,11 +530,11 @@ class App(ctk.CTk):
             now = time.time()
             if now - self._ui_error_at > 60:  # at most one report a minute, the loop runs twice a second
                 self._ui_error_at = now
-                log.exception("Error al refrescar la ventana (%s); sigo.", getattr(step, "__name__", "?"))
+                log.exception("Erro ao atualizar a janela (%s); continuando.", getattr(step, "__name__", "?"))
 
     def report_callback_exception(self, exc, val, tb) -> None:
         """Errors in buttons and timers go to the log file (with pythonw there is no console to print them)."""
-        log.error("Error en la ventana: %s", val, exc_info=(exc, val, tb))
+        log.error("Erro na janela: %s", val, exc_info=(exc, val, tb))
 
     def _drain_logs(self) -> None:
         records = []
@@ -772,7 +772,7 @@ class App(ctk.CTk):
         where = running_instance(self.cfg, include_local=self.web is None or self.web.server is None)
         if where:
             place = "en este equipo" if where == "127.0.0.1" else f"en {where}"
-            log.warning("Ya hay otro Airline Manager 4 Bot de este perfil en marcha %s: no arranco un segundo bot. "
+            log.warning("Já existe outro Airline Manager 4 Bot deste perfil em execução %s: não iniciarei uma segunda instância. "
                         "Páralo antes allí.", place)
             return
         if not self._save_settings(silent=True):
@@ -783,7 +783,7 @@ class App(ctk.CTk):
         self.bot.start()
 
     def stop_bot(self) -> None:
-        log.info("Parando tras el paso actual ...")
+        log.info("Parando após concluir a etapa atual ...")
         self.bot.stop()
 
     def _save_settings(self, silent: bool = False) -> bool:
@@ -791,7 +791,7 @@ class App(ctk.CTk):
         for key, label in ALL_FIELDS:
             value = parse_int(self.setting_entries[key].get())
             if value is None:
-                log.warning("'%s' debe ser un número entero.", label)
+                log.warning("'%s' deve ser um número inteiro.", label)
                 return False
             values[key] = value
         for key, value in clamp_settings(values).items():
@@ -808,12 +808,12 @@ class App(ctk.CTk):
             goal = known["name"]
             self.goal_combo.set(goal)
         elif goal and self._market:
-            log.warning("No encuentro «%s» en el mercado guardado; el bot lo buscará igualmente por nombre.", goal)
+            log.warning("Não encontrei «%s» no mercado salvo; o bot fará uma busca pelo nome.", goal)
         self.cfg.set("settings", "goal_model", goal)
         self.cfg.save()
         self._cfg_seen = self.cfg.version
         if not silent:
-            log.info("Ajustes guardados.")
+            log.info("Configurações salvas.")
         self._refresh_goal_panel()
         return True
 
@@ -823,9 +823,9 @@ class App(ctk.CTk):
         self._cfg_seen = self.cfg.version
         if key == "dry_run":
             if self.option_vars[key].get():
-                log.info("Simulación activada: el bot solo registra lo que compraría o planificaría.")
+                log.info("Simulação ativada: o bot apenas registra o que compraria ou programaria.")
             else:
-                log.info("Simulación desactivada: el bot gastará dinero de verdad.")
+                log.info("Simulação desativada: o bot fará operações com saldo real do jogo.")
         if key in ("save_for_goal", "goal_invest"):
             self._refresh_goal_panel()
         if key in ("auto_marketing", "marketing_eco"):
@@ -836,7 +836,7 @@ class App(ctk.CTk):
         self.cfg.set("options", "remember_credentials", "on" if remember else "off")
         self.cfg.save()
         if not remember and self.cfg.forget_credentials():
-            log.info("Credenciales guardadas eliminadas (config/secrets.ini).")
+            log.info("Credenciais salvas removidas (config/secrets.ini).")
 
     # -- profiles: each one is a separate airline / game account with its own window, data and web port
     def _profile_values(self) -> list[str]:
@@ -864,22 +864,22 @@ class App(ctk.CTk):
                  "ventana que se abre.", profile.label, profile.port())
         shortcut = create_desktop_shortcut(profile)
         if shortcut:
-            log.info("Acceso directo «%s» creado en el escritorio.", shortcut.removesuffix(".lnk"))
+            log.info("Atalho «%s» criado na área de trabalho.", shortcut.removesuffix(".lnk"))
         self.profile_menu.configure(values=self._profile_values())
         self._open_profile(profile)
 
     def _open_profile(self, profile: paths.Profile) -> None:
         if profile_running(profile):
-            log.info("El perfil «%s» ya está abierto: abro su panel web.", profile.label)
+            log.info("O perfil «%s» já está aberto; abrindo o painel web.", profile.label)
             token = profile_token(profile)
             webbrowser.open_new_tab(f"http://127.0.0.1:{profile.port()}/" + (f"?token={token}" if token else ""))
             return
-        log.info("Abriendo el perfil «%s» en otra ventana ...", profile.label)
+        log.info("Abrindo o perfil «%s» em outra janela ...", profile.label)
         launch(profile)
 
     def open_web(self) -> None:
         if self.web is None or not self.web.url:
-            log.info("El panel web está desactivado ([web] enabled en config/settings.ini).")
+            log.info("O painel web está desativado ([web] enabled em config/settings.ini).")
             return
         token = self.cfg.web_token
         webbrowser.open_new_tab(self.web.url + (f"?token={token}" if token else ""))
@@ -895,16 +895,16 @@ class App(ctk.CTk):
         self.telegram_label.configure(text=self._telegram_status())
         client = Telegram(*self.cfg.telegram)
         if not client.enabled:
-            log.warning("Telegram no está configurado todavía (config/secrets.ini, sección [telegram]).")
+            log.warning("Telegram ainda não está configurado (seção [telegram] em config/secrets.ini).")
             return
         self.btn_telegram_test.configure(state="disabled")
 
         def worker() -> None:
             ok, description = client.send_now("✅ <b>Airline Manager 4 Bot</b> conectado a Telegram.")
             if ok:
-                log.info("Mensaje de prueba enviado a Telegram.")
+                log.info("Mensagem de teste enviada ao Telegram.")
             else:
-                log.warning("La prueba de Telegram ha fallado: %s", description)
+                log.warning("Falha no teste do Telegram: %s", description)
             self.after(0, lambda: self.btn_telegram_test.configure(state="normal"))
 
         threading.Thread(target=worker, name="telegram-test", daemon=True).start()
@@ -925,7 +925,7 @@ class App(ctk.CTk):
         set_language(code)
         self.bot.request_game_language()
         self._rebuild_ui()
-        log.info("Idioma de la interfaz: %s. El del juego se cambia en la próxima revisión.", LANGUAGES[code])
+        log.info("Idioma da interface: %s. O idioma do jogo será verificado no próximo ciclo.", LANGUAGES[code])
 
     def _rebuild_ui(self) -> None:
         self._save_settings(silent=True)  # numbers typed but not saved yet survive the redraw
@@ -970,7 +970,7 @@ class App(ctk.CTk):
     def open_log_file(self) -> None:
         path = self.log_file.resolve()
         if not path.exists():
-            log.info("Aún no hay fichero de registro.")
+            log.info("Ainda não há arquivo de registro.")
             return
         system = platform.system()
         if system == "Windows":
@@ -982,7 +982,7 @@ class App(ctk.CTk):
 
     def on_close(self) -> None:
         if self.bot.is_alive():
-            log.info("Cerrando: parando el bot ...")
+            log.info("Fechando: interrompendo o bot ...")
             self.bot.stop()
             # Closing Chrome and chromedriver can take a while mid-cycle; leaving earlier orphans chromedriver.
             self.bot.join(timeout=20)

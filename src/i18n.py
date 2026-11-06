@@ -1,14 +1,14 @@
-"""Interface language of the desktop window and the web dashboard: Spanish (source) or English.
+"""Desktop and web interface languages: Brazilian Portuguese (default) or English.
 
-The Spanish text is the key: ``t("Guardar ajustes")`` returns it as is in Spanish and the English entry of
+Legacy source text is the lookup key: ``t("Guardar ajustes")`` returns it as is in Spanish and the English entry of
 ``EN`` in English, so the code keeps reading naturally. Texts with placeholders use ``str.format`` names:
 ``t("Próxima revisión en {time}", time="02:05")``. Help texts live in help_texts.py (``tip(key)``).
-The log and the Telegram messages are still Spanish only.
+The bot is localized for Brazilian Portuguese.
 """
 from __future__ import annotations
 
-LANGUAGES = {"es": "Español", "en": "English"}
-DEFAULT_LANGUAGE = "en"  # until [app] language is chosen in the sidebar
+LANGUAGES = {"pt_BR": "Português (Brasil)", "en": "English"}
+DEFAULT_LANGUAGE = "pt_BR"
 _language = DEFAULT_LANGUAGE
 
 
@@ -23,7 +23,7 @@ def language() -> str:
 
 
 def t(text: str, **values) -> str:
-    result = EN.get(text, text) if _language == "en" else text
+    result = EN.get(text, EN.get(PT_TO_ES.get(text, ""), text)) if _language == "en" else PT_BR.get(text, text)
     return result.format(**values) if values else result
 
 
@@ -132,3 +132,140 @@ EN: dict[str, str] = {
     "Guardado.": "Saved.", "«{key}» debe ser un número entero.": "“{key}” must be a whole number.",
     "Ajuste desconocido «{key}».": "Unknown setting “{key}”.",
 }
+
+
+# Brazilian Portuguese equivalents for legacy interface strings.
+PT_BR: dict[str, str] = {
+    "Flota": "Frota",
+    "Aviones": "Aeronaves",
+    "Opciones": "Opções",
+    "Comprar fuel a ≤ $": "Comprar combustível a ≤ $",
+    "Comprar CO2 a ≤ $": "Comprar CO₂ a ≤ $",
+    "Stock mínimo (%)": "Estoque mínimo (%)",
+    "Stock máx. (días)": "Estoque máximo (dias)",
+    "Gasto máx. (% caja)": "Gasto máximo (% do saldo)",
+    "Espera mín. (min)": "Intervalo mínimo (min)",
+    "Espera máx. (min)": "Intervalo máximo (min)",
+    "Percentil compra (%)": "Percentil de compra (%)",
+    "Percentil excepc. (%)": "Percentil excepcional (%)",
+    "Histórico (días)": "Histórico (dias)",
+    "Máx. fuel / compra": "Máx. combustível por compra",
+    "Máx. CO2 / compra": "Máx. CO₂ por compra",
+    "A-check si quedan <= horas": "A-check quando restarem ≤ horas",
+    "Reserva de caja ($)": "Reserva de caixa ($)",
+    "Ruta máx. avión pequeño (km)": "Rota máxima para aeronave pequena (km)",
+    "Ruta máx. avión grande (km)": "Rota máxima para aeronave grande (km)",
+    "Pista mínima (ft)": "Pista mínima (pés)",
+    "Huecos libres en el hangar": "Vagas disponíveis no hangar",
+    "Taller: amortizar en ≤ días": "Oficina: retorno em até ≤ dias",
+    "Mejoras de avión: velocidad, fuel y CO2": "Melhorias: velocidade, combustível e CO₂",
+    "Precio máx. sin objetivo (0 = libre)": "Preço máximo sem meta (0 = livre)",
+    "Campaña de reputación (1-4)": "Campanha de reputação (1-4)",
+    "Duración de la campaña (h)": "Duração da campanha (h)",
+    "Hora del resumen diario (0-23)": "Horário do resumo diário (0-23)",
+    "Compra inteligente con el histórico de precios": "Compra inteligente com histórico de preços",
+    "Reparar aviones desgastados": "Reparar aeronaves desgastadas",
+    "Crear rutas para aviones aparcados": "Criar rotas para aeronaves estacionadas",
+    "Ampliar el hangar si se llena": "Ampliar o hangar quando estiver cheio",
+    "Asientos business / first según demanda": "Assentos executiva / primeira conforme a demanda",
+    "Comprar aviones": "Comprar aeronaves",
+    "Ahorrar para un avión objetivo": "Economizar para uma aeronave desejada",
+    "Invertir en pequeños si adelantan el objetivo": "Investir em aeronaves menores se anteciparem a meta",
+    "Despegar aviones": "Decolar aeronaves",
+    "Comprar fuel": "Comprar combustível",
+    "Comprar CO2": "Comprar CO₂",
+    "Campañas de reputación": "Campanhas de reputação",
+    "Campaña eco-friendly": "Campanha ecológica",
+    "Vigilar el checklist del juego": "Monitorar a lista de tarefas do jogo",
+    "Iniciar el bot al abrir": "Iniciar o bot ao abrir",
+    "Mantener sesión del navegador": "Manter a sessão do navegador",
+    "Navegador oculto (headless)": "Navegador em segundo plano (headless)",
+    "Notificaciones por Telegram": "Notificações pelo Telegram",
+    "Telegram: también los despegues": "Telegram: avisar também as decolagens",
+    "Reiniciar solo tras un error": "Reiniciar automaticamente após erro",
+    "Simulación (no gasta nada)": "Simulação (sem gastos)",
+    "Avión objetivo": "Aeronave desejada",
+    "Modelo fijo sin objetivo": "Modelo fixo sem meta",
+    "➕ Nuevo perfil…": "➕ Novo perfil…",
+    "CUENTA": "CONTA",
+    "Correo": "E-mail",
+    "Contraseña": "Senha",
+    "Recordar credenciales": "Lembrar credenciais",
+    "⟳  Ejecutar ciclo ahora": "⟳  Executar ciclo agora",
+    "ESTADO": "STATUS",
+    "APARIENCIA": "APARÊNCIA",
+    "Oscuro": "Escuro",
+    "Juego en modo {mode}": "Jogo no modo {mode}",
+    "🌐  Abrir el panel web": "🌐  Abrir o painel web",
+    "Abre {url} en el navegador: las mismas estadísticas, registro y ajustes.": "Abra {url} no navegador para ver as mesmas estatísticas, registros e configurações.",
+    "Próxima revisión en {time}": "Próxima verificação em {time}",
+    "Revisando ...": "Verificando ...",
+    "Reinicio automático en {time}": "Reinício automático em {time}",
+    "Nuevo perfil": "Novo perfil",
+    "Nombre del perfil nuevo (por ejemplo «realismo»).\nTendrá su propia cuenta, ajustes, datos y panel web.": "Nome do novo perfil (por exemplo, «realismo»).\nEle terá sua própria conta, configurações, dados e painel web.",
+    "Abriendo navegador": "Abrindo navegador",
+    "Iniciando sesión": "Fazendo login",
+    "En marcha": "Em execução",
+    "Error": "Erro",
+    "💰  DINERO": "💰  DINHEIRO",
+    "⭐  REPUTACIÓN": "⭐  REPUTAÇÃO",
+    "⛽  FUEL": "⛽  COMBUSTÍVEL",
+    "🌿  CO2": "🌿  CO₂",
+    "🛩  FLOTA": "🛩  FROTA",
+    "🎯  OBJETIVO": "🎯  META",
+    "+{money}/día": "+{money}/dia",
+    "{n} puntos": "{n} pontos",
+    "campaña {time}": "campanha {time}",
+    "sin campaña activa": "sem campanha ativa",
+    "{n} en vuelo": "{n} em voo",
+    "{n} aparc.": "{n} estacionadas",
+    "{n} pend.": "{n} pendentes",
+    "actualizado {time}": "atualizado {time}",
+    "Sin datos todavía": "Ainda sem dados",
+    "Guardar ajustes": "Salvar configurações",
+    "vacío = más rentable": "vazio = mais rentável",
+    "(mín. visto ${price})": "(menor preço registrado ${price})",
+    "Precio más bajo visto: ${price} el %d/%m/%Y a las %H:%M": "Menor preço registrado: ${price} em %d/%m/%Y às %H:%M",
+    "Probar Telegram": "Testar Telegram",
+    "Telegram configurado para el chat {chat} (config/secrets.ini).": "Telegram configurado para o chat {chat} (config/secrets.ini).",
+    "Telegram sin configurar: añade bot_token y chat_id en la sección [telegram] de config/secrets.ini.": "Telegram não configurado: informe bot_token e chat_id na seção [telegram] de config/secrets.ini.",
+    "🎯 Sin objetivo": "🎯 Sem meta",
+    "🎯 Elige un avión objetivo": "🎯 Escolha uma aeronave desejada",
+    "Escribe o elige un modelo en «Avión objetivo» y pulsa Guardar ajustes.": "Digite ou selecione um modelo em «Aeronave desejada» e clique em Salvar configurações.",
+    "No encuentro ese modelo en el mercado guardado. Revisa el nombre o espera a que el bot consulte el mercado.": "Modelo não encontrado no mercado salvo. Confira o nome ou aguarde a próxima consulta ao mercado.",
+    "Ahorrado {have} ({pct}%), la reserva aparte.": "Economizado {have} ({pct}%), sem contar a reserva.",
+    "¡Ya llega! Lo pedirá en la próxima revisión si hay hueco en el hangar.": "Meta alcançada! O pedido será feito na próxima verificação se houver vaga no hangar.",
+    "Faltan {missing} · {rate} · llegada {eta}": "Faltam {missing} · {rate} · previsão {eta}",
+    "{money}/día": "{money}/dia",
+    "ritmo aún sin medir": "ritmo ainda não calculado",
+    "Hangar: {free} huecos libres de {total}": "Hangar: {free} vagas disponíveis de {total}",
+    "Modo ahorro apagado: compra el avión más rentable que pueda.": "Modo economia desligado: compra a aeronave mais rentável disponível.",
+    "Compra pequeños solo si se amortizan antes de llegar.": "Compra aeronaves menores apenas se houver retorno antes da meta.",
+    "Solo ahorra: no compra otros aviones.": "Apenas economiza: não compra outras aeronaves.",
+    "IDEAS DE OBJETIVO · precio · plazas · rentabilidad estimada · llegada a tu ritmo": "SUGESTÕES DE META · preço · assentos · lucro estimado · previsão",
+    "Escalera (a tu ritmo actual y al crecer):": "Progressão (no ritmo atual e com crescimento):",
+    "Caprichos:": "Aeronaves dos sonhos:",
+    "{name} · {price} · {seats} pax · gana {profit}/día · se paga en {days} d": "{name} · {price} · {seats} pax · rende {profit}/dia · retorno em {days} dias",
+    "El bot guardará la lista del mercado la próxima vez que lo consulte.": "O bot salvará a lista do mercado na próxima consulta.",
+    "Automático (escalera)": "Automático (progressão)",
+    "Auto: {name}": "Automático: {name}",
+    "sin estimar": "sem estimativa",
+    "ya": "agora",
+    "menos de 1 h": "menos de 1 h",
+    "~{n} días": "~{n} dias",
+    "📜  Registro": "📜  Registros",
+    "Abrir fichero": "Abrir arquivo",
+    "Limpiar": "Limpar",
+    "El bot ya está en marcha.": "O bot já está em execução.",
+    "Iniciando el bot ...": "Iniciando o bot ...",
+    "El bot ya está parado.": "O bot já está parado.",
+    "Revisando ahora.": "Verificando agora.",
+    "Cerrando ...": "Fechando ...",
+    "Acción desconocida.": "Ação desconhecida.",
+    "Guardado.": "Salvo.",
+    "«{key}» debe ser un número entero.": "«{key}» deve ser um número inteiro.",
+    "Ajuste desconocido «{key}».": "Configuração desconhecida: «{key}»."
+}
+
+# Resolve new Portuguese source labels back to legacy keys for English rendering.
+PT_TO_ES = {value: key for key, value in PT_BR.items()}

@@ -5,6 +5,8 @@
     <img src="screenshots/desktop-mercado.png" alt="Screenshot of the desktop app">
 </div>
 
+**Idioma padrão: Português (Brasil).** [Guia completo das configurações](#guia-do-aplicativo-em-português-brasileiro).
+
 ## Features
 
 - ✔️ Auto depart all aircraft.
@@ -148,121 +150,108 @@ Then, in the app's *Opciones* tab, keep **Notificaciones por Telegram** on and p
 
 You get a message for every purchase, route, order, repair or A-check (also in dry run, marked as such), when the bot starts, stops or crashes, and one daily summary after `summary_hour` with the balance, stocks, fleet and the day's actions. Switch **Telegram: also departures** on if you want a message for every departure too.
 
-## Guía de la app (en español)
+## Guia do aplicativo em português brasileiro
 
-El bot revisa tu aerolínea cada pocos minutos y en cada revisión, por este orden: lee el dinero, mantiene en marcha las campañas de reputación, planifica reparaciones y A-checks de los aviones que están en base, ajusta sus asientos (turista, business y first) a la demanda de su ruta, despega todo lo que esté listo, mira el mercado de fuel y CO2 y compra si el precio es bueno, da ruta a los aviones aparcados y, si no queda ninguno aparcado, compra un avión o ahorra para el objetivo. De vez en cuando mira el checklist del juego. Todo lo que hace aparece en el Registro y, si quieres, en Telegram.
+O bot verifica a companhia aérea periodicamente: lê o saldo, administra campanhas, repara aeronaves, ajusta assentos, decola voos disponíveis, compra combustível e CO₂, cria rotas, adquire aeronaves ou economiza para uma meta. As ações ficam registradas no painel e podem ser enviadas pelo Telegram.
 
-Pasa el ratón por encima de cualquier ajuste de la app para ver esta misma explicación.
+Passe o mouse sobre uma configuração para abrir a ajuda contextual em português.
 
 ### Barra lateral
 
-- **Perfil**: Cada perfil es una aerolínea (una cuenta del juego) con sus propios ajustes, credenciales, sesión de Chrome, datos y panel web. Elige otro para abrirlo en otra ventana (pueden ir a la vez) o crea uno nuevo con «➕ Nuevo perfil…»: copia tus ajustes actuales y pone un acceso directo en el escritorio.
-- **Correo y contraseña**: Tu correo y contraseña de Airline Manager. Si marcas «Recordar credenciales» se guardan en config/secrets.ini, que no se sube a git. Si los dejas vacíos, inicia sesión a mano en Chrome.
-- **Recordar credenciales**: Guarda el correo y la contraseña en config/secrets.ini para no escribirlos cada vez. Al desmarcarlo se borra ese fichero.
-- **INICIAR BOT**: Abre Chrome, inicia sesión y empieza a revisar la aerolínea en bucle. Guarda los ajustes antes de arrancar.
-- **PARAR BOT**: Para el bot cuando termine el paso que esté haciendo y cierra Chrome.
-- **Ejecutar ciclo ahora**: Se salta la espera y hace una revisión completa ahora mismo.
-- **Estado**: Estado del bot y cuenta atrás hasta la próxima revisión. Tras un error verás el motivo y la cuenta atrás del reinicio automático.
-- **Abrir el panel web**: Abre en el navegador el panel web, con las mismas tarjetas, registro y ajustes (ver «Panel web» más abajo).
-- **Apariencia**: Tema claro, oscuro o el del sistema.
-- **Idioma**: Idioma de la ventana y del panel web (español o inglés). También cambia el idioma de tu cuenta en el juego en la siguiente revisión (el bot funciona con el juego en cualquier idioma). El registro y Telegram siguen en español.
+- **Perfis** — Cada perfil usa uma conta, configurações, dados e sessão do navegador independentes.
+- **Conta** — Credenciais de acesso ao Airline Manager. Deixe em branco para fazer login manualmente no Chrome.
+- **Lembrar credenciais** — Armazena as credenciais localmente em config/secrets.ini, que não é enviado ao Git.
+- **Iniciar bot** — Abre o navegador e inicia os ciclos automáticos. Salve as configurações antes.
+- **Parar bot** — Interrompe o bot após concluir a etapa atual e fecha o navegador.
+- **Executar ciclo agora** — Executa imediatamente uma nova verificação, sem aguardar o intervalo.
+- **Status** — Estado atual do bot, tempo para o próximo ciclo e informações de erro.
+- **Aparência** — Escolha entre aparência clara, escura ou padrão do sistema.
+- **Idioma** — Idioma da interface: português brasileiro ou inglês. A alteração do idioma do jogo depende das opções disponíveis nele.
 
-### Tarjetas de estadísticas (arriba)
+### Indicadores
 
-- **Dinero**: Dinero de la aerolínea. Debajo, los ingresos netos estimados por día mientras el bot está en marcha (el fuel y el CO2 cuentan al gastarse, no al comprarlos) y los puntos del juego (el bot no los gasta).
-- **Reputación**: Reputación de la aerolínea, con las campañas que estén en marcha. Los aviones vuelan más o menos así de llenos. Debajo, lo que le queda a la primera campaña que acaba.
-- **Fuel**: Lo lleno que está el tanque de fuel. Debajo, el precio actual por 1.000 lbs y el precio por debajo del cual compra ahora mismo.
-- **CO2**: Lo lleno que está el tanque de CO2. Debajo, el precio actual de 1.000 cuotas y el umbral de compra actual.
-- **Flota**: Aviones de la flota. Debajo: en vuelo, aparcados sin ruta y pendientes (de entrega o en el taller cambiando asientos).
-- **Objetivo**: Progreso hacia el avión objetivo: dinero ahorrado por encima de la reserva y llegada estimada a tu ritmo de ingresos.
+- **Dinheiro** — Saldo, renda líquida estimada por dia e pontos da companhia aérea.
+- **Reputação** — Reputação e campanhas ativas, que influenciam a ocupação dos voos.
+- **Combustível** — Estoque de combustível, preço por 1.000 libras e limite de compra.
+- **CO₂** — Estoque de CO₂, preço por 1.000 cotas e limite de compra.
+- **Frota** — Aeronaves em voo, estacionadas e pendentes de entrega ou manutenção.
+- **Meta** — Progresso financeiro e prazo estimado para adquirir a aeronave desejada.
 
-### Pestaña Mercado
+### Aba Mercado
 
-- **Comprar fuel a ≤ $**: Por debajo de este precio compra fuel siempre, diga lo que diga el histórico. Entre paréntesis, junto a la casilla, el precio más bajo que ha visto el bot.
-- **Comprar CO2 a ≤ $**: Por debajo de este precio compra CO2 siempre, diga lo que diga el histórico. Entre paréntesis, junto a la casilla, el precio más bajo que ha visto el bot.
-- **Percentil compra (%)**: Con la compra inteligente, compra cuando el precio está entre el X % más barato de los últimos días. 25 = el cuarto más barato. Más bajo compra menos veces pero más barato.
-- **Percentil excepc. (%)**: Precio excepcional: si el precio está entre el X % más barato, llena el tanque con todo el dinero que haya por encima de la reserva y puede volver a comprar en la misma media hora. 0 lo desactiva.
-- **Histórico (días)**: Cuántos días de precios usa para calcular los percentiles.
-- **Stock mínimo (%)**: Si el tanque baja de este porcentaje, repone hasta ese nivel a cualquier precio para que ningún avión se quede en tierra.
-- **Stock máx. (días)**: Como mucho compra fuel o CO2 para estos días de consumo (lo mide el bot); con precio excepcional, el doble. Así el dinero va a aviones nuevos en vez de quedarse semanas en el tanque. 0 = llena el tanque.
-- **Gasto máx. (% caja)**: Parte máxima del dinero disponible (por encima de la reserva) que gasta en una compra normal de fuel o CO2.
-- **Máx. fuel / compra**: Cantidad máxima de fuel por compra. Con 9.999.999 llena lo que quepa.
-- **Máx. CO2 / compra**: Cantidad máxima de CO2 por compra. Con 9.999.999 llena lo que quepa.
-- **Espera mín. (min)**: Espera mínima entre revisiones. El bot elige un tiempo al azar entre el mínimo y el máximo.
-- **Espera máx. (min)**: Espera máxima entre revisiones. Se adelanta solo si va a aterrizar un avión o a cambiar el precio.
-- **Compra inteligente**: Usa el histórico de precios para decidir: compra cuando el precio está en la parte baja de los últimos días, no solo por debajo del precio fijo.
+- **Comprar combustível a ≤ $** — Compra combustível neste preço ou abaixo, mesmo que o histórico indique esperar.
+- **Comprar CO₂ a ≤ $** — Compra CO₂ neste preço ou abaixo, mesmo que o histórico indique esperar.
+- **Estoque mínimo (%)** — Abaixo deste nível, repõe os insumos mesmo que o preço esteja alto.
+- **Estoque máximo (dias)** — Limita o estoque à previsão de consumo por dias. Zero permite encher completamente.
+- **Gasto máximo (% do saldo)** — Percentual máximo do saldo disponível acima da reserva por compra.
+- **Intervalo mínimo (min)** — Tempo mínimo entre verificações automáticas.
+- **Intervalo máximo (min)** — Tempo máximo entre verificações; pousos e preços podem antecipar o ciclo.
+- **Percentil de compra (%)** — Compra nos percentis de preços mais baixos dos últimos dias.
+- **Percentil excepcional (%)** — Preço excepcional pode liberar compras maiores e repetidas na mesma meia hora. Zero desativa.
+- **Histórico (dias)** — Quantidade de dias usada na análise do histórico de preços.
+- **Máx. combustível por compra** — Quantidade máxima de combustível por compra. 9.999.999 libera o limite do tanque.
+- **Máx. CO₂ por compra** — Quantidade máxima de CO₂ por compra. 9.999.999 libera o limite do tanque.
+- **Compra inteligente com histórico de preços** — Compra segundo os preços mais vantajosos do histórico.
 
-### Pestaña Flota
+### Aba Frota
 
-- **Reparar aviones desgastados**: Planifica la reparación de los aviones cuyo desgaste supere el umbral.
-- **Planificar A-checks**: Planifica el A-check cuando a un avión le queden pocas horas.
-- **Crear rutas para aviones aparcados**: Da ruta a los aviones aparcados: elige la ruta con más demanda que el avión puede volar y pone el precio automático del juego.
-- **Ampliar el hangar si se llena**: Si quedan pocos huecos en el hangar, compra uno más (unos $25.000) para que siempre se pueda comprar otro avión.
-- **Asientos business / first según demanda**: Cuando un avión está en la base, mira la demanda de su ruta y le pone asientos first y business hasta cubrir esa demanda; el resto, turista. Por hueco, first paga más que business y business más que turista. Solo cambia si sale a cuenta (ver «amortizar en»). Cambiar asientos cuesta $8.000 por cada business y $16.000 por cada first, y el avión pasa un rato en el taller.
-- **Reparar a partir de desgaste (%)**: Desgaste a partir del cual se repara un avión.
-- **A-check si quedan <= horas**: Se planifica el A-check cuando quedan estas horas o menos.
-- **Reserva de caja ($)**: Colchón para lo imprescindible: por debajo de esta cantidad solo paga reparaciones, A-checks, el fuel o CO2 de un tanque casi vacío y la ruta de un avión ya comprado. Nada de aviones, campañas, taller, hangar ni compras normales de fuel.
-- **Ruta máx. avión pequeño (km)**: Distancia máxima al buscar ruta para aviones pequeños y medianos.
-- **Ruta máx. avión grande (km)**: Distancia máxima al buscar ruta para aviones de 150 plazas o más. Las rutas largas pagan billetes más caros.
-- **Pista mínima (ft)**: Pista mínima del aeropuerto de destino al buscar rutas.
-- **Huecos libres en el hangar**: Huecos libres que intenta mantener en el hangar si «Ampliar el hangar» está activado.
-- **Rutas / pedidos por ciclo**: Máximo de rutas nuevas y pedidos de aviones en cada revisión, para no gastar todo de golpe.
-- **Mejoras de avión: velocidad, fuel y CO2**: Cuando un avión está en la base, calcula cuánto ganaría con cada mejora del taller del juego: velocidad +10 % (más vuelos al día), fuel -10 % y CO2 -10 %. Instala solo las que se pagan en el plazo de «amortizar en». Son permanentes y cada una tiene el avión unos 13 minutos en el taller.
-- **Taller: amortizar en ≤ días**: Solo cambia los asientos o instala una mejora si su coste, más lo que el avión deja de ganar en el taller, se recupera en estos días o menos.
+- **Reparar a partir de desgaste (%)** — Desgaste percentual a partir do qual deve reparar uma aeronave.
+- **A-check quando restarem ≤ horas** — Horas restantes para iniciar a programação do A-check.
+- **Reserva de caixa ($)** — Valor protegido contra compras não essenciais, preservando a operação.
+- **Rota máxima para aeronave pequena (km)** — Distância máxima de rotas para aeronaves pequenas e médias.
+- **Rota máxima para aeronave grande (km)** — Distância máxima de rotas para aeronaves de grande porte.
+- **Pista mínima (pés)** — Comprimento mínimo da pista do aeroporto de destino.
+- **Vagas disponíveis no hangar** — Quantidade de vagas que o bot tenta manter livres no hangar.
+- **Rutas / pedidos por ciclo** — Limita novas rotas e pedidos de aeronaves por ciclo.
+- **Oficina: retorno em até ≤ dias** — Prazo máximo para recuperar o custo de melhorias e perda de receita durante a parada.
+- **Reparar aeronaves desgastadas** — Programa reparos das aeronaves que atingirem o desgaste definido.
+- **Planificar A-checks** — Programa o A-check quando restarem poucas horas.
+- **Criar rotas para aeronaves estacionadas** — Cria rotas com demanda adequada para aeronaves estacionadas.
+- **Ampliar o hangar quando estiver cheio** — Compra expansão do hangar quando estiver perto do limite.
+- **Assentos executiva / primeira conforme a demanda** — Distribui assentos entre econômica, executiva e primeira classe conforme a demanda.
+- **Melhorias: velocidade, combustível e CO₂** — Avalia melhorias de velocidade, consumo de combustível e emissões de CO₂.
 
-### Pestaña Aviones (compras y objetivo)
+### Aba Aeronaves
 
-- **Comprar aviones**: Permite al bot comprar aviones. Nunca compra mientras haya aviones aparcados sin ruta.
-- **Ahorrar para un avión objetivo**: Modo ahorro: junta dinero para el avión objetivo y lo compra en cuanto llega, sin tocar la reserva.
-- **Invertir en pequeños si adelantan el objetivo**: Mientras ahorra, compra un avión más pequeño solo si se amortiza en menos de la mitad del tiempo que falta para el objetivo: así el objetivo llega antes. Apagado, solo ahorra.
-- **Avión objetivo**: El avión que quieres conseguir. «Automático (escalera)» elige solo el siguiente escalón: el avión que más gana al día entre los que cuestan como mucho un día de ingresos y se pagan en 5 días o menos. Al crecer los ingresos, la escalera sube sola a aviones más grandes. También puedes elegir un modelo fijo.
-- **Modelo fijo sin objetivo**: Sin objetivo: compra siempre este modelo en lugar del más rentable.
-- **Precio máx. sin objetivo (0 = libre)**: Sin objetivo: no compra aviones más caros que esto. 0 = sin límite.
+- **Preço máximo sem meta (0 = livre)** — Limite de preço sem meta definida; zero remove o limite.
+- **Comprar aeronaves** — Permite comprar aeronaves, desde que não haja outras estacionadas sem rota.
+- **Economizar para uma aeronave desejada** — Economiza para comprar a aeronave desejada sem comprometer a reserva.
+- **Investir em aeronaves menores se anteciparem a meta** — Compra aeronaves menores somente se ajudarem a atingir a meta mais cedo.
+- **Aeronave desejada** — Escolha um modelo ou a progressão automática, que evolui conforme o lucro da companhia.
+- **Modelo fixo sem meta** — Modelo fixo a comprar quando não houver uma meta de aquisição.
 
-### Pestaña Opciones
+### Aba Opções
 
-- **Despegar aviones**: Despega todos los aviones que estén listos en cada revisión.
-- **Comprar fuel**: Compra fuel según las reglas de la pestaña Mercado.
-- **Comprar CO2**: Compra CO2 según las reglas de la pestaña Mercado.
-- **Campañas de reputación**: Mantiene en marcha una campaña de reputación: los aviones vuelan tan llenos como la reputación, así que cada despegue gana más. Solo la lanza si lo que trae en billetes (según tus ingresos medidos) supera su precio, y nunca baja de la reserva de caja.
-- **Campaña eco-friendly**: Mantiene en marcha la campaña eco-friendly (12 h, +10 % de reputación, barata) mientras salga a cuenta. Solo funciona si tienes cuotas de CO2 en el tanque.
-- **Vigilar el checklist del juego**: Lee el checklist del juego (abajo a la izquierda), avisa de las tareas que se completan y cobra las recompensas si el juego ofrece un botón.
-- **Iniciar el bot al abrir**: Arranca el bot nada más abrir la aplicación. Útil con el acceso directo en el inicio de Windows.
-- **Mantener sesión del navegador**: Guarda el perfil de Chrome en config/session. El juego pide login igualmente, pero conserva cookies y ajustes.
-- **Navegador oculto (headless)**: Chrome sin ventana. Más discreto; si el juego pide un captcha no podrás verlo.
-- **Notificaciones por Telegram**: Envía a Telegram cada compra, ruta, pedido, reparación, error y un resumen diario.
-- **Telegram: también los despegues**: Además, un mensaje en cada despegue. Suele ser demasiado ruido.
-- **Reiniciar solo tras un error**: Si el bot se para por un error, vuelve a arrancar solo a los 2 minutos (luego 4, 8... hasta 30).
-- **Simulación (no gasta nada)**: Simulación: el bot hace todo igual pero no compra ni planifica nada; solo escribe en el registro lo que haría.
-- **Campaña de reputación (1-4)**: Qué campaña de reputación lanza: 1 (+5-10 %, la más barata) a 4 (+25-35 %). La 4 es la que más reputación da por cada dólar.
-- **Duración de la campaña (h)**: Duración de cada campaña de reputación: 4, 8, 12, 16, 20 o 24 h. Las largas salen algo más baratas por hora, pero siguen corriendo aunque pares el bot.
-- **Hora del resumen diario (0-23)**: Hora a partir de la cual se envía el resumen diario por Telegram.
-- **Probar Telegram**: Manda un mensaje de prueba para comprobar el token y el chat id de config/secrets.ini.
+- **Campanha de reputação (1-4)** — Nível da campanha de reputação entre 1 e 4.
+- **Duração da campanha (h)** — Duração das campanhas: 4, 8, 12, 16, 20 ou 24 horas.
+- **Decolar aeronaves** — Decola as aeronaves disponíveis em cada ciclo.
+- **Comprar combustível** — Compra combustível conforme os critérios da aba Mercado.
+- **Comprar CO₂** — Compra CO₂ conforme os critérios da aba Mercado.
+- **Campanhas de reputação** — Inicia campanhas de reputação se o retorno justificar o custo.
+- **Campanha ecológica** — Mantém campanha ecológica enquanto for vantajosa e houver CO₂.
+- **Monitorar a lista de tarefas do jogo** — Monitora tarefas e coleta recompensas disponíveis no jogo.
+- **Iniciar o bot ao abrir** — Inicia automaticamente o bot ao abrir o aplicativo.
+- **Manter a sessão do navegador** — Mantém os cookies e os dados da sessão do Chrome.
+- **Navegador em segundo plano (headless)** — Executa o navegador oculto; CAPTCHAs ainda exigem intervenção manual.
+- **Notificações pelo Telegram** — Envia eventos importantes e um resumo diário para o Telegram.
+- **Telegram: avisar também as decolagens** — Envia também avisos a cada decolagem.
+- **Reiniciar automaticamente após erro** — Reinicia automaticamente após falhas, com intervalo crescente.
+- **Simulação (sem gastos)** — Simula ações sem executar compras ou mudanças no jogo.
 
-### Registro
+### Registros e notificações
 
-- **Abrir fichero**: Abre data/logs/am4bot.log con todo el detalle, incluido lo que no sale aquí.
-- **Limpiar**: Vacía el panel. El fichero de registro no se toca.
-Cada línea del registro lleva hora, nivel (INFO, AVISO, ERROR), categoría (DINERO, VUELOS, FUEL, CO2, MARKETING, MANT, ASIENTOS, FLOTA, RUTAS, AVIONES, CHECKLIST, TELEGRAM, BOT) y el mensaje. Todo queda también en `data/logs/am4bot.log`.
+- **Registros** — O bot informa compras, partidas, rotas, manutenção, erros e tarefas executadas. O painel web e o aplicativo mostram os mesmos eventos.
+- **Telegram** — Configure a seção `[telegram]` em `config/secrets.ini`. Os alertas de decolagem podem ser desativados para reduzir notificações.
+- **Modo simulação** — Ative para verificar as decisões sem fazer compras nem modificar a companhia aérea.
 
-### Consejos
+### Painel web e operação contínua
 
-- Los números se guardan con «Guardar ajustes»; los interruptores se guardan solos.
-- La reserva de caja es tu colchón: el bot no baja de ahí salvo para reponer fuel o CO2 si el tanque se vacía.
-- Los aviones pequeños (ATR, Il-114) se amortizan en uno o dos días según la estimación del bot; los grandes (A330, B777, B747, A380) tardan semanas. Lo más rápido para crecer son los medianos; el objetivo sirve para el capricho grande.
-- La rentabilidad es una estimación: usa la ocupación que mide el bot y el precio automático del juego.
+Execute `python src/main.py --web` para iniciar somente o painel web. O endereço padrão é `http://127.0.0.1:8744/`. Para acesso pela rede local, utilize token de autenticação. Os scripts da pasta `scripts/` ajudam na execução no Windows e no Raspberry Pi.
 
-### En una Raspberry Pi
+### Segurança e compatibilidade
 
-Los dos perfiles pueden vivir en una Raspberry como servicios (arrancan solos y se reinician si fallan) mientras programas en Windows: `scripts\desplegar_pi.bat -Instalar` la primera vez y `scripts\desplegar_pi.bat` después de cada cambio. Los paneles se abren desde Windows en `http://<ip-de-la-raspberry>:8744` (principal) y `:8745` (secundario) con su token, y si abres la app en Windows no arranca un segundo bot de una aerolínea que ya juega la Raspberry. Detalles en «Running on a Raspberry Pi».
+Mantenha `config/secrets.ini` privado e não faça commit de credenciais. O idioma do aplicativo é português brasileiro por padrão, com inglês opcional. O bot somente seleciona português dentro do jogo se esse idioma existir nas opções da conta; caso contrário, preserva o idioma atual do jogo.
 
-### Panel web
-
-Mientras la app está abierta, el mismo panel se ve en el navegador en <http://127.0.0.1:8744/> (botón «Abrir el panel web»): tarjetas, registro en directo con filtro por categoría, iniciar / parar / revisar ahora y todos los ajustes. Los interruptores se guardan al cambiarlos y los números con «Guardar»; la ventana y la web se mantienen sincronizadas.
-
-- Por defecto solo se ve desde este PC. Para verlo desde el móvil en casa: `host = 0.0.0.0` en la sección `[web]` de `config/settings.ini` y un `token` largo en la sección `[web]` de `config/secrets.ini`; luego abre una vez `http://<ip-del-pc>:8744/?token=<token>` en cada dispositivo.
-- `python src/main.py --web` arranca el bot solo con el panel web, sin ventana (las credenciales salen de `config/secrets.ini`).
-- Accesos directos: `scripts\web.bat` abre el panel y, si el bot no está en marcha, lo arranca en modo web; `scripts\web_parar.bat` lo para de forma limpia (sea el modo web o la app), cerrando también Chrome. Nunca corren dos bots a la vez.
 
 ## Configuration
 
