@@ -14,7 +14,7 @@ O painel web e o aplicativo desktop agora usam a identidade **AM/04 — Torre de
 
 **[Conheça a arquitetura visual e os contratos da interface](docs/IDENTIDADE_VISUAL.md)**
 
-As capturas históricas abaixo ainda mostram a interface anterior e serão atualizadas posteriormente em uma instalação real, sem dados fictícios de produção.
+As capturas abaixo são geradas **diretamente a partir do aplicativo**, com uma companhia de demonstração. Não exibem contas reais, credenciais ou partidas executadas. A identidade web usa o tema escuro; o desktop oferece também tema claro.
 
 ## Funcionalidades
 
@@ -31,20 +31,57 @@ As capturas históricas abaixo ainda mostram a interface anterior e serão atual
 
 As estimativas adaptam-se aos modos Fácil e Realista e dependem das informações disponíveis da companhia.
 
-<details>
-<summary><b>Imagens do desktop e painel web</b></summary>
+## Interface — AM/04 Torre de Controle
 
-| Desktop | Painel web |
+### Painel operacional
+
+![Torre de Controle AM/04 — painel principal com telemetria e registro operacional](screenshots/web-visao-geral.png)
+
+Painel compacto com indicadores da companhia, eventos do bot e confirmação da última alteração. O menu **Parâmetros** abre uma página separada; as rotinas de execução continuam na visão geral.
+
+### Configurações em tela dedicada
+
+| Mercado | Frota |
 | --- | --- |
-| <img src="screenshots/desktop-mercado.png" width="420" alt="Aba Mercado no desktop"> | <img src="screenshots/web-mercado.png" width="420" alt="Aba Mercado no navegador"> |
-| <img src="screenshots/desktop-flota.png" width="420" alt="Aba Frota no desktop"> | <img src="screenshots/web-flota.png" width="420" alt="Aba Frota no navegador"> |
-| <img src="screenshots/desktop-aviones.png" width="420" alt="Aba Aeronaves no desktop"> | <img src="screenshots/web-aviones.png" width="420" alt="Aba Aeronaves no navegador"> |
-| <img src="screenshots/desktop-opciones.png" width="420" alt="Aba Opções no desktop"> | <img src="screenshots/web-opciones.png" width="420" alt="Aba Opções no navegador"> |
-| <img src="screenshots/desktop-mercado-light.png" width="420" alt="Tema claro no desktop"> | <img src="screenshots/web-mercado-light.png" width="420" alt="Tema claro no navegador"> |
-| | <img src="screenshots/web-mobile.png" width="200" alt="Painel web no celular"> |
+| ![Parâmetros do Mercado na interface web](screenshots/web-config-mercado.png) | ![Parâmetros da Frota na interface web](screenshots/web-config-frota.png) |
+| Aeronaves | Opções |
+| ![Parâmetros das Aeronaves na interface web](screenshots/web-config-aeronaves.png) | ![Parâmetros de Opções na interface web](screenshots/web-config-opcoes.png) |
 
-As imagens são exemplos de uma versão anterior. Para atualizar as capturas, utilize o gerador da pasta scripts no ambiente compatível.
+Os interruptores são salvos automaticamente e exibem confirmação; números e modelos precisam do botão **Salvar alterações**. Campos não salvos permanecem disponíveis ao trocar de categoria na sessão atual.
+
+### Acesso pelo celular
+
+| Visão geral | Configurações |
+| --- | --- |
+| <img src="screenshots/web-mobile.png" width="280" alt="Painel AM/04 adaptado para celular"> | <img src="screenshots/web-mobile-config.png" width="280" alt="Configurações AM/04 adaptadas para celular"> |
+
+<details>
+<summary><b>Aplicativo desktop — abrir capturas</b></summary>
+
+| Mercado | Frota |
+| --- | --- |
+| ![Mercado no aplicativo desktop](screenshots/desktop-mercado.png) | ![Frota no aplicativo desktop](screenshots/desktop-frota.png) |
+| Aeronaves | Opções |
+| ![Aeronaves no aplicativo desktop](screenshots/desktop-aeronaves.png) | ![Opções no aplicativo desktop](screenshots/desktop-opcoes.png) |
+
+![Aplicativo desktop com aparência clara](screenshots/desktop-mercado-light.png)
+
 </details>
+
+### Regenerar as capturas
+
+O gerador [\`scripts/screenshots.py\`](scripts/screenshots.py) inicia **somente uma interface de demonstração local**, sem login no jogo, compras, decolagens ou credenciais verdadeiras. Ele captura desktop e web na resolução apropriada, e remove imagens obsoletas **apenas depois de completar todas as novas capturas**.
+
+No Ubuntu com X11/Xvfb e Chrome instalado:
+
+~~~bash
+python -m pip install -r requirements.txt
+xvfb-run -a -s "-screen 0 1920x1200x24" python scripts/screenshots.py
+~~~
+
+No Windows com ambiente gráfico, execute \`python scripts/screenshots.py\`. Para reproduzir automaticamente em uma branch no GitHub, consulte o workflow [Atualizar capturas AM/04](.github/workflows/screenshots.yml).
+
+
 
 ## Instalação fácil no Raspberry Pi OS e Ubuntu
 
@@ -165,10 +202,10 @@ Passe o mouse sobre uma configuração para abrir a ajuda contextual em portugu�
 - **Rota máxima para aeronave grande (km)** — Distância máxima de rotas para aeronaves de grande porte.
 - **Pista mínima (pés)** — Comprimento mínimo da pista do aeroporto de destino.
 - **Vagas disponíveis no hangar** — Quantidade de vagas que o bot tenta manter livres no hangar.
-- **Rutas / pedidos por ciclo** — Limita novas rotas e pedidos de aeronaves por ciclo.
+- **Rotas / pedidos por ciclo** — Limita novas rotas e pedidos de aeronaves por ciclo.
 - **Oficina: retorno em até ≤ dias** — Prazo máximo para recuperar o custo de melhorias e perda de receita durante a parada.
 - **Reparar aeronaves desgastadas** — Programa reparos das aeronaves que atingirem o desgaste definido.
-- **Planificar A-checks** — Programa o A-check quando restarem poucas horas.
+- **Programar revisões A-check** — Programa o A-check quando restarem poucas horas.
 - **Criar rotas para aeronaves estacionadas** — Cria rotas com demanda adequada para aeronaves estacionadas.
 - **Ampliar o hangar quando estiver cheio** — Compra expansão do hangar quando estiver perto do limite.
 - **Assentos executiva / primeira conforme a demanda** — Distribui assentos entre econômica, executiva e primeira classe conforme a demanda.
