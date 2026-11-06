@@ -112,3 +112,110 @@ def test_token_de_exemplo_nao_pode_ser_usado_na_lan(projeto: Path):
     token = ler_cfg(projeto / "config/secrets.ini").get("web", "token")
     assert token != "change-me-to-a-long-random-string"
     assert len(token) >= 32
+
+
+def test_login_ssh_interativo_usa_stdin_e_senha_oculta(monkeypatch):
+    import builtins
+    import sys
+
+    class Terminal:
+        @staticmethod
+        def isatty() -> bool:
+            return True
+
+    cfg = ConfigParser(interpolation=None)
+    monkeypatch.setattr(sys, "stdin", Terminal())
+    monkeypatch.setattr(builtins, "input", lambda prompt: "piloto@example.com")
+    chamadas = []
+    monkeypatch.setattr(
+        modulo.getpass, "getpass",
+        lambda prompt, **kwargs: (chamadas.append((prompt, kwargs)), "senha-teste")[1],
+    )
+    assert modulo.configurar_login(cfg) is True
+    assert cfg.get("login", "username") == "piloto@example.com"
+    assert cfg.get("login", "password") == "senha-teste"
+    assert chamadas == [("Senha do jogo (não será exibida): ", {})]
+
+
+def test_login_ssh_sem_stdin_interativo_usa_dev_tty(monkeypatch):
+    import builtins
+    import sys
+
+    class Terminal:
+        @staticmethod
+        def isatty() -> bool:
+            return False
+
+    # Em /dev/tty real, escrever o prompt não sobrescreve a entrada.
+    class TtyFake:
+        def __init__(self):
+            self.prompt = ""
+
+        def write(self, texto):
+            self.prompt += texto
+
+        def flush(self):
+            pass
+
+        def readline(self):
+            return "segundo@example.com\n"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    cfg = ConfigParser(interpolation=None)
+    monkeypatch.setattr(sys, "stdin", Terminal())
+    monkeypatch.setattr(builtins, "open", lambda path, *args, **kwargs: TtyFake() if path == "/dev/tty" else None)
+    monkeypatch.setattr(modulo.getpass, "getpass", lambda prompt, stream=None: "senha-de-teste")
+    assert modulo.configurar_login(cfg) is True
+    assert cfg.get("login", "username") == "segundo@example.com"
+    assert cfg.get("login", "password") == "senha-de-teste"
+
+
+def test_login_sem_terminal_retorna_erro_claro_e_nao_altera_config(monkeypatch):
+    import builtins
+    import sys
+
+    class Terminal:
+        @staticmethod
+        def isatty() -> bool:
+            return False
+
+    cfg = ConfigParser(interpolation=None)
+    monkeypatch.setattr(sys, "stdin", Terminal())
+
+    def sem_terminal(*args, **kwargs):
+        raise OSError("No such device")
+
+    monkeypatch.setattr(builtins, "open", sem_terminal)
+    with pytest.raises(RuntimeError, match="ssh -t"):
+        modulo.configurar_login(cfg)
+    assert not cfg.has_section("login")
+
+
+def test_login_getpass_sem_echo_falha_em_vez_de_expor_senha(monkeypatch):
+    import builtins
+    import getpass
+    import sys
+    import warnings
+
+    class Terminal:
+        @staticmethod
+        def isatty() -> bool:
+            return True
+
+    cfg = ConfigParser(interpolation=None)
+    monkeypatch.setattr(sys, "stdin", Terminal())
+    monkeypatch.setattr(builtins, "input", lambda prompt: "piloto@example.com")
+
+    def senha_com_echo(prompt):
+        warnings.warn("Password input may be echoed.", getpass.GetPassWarning, stacklevel=2)
+        return "nao-usar"
+
+    monkeypatch.setattr(modulo.getpass, "getpass", senha_com_echo)
+    with pytest.raises(RuntimeError, match="terminal interativo"):
+        modulo.configurar_login(cfg)
+    assert not cfg.has_section("login")

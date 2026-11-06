@@ -9,6 +9,7 @@ import re
 import secrets
 import sys
 import tempfile
+import warnings
 from configparser import ConfigParser
 from pathlib import Path
 from urllib.parse import quote
@@ -83,16 +84,40 @@ def porta_perfil(root: Path, perfil: str, atual: ConfigParser) -> int:
 
 
 def configurar_login(secrets_cfg: ConfigParser) -> bool:
+    """Lê as credenciais de um terminal real, com senha oculta e sem expô-la em argumentos.
+
+    Em SSH e em certos terminais, stdin é interativo mesmo quando /dev/tty
+    não está acessível. Por isso, tenta stdin primeiro; /dev/tty é apenas
+    uma alternativa quando stdin está redirecionado.
+    """
+    pergunta_email = "E-mail do jogo (Enter para cancelar): "
+    pergunta_senha = "Senha do jogo (não será exibida): "
     try:
-        with open("/dev/tty", "r+", encoding="utf-8") as tty:
-            tty.write("E-mail do jogo (Enter para cancelar): ")
-            tty.flush()
-            usuario = tty.readline().strip()
+        if sys.stdin.isatty():
+            usuario = input(pergunta_email).strip()
             if not usuario:
                 return False
-            senha = getpass.getpass("Senha do jogo (não será exibida): ", stream=tty)
-    except (OSError, EOFError):
-        raise RuntimeError("O modo --configurar-login exige um terminal interativo.") from None
+            with warnings.catch_warnings():
+                # getpass pode usar leitura visível se não conseguir desativar echo.
+                # Falhar é mais seguro do que expor a senha no terminal.
+                warnings.simplefilter("error", getpass.GetPassWarning)
+                senha = getpass.getpass(pergunta_senha)
+        else:
+            with open("/dev/tty", "r+", encoding="utf-8") as tty:
+                tty.write(pergunta_email)
+                tty.flush()
+                usuario = tty.readline().strip()
+                if not usuario:
+                    return False
+                with warnings.catch_warnings():
+                    warnings.simplefilter("error", getpass.GetPassWarning)
+                    senha = getpass.getpass(pergunta_senha, stream=tty)
+    except (OSError, EOFError, getpass.GetPassWarning):
+        raise RuntimeError(
+            "Não foi possível acessar um terminal interativo com entrada de senha oculta. "
+            "Execute no terminal normal ou via 'ssh -t usuario@servidor'; "
+            "alternativamente, edite config/secrets.ini e aplique chmod 600."
+        ) from None
     if not senha:
         raise ValueError("Senha vazia: credenciais não alteradas.")
     definir(secrets_cfg, "login", "username", usuario)

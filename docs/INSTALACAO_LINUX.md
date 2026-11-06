@@ -109,6 +109,8 @@ O instalador **não executa `git reset`**, não remove arquivos de dados e não 
 - Confira os eventos: `sudo journalctl -u am4bot@principal -n 100 --no-pager`.
 - Se o Chromium ou o ChromeDriver não iniciar, confira `chromium --version` (Raspberry Pi OS) ou `chromium-browser --version` (Ubuntu) e `chromedriver --version`. No Ubuntu, confirme `snap list chromium`.
 - No Ubuntu minimal ou contêiner, `snapd` exige serviços do sistema ativos; instalações sem `systemd` não são suportadas.
+- Se `python3 scripts/configurar_linux.py --configurar-login` mostrar `Não foi possível acessar um terminal interativo`, abra uma sessão com TTY (por exemplo, `ssh -t usuario@servidor`) ou utilize o terminal integrado do servidor. O script lê e-mail pelo terminal e senha com eco desativado; não passe a senha como argumento de linha de comando.
+- Caso o ambiente não forneça terminal interativo (contêiner, cron ou SSH sem alocação de TTY), configure as credenciais editando `config/secrets.ini` com uma seção `[login]`, as chaves `username` e `password`; depois execute `chmod 600 config/secrets.ini` e `sudo systemctl restart am4bot@principal`. Preserve todas as outras seções existentes.
 - Não atribua permissões globais ao `config/secrets.ini` e não exponha a porta web na internet.
 - O instalador é validado com testes de configuração e sintaxe; a navegação real do Selenium precisa ser conferida no dispositivo de destino.
 
