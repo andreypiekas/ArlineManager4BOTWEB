@@ -86,9 +86,9 @@ TEXT_SETTINGS = [
 # Tabs in display order: (name, icon, fields, switches)
 TABS = [
     ("Mercado", "🛒", MARKET_FIELDS, MARKET_SWITCHES),
-    ("Flota", "🛩️", FLEET_FIELDS, FLEET_SWITCHES),
-    ("Aviones", "✈️", AIRCRAFT_FIELDS, AIRCRAFT_SWITCHES),
-    ("Opciones", "⚙️", OPTIONS_FIELDS, OPTION_SWITCHES),
+    ("Frota", "🛩️", FLEET_FIELDS, FLEET_SWITCHES),
+    ("Aeronaves", "✈️", AIRCRAFT_FIELDS, AIRCRAFT_SWITCHES),
+    ("Opções", "⚙️", OPTIONS_FIELDS, OPTION_SWITCHES),
 ]
 
 # Switches that default to on when the key is missing from config/defaults.ini too (tests/ keep both in step)

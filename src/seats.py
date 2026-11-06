@@ -57,7 +57,7 @@ FIRST_CLASS_REWARD = 100_000
 # Performance modifications of the same panel (#mod1..3, costs in the page globals mod1cost..mod3cost, each
 # takes 800 s in the workshop and is permanent). The page script tests "$('#modN').is(':checked') && X==0":
 # X is 1 when the aircraft already has that modification.
-MODS = {1: "CO2 -10 %", 2: "velocidad +10 %", 3: "fuel -10 %"}
+MODS = {1: "CO₂ -10 %", 2: "velocidade +10 %", 3: "combustível -10 %"}
 MOD_SECONDS = 800
 _MOD_INSTALLED_RE = re.compile(r"#mod(\d)'\)\.is\(':checked'\)\s*&&\s*(\d+)\s*==\s*0")
 

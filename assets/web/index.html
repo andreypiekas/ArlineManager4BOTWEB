@@ -3,124 +3,259 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AM4 Bot</title>
+<meta name="theme-color" content="#0b1014">
+<meta name="description" content="Central de operações do Airline Manager 4 Bot: telemetria, frota e comandos em tempo real.">
+<title>AM4 / Central de operações</title>
 <style>
 :root {
-  --bg: #0d1117; --card: #161b22; --card2: #1c2128; --border: #30363d; --ink: #e6edf3; --muted: #8b949e;
-  --accent: #2f81f7; --accent-ink: #ffffff; --ok: #2ea043; --warn: #d29922; --bad: #f85149; --track: #30363d;
-  --log-bg: #0b0f14; --shadow: 0 1px 0 rgba(255,255,255,.03), 0 8px 24px rgba(0,0,0,.25);
   color-scheme: dark;
-}
-@media (prefers-color-scheme: light) {
-  :root { --bg: #f3f5f8; --card: #ffffff; --card2: #f6f8fa; --border: #d0d7de; --ink: #1f2328; --muted: #656d76;
-    --accent: #0969da; --track: #e4e8ec; --log-bg: #fbfcfd; --shadow: 0 1px 2px rgba(31,35,40,.08); color-scheme: light; }
+  --bg: #0b1014; --panel: #121a20; --panel-hi: #172128; --rail: #0d1519;
+  --border: #26343b; --border-strong: #3d4d55; --ink: #eff4ed; --muted: #899ba0;
+  --dim: #5c7179; --signal: #c8fc79; --signal-text: #101813; --aqua: #76e8df;
+  --orange: #ffab70; --bad: #ff827b; --ok: #c8fc79; --warn: #ffbe70;
+  --track: #2b3840; --log-bg: #0b1115;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink);
-  font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
-.wrap { max-width: 1400px; margin: 0 auto; padding: 16px; }
-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-.brand { font-weight: 700; font-size: 18px; letter-spacing: .2px; display: flex; align-items: center; gap: 8px; }
-.brand small { font-weight: 500; color: var(--muted); font-size: 13px; }
-.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-weight: 600;
-  font-size: 13px; background: var(--card2); border: 1px solid var(--border); }
-.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-.pill.RUNNING .dot { background: var(--ok); box-shadow: 0 0 0 3px rgba(46,160,67,.25); }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.55 "Segoe UI", "Inter", system-ui, sans-serif; }
+body::before { content: ""; position: fixed; pointer-events: none; inset: 0; opacity: .12; z-index: -1;
+  background-image: linear-gradient(rgba(132,162,166,.12) 1px, transparent 1px),
+                    linear-gradient(90deg,rgba(132,162,166,.12) 1px, transparent 1px);
+  background-size: 52px 52px; }
+:focus-visible { outline: 2px solid var(--aqua); outline-offset: 3px; }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .36; }
+button:focus-visible, a:focus-visible { outline-offset: 3px; }
+a { color: inherit; }
+.skip-link { position: fixed; z-index: 40; top: -80px; left: 14px; background: var(--signal); color: var(--signal-text); padding: 10px 14px; }
+.skip-link:focus { top: 12px; }
+.app-shell { display: grid; grid-template-columns: 254px minmax(0, 1fr); min-height: 100vh; max-width: 1920px; margin: auto; }
+.side-panel { position: sticky; top: 0; height: 100vh; min-height: 640px; display: flex; flex-direction: column; padding: 34px 22px 20px;
+  background: var(--rail); border-right: 1px solid var(--border); }
+.brand-lockup { display: flex; gap: 12px; align-items: flex-start; text-decoration: none; margin-bottom: 44px; }
+.brand-mark { border: 1px solid var(--signal); color: var(--signal); font: 800 23px/1 "Bahnschrift", "Arial Narrow", sans-serif;
+  padding: 13px 11px 11px; letter-spacing: -1.8px; }
+.brand-mark b { font-weight: 400; font-size: 12px; vertical-align: top; letter-spacing: 0; margin-left: 2px; }
+.brand-lockup small { padding-top: 4px; display: block; color: var(--ink); text-transform: uppercase; font: 700 10px/1.5 "Cascadia Mono", Consolas, monospace; letter-spacing: .13em; }
+.brand-lockup small span { display: block; color: var(--dim); font-size: 9px; margin-top: 4px; letter-spacing: .08em; }
+.eyebrow { display: block; color: var(--dim); text-transform: uppercase; letter-spacing: .15em; font: 700 10px/1.5 "Cascadia Mono", Consolas, monospace; }
+.side-status { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 22px 0 20px; }
+.side-status .eyebrow { margin-bottom: 12px; }
+.pill { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 13px; max-width: 100%; overflow-wrap: anywhere; }
+.pill .dot { width: 9px; height: 9px; background: var(--dim); flex: none; }
+.pill.RUNNING .dot { background: var(--ok); box-shadow: 0 0 0 4px rgba(200,252,121,.09); }
 .pill.ERROR .dot { background: var(--bad); }
 .pill.STARTING .dot, .pill.LOGGING_IN .dot, .pill.STOPPING .dot { background: var(--warn); }
-.badge { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(210,153,34,.15);
-  color: var(--warn); border: 1px solid rgba(210,153,34,.4); }
-.next { color: var(--muted); font-size: 13px; }
+.next { display: block; min-height: 25px; margin-top: 14px; font: 11px/1.6 "Cascadia Mono", Consolas, monospace; color: var(--muted); }
+.badge { display: inline-flex; align-items: center; padding: 5px 8px; margin-top: 12px; border: 1px solid var(--warn);
+  color: var(--warn); font: 700 10px "Cascadia Mono", Consolas, monospace; text-transform: uppercase; letter-spacing: .06em; }
+.nav-list { margin: 38px 0 26px; display: grid; gap: 8px; }
+.nav-list a { display: flex; align-items: center; gap: 11px; padding: 12px 10px; border-left: 2px solid transparent;
+  text-decoration: none; font-weight: 650; color: var(--muted); transition: background .18s, color .18s; }
+.nav-list a:hover, .nav-list a:focus-visible { background: var(--panel); color: var(--ink); border-left-color: var(--signal); }
+.nav-list .index { width: 22px; font: 10px "Cascadia Mono", Consolas, monospace; color: var(--dim); }
+.side-actions { margin-top: auto; display: grid; gap: 8px; }
+.side-actions .eyebrow { margin-bottom: 6px; }
+button { border: 1px solid var(--border-strong); background: var(--panel); color: var(--ink); padding: 11px 14px;
+  font-weight: 700; transition: border-color .15s, background .15s, transform .15s; border-radius: 2px; }
+button:hover:not(:disabled) { border-color: var(--aqua); }
+button:active:not(:disabled) { transform: translateY(1px); }
+button.primary { background: var(--signal); border-color: var(--signal); color: var(--signal-text); }
+button.primary:hover:not(:disabled) { background: #e0ffac; }
+button.danger { background: transparent; border-color: #684743; color: var(--bad); }
+button.danger:hover:not(:disabled) { border-color: var(--bad); }
+button.accent { background: var(--aqua); border-color: var(--aqua); color: #061b1b; }
+.side-note { border-top: 1px solid var(--border); padding-top: 18px; color: var(--dim); font: 10px/1.8 "Cascadia Mono", Consolas, monospace;
+  letter-spacing: .08em; text-transform: uppercase; margin-top: 26px; }
+.side-note strong { color: var(--signal); font-weight: 500; }
+.workspace { min-width: 0; padding: 28px clamp(18px, 3.6vw, 64px) 22px; }
+.topline { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 0 19px;
+  border-bottom: 1px solid var(--border); color: var(--muted); font: 11px "Cascadia Mono", Consolas, monospace;
+  text-transform: uppercase; letter-spacing: .11em; }
+.topline .path { color: var(--aqua); }
+.topline .live { color: var(--signal); }
+.hero { display: flex; justify-content: space-between; align-items: center; padding: clamp(32px, 5vw, 74px) 0 45px; gap: 24px; }
+.hero .eyebrow { color: var(--signal); margin-bottom: 20px; }
+.hero h1 { margin: 0; font: 600 clamp(42px, 5.6vw, 92px)/.94 "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
+  letter-spacing: -.064em; text-transform: uppercase; }
+.hero h1 em { font-style: normal; color: var(--signal); }
+.hero p { margin: 25px 0 0; max-width: 620px; color: var(--muted); font-size: 14px; }
+.hero-index { border-top: 1px solid var(--border-strong); align-self: stretch; padding: 10px 0 0 22px; min-width: 126px;
+  color: var(--dim); font: 10px/1.9 "Cascadia Mono", Consolas, monospace; text-transform: uppercase; letter-spacing: .09em; }
+.hero-index span { display: block; font: 700 66px/.95 "Bahnschrift", sans-serif; color: var(--ink); letter-spacing: -.09em; }
+.section-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 13px;
+  font: 700 11px "Cascadia Mono", Consolas, monospace; letter-spacing: .13em; text-transform: uppercase; }
+.section-bar .counter { color: var(--dim); font-weight: 400; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 35px; }
+.tile { min-width: 0; background: var(--panel); border: 1px solid var(--border); padding: 20px 20px 18px; position: relative; min-height: 154px; overflow: hidden; }
+.tile::after { content:""; position: absolute; height: 3px; background: var(--aqua); bottom: -1px; left: 0; width: 42px; opacity: .6; }
+.tile:first-child { grid-column: span 2; background: var(--signal); border-color: var(--signal); color: var(--signal-text); }
+.tile:first-child::after { background: #1b2820; }
+.tile:last-child { grid-column: span 2; }
+.tile .label { color: var(--muted); font: 700 10px/1.4 "Cascadia Mono", Consolas, monospace; text-transform: uppercase; letter-spacing: .12em; }
+.tile:first-child .label, .tile:first-child .sub { color: #364b30; }
+.tile .value { margin: 12px 0 8px; font: 700 clamp(25px, 2.5vw, 39px)/1.1 "Bahnschrift", "Arial Narrow", sans-serif;
+  letter-spacing: -.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile:first-child .value { font-size: clamp(36px, 3.3vw, 58px); }
+.tile .sub { color: var(--muted); font: 11px/1.5 "Cascadia Mono", Consolas, monospace; white-space: normal; overflow-wrap: anywhere; }
+.bar { height: 3px; background: var(--track); margin-top: 14px; }
+.bar i { display: block; height: 100%; width: 0; background: var(--aqua); transition: width .5s ease; }
+.tile:last-child .bar i { background: var(--signal); }
+.grid { display: grid; grid-template-columns: minmax(0, 1.27fr) minmax(360px, 1fr); gap: 18px; align-items: start; }
+.card { min-width: 0; background: var(--panel); border: 1px solid var(--border); }
+.card-head { padding: 20px 21px 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+.card-head h2 { margin: 0; font: 700 16px/1.2 "Bahnschrift", "Segoe UI", sans-serif; text-transform: uppercase; letter-spacing: .08em; }
+.card-head h2 small { display: block; color: var(--dim); margin-top: 6px; font: 10px "Cascadia Mono", Consolas, monospace;
+  letter-spacing: .1em; text-transform: uppercase; }
+.card-head .serial { color: var(--aqua); font: 700 11px "Cascadia Mono", Consolas, monospace; }
 .spacer { flex: 1; }
-button { font: inherit; border: 1px solid var(--border); background: var(--card2); color: var(--ink); border-radius: 8px;
-  padding: 7px 14px; cursor: pointer; font-weight: 600; }
-button:hover:not(:disabled) { border-color: var(--accent); }
-button:disabled { opacity: .45; cursor: default; }
-button.primary { background: var(--ok); border-color: var(--ok); color: #fff; }
-button.danger { background: transparent; border-color: var(--bad); color: var(--bad); }
-button.accent { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
-.tile, .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
-.tile { padding: 12px 14px; min-width: 0; }
-.tile .label { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
-.tile .value { font-size: 24px; font-weight: 700; margin: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile .sub { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar { height: 6px; border-radius: 999px; background: var(--track); margin-top: 8px; overflow: hidden; }
-.bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .4s; }
-.grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(330px, 1fr); gap: 14px; align-items: start; }
-@media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
-.card-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
-.card-head h2 { font-size: 15px; margin: 0; }
-select, input[type=text], input[type=number] { font: inherit; color: var(--ink); background: var(--card2);
-  border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; }
-#log { margin: 0; height: 62vh; min-height: 320px; overflow: auto; padding: 10px 14px; background: var(--log-bg);
-  border-radius: 0 0 12px 12px; font: 12.5px/1.55 "Cascadia Mono", Consolas, Menlo, monospace; }
-#log div { white-space: pre-wrap; word-break: break-word; }
-#log .ts { color: var(--muted); }
-.tabs { display: flex; gap: 4px; padding: 8px 10px 0; flex-wrap: wrap; }
-.tabs button { border: none; background: transparent; color: var(--muted); padding: 8px 10px; border-radius: 8px 8px 0 0;
-  border-bottom: 2px solid transparent; }
-.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); }
-.panel { padding: 12px 14px 14px; border-top: 1px solid var(--border); }
-.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0; }
-.row > label:first-child { flex: 1; min-width: 0; }
-.row input[type=number] { width: 120px; text-align: right; }
+select, input[type=text], input[type=number] { color: var(--ink); background: var(--bg); border: 1px solid var(--border-strong);
+  border-radius: 2px; padding: 9px 10px; font: 12px "Cascadia Mono", Consolas, monospace; min-width: 0; }
+select { max-width: 185px; }
+#log { margin: 0; min-height: 350px; height: min(67vh, 780px); overflow: auto; padding: 8px 0; background: var(--log-bg);
+  font: 11.5px/1.65 "Cascadia Mono", Consolas, Menlo, monospace; scrollbar-color: var(--border-strong) transparent; }
+#log > div { padding: 7px 20px; white-space: pre-wrap; overflow-wrap: anywhere; border-left: 2px solid transparent; }
+#log > div:nth-child(even) { background: rgba(130,165,180,.032); }
+#log > div:hover { background: var(--panel-hi); border-left-color: var(--aqua); }
+#log .ts { color: var(--dim); }
+.tabs { display: flex; gap: 0; padding: 0 10px; overflow-x: auto; border-bottom: 1px solid var(--border); }
+.tabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted);
+  font: 700 11px "Cascadia Mono", Consolas, monospace; padding: 17px 13px 15px; white-space: nowrap;
+  border-radius: 0; text-transform: uppercase; letter-spacing: .04em; }
+.tabs button.on { color: var(--signal); border-bottom-color: var(--signal); }
+.panel { padding: 17px 22px 24px; max-height: 70vh; min-height: 220px; overflow: auto; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 12px 0;
+  border-bottom: 1px solid rgba(132,155,160,.13); }
+.row > label:first-child { flex: 1; min-width: 0; color: var(--ink); font-size: 12px; line-height: 1.45; cursor: pointer; }
+.row[title]:hover > label:first-child { color: var(--signal); }
+.row input[type=number] { width: 110px; text-align: right; }
 .row input[type=text] { width: 190px; }
-.switch { position: relative; width: 38px; height: 22px; flex: none; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.switch span { position: absolute; inset: 0; background: var(--track); border-radius: 999px; cursor: pointer; transition: .2s; }
-.switch span::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff;
-  border-radius: 50%; transition: .2s; }
-.switch input:checked + span { background: var(--accent); }
-.switch input:checked + span::before { transform: translateX(16px); }
-.section-title { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px;
-  margin: 12px 0 4px; }
-.actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
-.msg { color: var(--muted); font-size: 13px; }
+.switch { position: relative; width: 42px; height: 24px; flex: none; }
+.switch input { position: absolute; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+.switch span { position: absolute; inset: 0; border: 1px solid var(--border-strong); background: var(--track);
+  pointer-events: none; transition: background .2s, border-color .2s; }
+.switch span::before { content: ""; position: absolute; width: 14px; height: 14px; top: 4px; left: 4px;
+  background: var(--ink); transition: transform .2s; }
+.switch input:checked + span { background: #365639; border-color: var(--signal); }
+.switch input:checked + span::before { background: var(--signal); transform: translateX(18px); }
+.switch input:focus-visible + span { outline: 2px solid var(--aqua); outline-offset: 3px; }
+.section-title { margin: 24px 0 3px; color: var(--aqua); text-transform: uppercase;
+  font: 700 10px "Cascadia Mono", Consolas, monospace; letter-spacing: .16em; }
+.section-title:first-child { margin-top: 4px; }
+.actions { display: flex; align-items: center; gap: 12px; margin-top: 25px; }
+.msg { color: var(--muted); font: 11px/1.5 "Cascadia Mono", Consolas, monospace; }
 .msg.bad { color: var(--bad); }
-footer { color: var(--muted); font-size: 12px; text-align: center; margin: 18px 0 4px; }
+#updated { margin-left: auto; }
+footer { display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding: 18px 0 0; margin: 40px 0 0;
+  font: 10px/1.7 "Cascadia Mono", Consolas, monospace; color: var(--dim); }
+footer strong { font-weight: 600; color: var(--aqua); }
+@media (max-width: 1330px) {
+  .app-shell { grid-template-columns: 218px minmax(0, 1fr); }
+  .side-panel { padding-left: 15px; padding-right: 15px; }
+  .grid { grid-template-columns: 1fr; }
+  #log { height: 380px; min-height: 280px; }
+  .panel { max-height: none; }
+}
+@media (max-width: 800px) {
+  .app-shell { display: block; }
+  .side-panel { position: static; height: auto; min-height: 0; padding: 19px 17px; }
+  .brand-lockup { margin-bottom: 17px; }
+  .side-status { padding: 12px 0; }
+  .nav-list { display: none; }
+  .side-actions { margin-top: 15px; grid-template-columns: repeat(3, 1fr); }
+  .side-actions .eyebrow { grid-column: 1/-1; }
+  .side-actions button { padding: 10px 5px; font-size: 11px; }
+  .side-note { display: none; }
+  .workspace { padding: 20px 16px; }
+  .hero { padding: 36px 0 32px; }
+  .hero-index { display: none; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tile { min-height: 126px; padding: 16px; }
+  .tile:first-child, .tile:last-child { grid-column: span 2; }
+  .tile .value { font-size: 27px; }
+}
+@media (max-width: 420px) {
+  .hero h1 { font-size: 46px; }
+  .kpis { gap: 6px; }
+  .tile { padding: 12px; }
+  .tile .value { font-size: 24px; }
+  .row { align-items: flex-start; }
+  .row input[type=text], .row input[type=number] { width: 106px; }
+  .panel { padding: 12px; }
+  .card-head { padding: 14px; }
+  footer { display: block; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="brand">✈️ Airline Manager 4 Bot <small id="profile">painel web</small></div>
-    <span class="pill" id="pill"><span class="dot"></span><span id="state">…</span></span>
-    <span class="badge" id="dry" hidden data-t="🧪 Simulação">🧪 Simulação</span>
-    <span class="next" id="next"></span>
-    <span class="spacer"></span>
-    <button class="primary" id="btnStart" data-t="Iniciar">Iniciar</button>
-    <button class="danger" id="btnStop" data-t="Parar">Parar</button>
-    <button id="btnNow" data-t="Verificar agora">Verificar agora</button>
-  </header>
-
-  <section class="kpis">
-    <div class="tile"><div class="label" data-t="💰 Dinheiro">💰 Dinheiro</div><div class="value" id="kMoney">-</div><div class="sub" id="kMoneySub"></div></div>
-    <div class="tile"><div class="label" data-t="⭐ Reputação">⭐ Reputação</div><div class="value" id="kRep">-</div><div class="sub" id="kRepSub"></div><div class="bar"><i id="bRep"></i></div></div>
-    <div class="tile"><div class="label" data-t="⛽ Combustível">⛽ Combustível</div><div class="value" id="kFuel">-</div><div class="sub" id="kFuelSub"></div><div class="bar"><i id="bFuel"></i></div></div>
-    <div class="tile"><div class="label" data-t="🌿 CO₂">🌿 CO₂</div><div class="value" id="kCo2">-</div><div class="sub" id="kCo2Sub"></div><div class="bar"><i id="bCo2"></i></div></div>
-    <div class="tile"><div class="label" data-t="🛩️ Frota">🛩️ Frota</div><div class="value" id="kFleet">-</div><div class="sub" id="kFleetSub"></div></div>
-    <div class="tile"><div class="label" data-t="🎯 Meta">🎯 Meta</div><div class="value" id="kGoal">-</div><div class="sub" id="kGoalSub"></div><div class="bar"><i id="bGoal"></i></div></div>
-  </section>
-
-  <div class="grid">
-    <section class="card">
-      <div class="card-head">
-        <h2 data-t="Registros">Registros</h2><span class="spacer"></span>
-        <select id="tagFilter" title="Filtrar por categoria" data-t-title="Filtrar por categoria"><option value="" data-t="Todas as categorias">Todas as categorias</option></select>
+<a class="skip-link" href="#overview" data-t="Ir para o conteúdo">Ir para o conteúdo</a>
+<div class="app-shell">
+  <aside class="side-panel" aria-label="Navegação e controle da automação">
+    <a class="brand-lockup" href="#overview" aria-label="Ir ao painel principal">
+      <span class="brand-mark">AM<b>04</b></span>
+      <small>FLIGHT<br>OPERATIONS<span>CONTROL SYSTEM / V.02</span></small>
+    </a>
+    <div class="side-status">
+      <span class="eyebrow" data-t="● SISTEMA / ESTADO">● SISTEMA / ESTADO</span>
+      <span class="pill" id="pill" role="status" aria-live="polite"><span class="dot"></span><span id="state">Iniciando…</span></span>
+      <span class="badge" id="dry" hidden data-t="🧪 Simulação">🧪 Simulação</span>
+      <span class="next" id="next" aria-live="polite"></span>
+    </div>
+    <nav class="nav-list" aria-label="Seções">
+      <a href="#overview"><span class="index">01/</span><span data-t="Visão geral">Visão geral</span></a>
+      <a href="#activity"><span class="index">02/</span><span data-t="Registro operacional">Registro operacional</span></a>
+      <a href="#parameters"><span class="index">03/</span><span data-t="Parâmetros">Parâmetros</span></a>
+    </nav>
+    <div class="side-actions">
+      <span class="eyebrow" data-t="COMANDOS / CONTROLE">COMANDOS / CONTROLE</span>
+      <button class="primary" id="btnStart" data-t="Iniciar">Iniciar</button>
+      <button class="danger" id="btnStop" data-t="Parar">Parar</button>
+      <button id="btnNow" data-t="Verificar agora">Verificar agora</button>
+    </div>
+    <div class="side-note">SISTEMA EM REDE LOCAL<br><strong>AM4 / TORRE DE CONTROLE</strong></div>
+  </aside>
+  <main class="workspace" id="overview">
+    <div class="topline"><span class="path">AM4 / OPERATIONS / CONSOLE</span><span id="profile">painel web</span><span class="live">● LIVE FEED</span></div>
+    <header class="hero">
+      <div>
+        <span class="eyebrow" data-t="SUA COMPANHIA EM TEMPO REAL">SUA COMPANHIA EM TEMPO REAL</span>
+        <h1>TORRE DE<br><em>CONTROLE.</em></h1>
+        <p data-t="Uma visão clara de tudo que importa. Decisões, recursos e atividade da frota em um só lugar.">
+          Uma visão clara de tudo que importa. Decisões, recursos e atividade da frota em um só lugar.
+        </p>
       </div>
-      <div id="log"></div>
+      <div class="hero-index"><span>04</span>FLIGHT SYSTEM<br>CONTROL ROOM</div>
+    </header>
+    <div class="section-bar"><span data-t="01 / TELEMETRIA DA COMPANHIA">01 / TELEMETRIA DA COMPANHIA</span><span class="counter">LIVE / DATA</span></div>
+    <section class="kpis" aria-label="Indicadores da companhia">
+      <div class="tile"><div class="label" data-t="💰 Dinheiro">💰 Dinheiro</div><div class="value" id="kMoney">—</div><div class="sub" id="kMoneySub"></div></div>
+      <div class="tile"><div class="label" data-t="⭐ Reputação">⭐ Reputação</div><div class="value" id="kRep">—</div><div class="sub" id="kRepSub"></div><div class="bar"><i id="bRep"></i></div></div>
+      <div class="tile"><div class="label" data-t="⛽ Combustível">⛽ Combustível</div><div class="value" id="kFuel">—</div><div class="sub" id="kFuelSub"></div><div class="bar"><i id="bFuel"></i></div></div>
+      <div class="tile"><div class="label" data-t="🌿 CO₂">🌿 CO₂</div><div class="value" id="kCo2">—</div><div class="sub" id="kCo2Sub"></div><div class="bar"><i id="bCo2"></i></div></div>
+      <div class="tile"><div class="label" data-t="🛩️ Frota">🛩️ Frota</div><div class="value" id="kFleet">—</div><div class="sub" id="kFleetSub"></div></div>
+      <div class="tile"><div class="label" data-t="🎯 Meta">🎯 Meta</div><div class="value" id="kGoal">—</div><div class="sub" id="kGoalSub"></div><div class="bar"><i id="bGoal"></i></div></div>
     </section>
-
-    <section class="card">
-      <div class="card-head"><h2 data-t="Configurações">Configurações</h2><span class="spacer"></span><span class="msg" id="updated"></span></div>
-      <div class="tabs" id="tabs"></div>
-      <div class="panel" id="panel"></div>
-    </section>
-  </div>
-  <footer data-t="As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.">As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.</footer>
+    <div class="section-bar"><span data-t="02 / CENTRO DE OPERAÇÕES">02 / CENTRO DE OPERAÇÕES</span><span class="counter">MONITOR / CONFIG</span></div>
+    <div class="grid">
+      <section class="card" id="activity" aria-label="Registro operacional">
+        <div class="card-head">
+          <span class="serial">02A</span><h2><span data-t="Registros">Registros</span><small data-t="Fluxo de eventos em tempo real">Fluxo de eventos em tempo real</small></h2><span class="spacer"></span>
+          <select id="tagFilter" aria-label="Filtrar por categoria" title="Filtrar por categoria" data-t-title="Filtrar por categoria"><option value="" data-t="Todas as categorias">Todas as categorias</option></select>
+        </div>
+        <div id="log" role="log" aria-label="Eventos recentes" aria-live="off"></div>
+      </section>
+      <section class="card" id="parameters" aria-label="Parâmetros operacionais">
+        <div class="card-head"><span class="serial">02B</span><h2><span data-t="Configurações">Configurações</span><small data-t="Parâmetros operacionais">Parâmetros operacionais</small></h2><span class="spacer"></span><span class="msg" id="updated"></span></div>
+        <div class="tabs" id="tabs" role="tablist" aria-label="Categorias de configurações"></div>
+        <div class="panel" id="panel" role="tabpanel"></div>
+      </section>
+    </div>
+    <footer><span data-t="As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.">As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.</span><strong>AM4 / CONTROL SYSTEM</strong></footer>
+  </main>
 </div>
-
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -138,6 +273,12 @@ const EN = {
   "🧪 Simulação": "🧪 Dry run", "Iniciar": "Start", "Parar": "Stop", "Verificar agora": "Check now",
   "⛽ Combustível": "⛽ Fuel", "🌿 CO₂": "🌿 CO₂", "💰 Dinheiro": "💰 Money", "⭐ Reputação": "⭐ Reputation", "🛩️ Frota": "🛩️ Fleet", "🎯 Meta": "🎯 Goal",
   "Registros": "Log", "Filtrar por categoria": "Filter by category", "Todas as categorias": "All categories",
+  "Ir para o conteúdo": "Skip to content", "● SISTEMA / ESTADO": "● SYSTEM / STATUS",
+  "Visão geral": "Overview", "Registro operacional": "Operations log", "Parâmetros": "Parameters",
+  "COMANDOS / CONTROLE": "COMMAND / CONTROL", "SUA COMPANHIA EM TEMPO REAL": "YOUR AIRLINE IN REAL TIME",
+  "Uma visão clara de tudo que importa. Decisões, recursos e atividade da frota em um só lugar.": "Everything that matters. Decisions, resources and fleet activity in one place.",
+  "01 / TELEMETRIA DA COMPANHIA": "01 / AIRLINE TELEMETRY", "02 / CENTRO DE OPERAÇÕES": "02 / OPERATIONS CENTER",
+  "Fluxo de eventos em tempo real": "Real-time event stream", "Parâmetros operacionais": "Operational parameters",
   "Configurações": "Settings", "As opções são salvas automaticamente; os valores numéricos precisam ser salvos. Consulte a ajuda no README.":
     "Switches are saved as you change them; numbers with “Save”. The full help is in the README.",
   "painel web": "web dashboard", "perfil {x}": "profile {x}", "modo {x}": "{x} mode", "Erro: {x}": "Error: {x}",
@@ -262,7 +403,7 @@ function renderSettings() {
   const tabs = $("tabs"); tabs.textContent = "";
   settings.tabs.forEach((tab, i) => {
     const b = document.createElement("button");
-    b.textContent = tab.icon + " " + tab.name; b.className = i === activeTab ? "on" : "";
+    b.textContent = tab.icon + " " + tab.name; b.className = i === activeTab ? "on" : ""; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(i === activeTab));
     b.onclick = () => { activeTab = i; renderSettings(); };
     tabs.appendChild(b);
   });
@@ -284,7 +425,7 @@ function renderSettings() {
     }
   }
   const inputs = [];
-  if (tab.key === "Aviones") {
+  if (tab.key === "Aeronaves" || tab.key === "Aviones") {
     const t = document.createElement("div"); t.className = "section-title"; t.textContent = tr("Meta"); panel.appendChild(t);
     const list = document.createElement("datalist"); list.id = "goalList";
     for (const name of settings.goal_options) { const o = document.createElement("option"); o.value = name; list.appendChild(o); }

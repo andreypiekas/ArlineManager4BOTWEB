@@ -85,11 +85,11 @@ def _mask_email(email: str) -> str:
 
 class BotState(str, Enum):
     IDLE = "Parado"
-    STARTING = "Abriendo navegador"
-    LOGGING_IN = "Iniciando sesión"
-    RUNNING = "En marcha"
+    STARTING = "Abrindo navegador"
+    LOGGING_IN = "Fazendo login"
+    RUNNING = "Em execução"
     STOPPING = "Parando"
-    ERROR = "Error"
+    ERROR = "Erro"
 
 
 @dataclass
@@ -532,7 +532,7 @@ class Bot:
             action()
         except _SOFT_ERRORS as exc:
             log.warning("Problema ao %s: %s. Será retomado no próximo ciclo.", what, exc.__class__.__name__)
-            log.debug("Detalles:", exc_info=True)
+            log.debug("Detalhes:", exc_info=True)
             self.close_popup(quiet=True)
         except Exception as exc:  # noqa: BLE001 - an optional step (marketing, checklist ...) must not stop departures
             if self._stop.is_set() or not self._browser_alive():

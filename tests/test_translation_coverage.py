@@ -36,17 +36,10 @@ def test_painel_web_traduzido_com_ingles_opcional():
 
 def test_rotulos_desktop_em_portugues():
     set_language("pt_BR")
-    exemplos = {
-        "Flota": "Frota",
-        "Aviones": "Aeronaves",
-        "Opciones": "Opções",
-        "Guardar ajustes": "Salvar configurações",
-        "Nuevo perfil": "Novo perfil",
-        "Sin datos todavía": "Ainda sem dados",
-        "Probar Telegram": "Testar Telegram",
-    }
-    for espanhol, portugues in exemplos.items():
-        assert t(espanhol) == portugues
+    exemplos = ("Frota", "Aeronaves", "Opções", "Salvar configurações",
+                "Novo perfil", "Ainda sem dados", "Testar Telegram")
+    for portugues in exemplos:
+        assert t(portugues) == portugues
     for _, _, fields, switches in TABS:
         for _, rotulo in fields + switches:
             assert rotulo.strip()
@@ -55,7 +48,7 @@ def test_rotulos_desktop_em_portugues():
     assert len(ALL_SWITCHES) > 10
 
     set_language("en")
-    assert t("Flota") == "Fleet"
+    assert t("Frota") == "Fleet"
     assert t("Comprar combustível") == "Buy fuel"
     set_language("pt_BR")
 
