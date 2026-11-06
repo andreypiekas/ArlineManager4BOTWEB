@@ -27,5 +27,9 @@ jobs:
         run: ruff check src scripts tests
       - name: Compile
         run: python -m compileall -q src scripts
+      - name: Verificar instalador Linux
+        run: |
+          bash -n instalar.sh
+          bash instalar.sh --ajuda
       - name: Test
         run: pytest
