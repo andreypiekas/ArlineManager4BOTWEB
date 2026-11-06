@@ -82,11 +82,18 @@ as principais traduções, o JavaScript e os nomes exibidos nos logs.
 
 ## Atualização e imagens
 
-As capturas históricas presentes em `screenshots/` representam a
-interface anterior. Devem ser regeneradas somente em um dispositivo com o
-bot e o navegador instalados, após a atualização. Não são utilizadas
-como dependências para renderizar o novo painel.
+As imagens em `screenshots/` são capturas da interface **AM/04 compacta**,
+geradas em uma sessão demonstrativa e sem dados da conta do usuário:
 
-Antes de atualização em um servidor, faça backup dos arquivos locais de
+- `web-visao-geral.png`: operações e telemetria.
+- `web-config-*.png`: páginas de Mercado, Frota, Aeronaves e Opções.
+- `web-mobile*.png`: comportamento responsivo no celular.
+- `desktop-*.png`: aplicativo desktop com controles equivalentes.
+
+O script `scripts/screenshots.py` não autentica no jogo, não executa
+operações e não altera os arquivos de configuração. A geração reproduzível
+pode ser executada em Xvfb/Chrome por meio do workflow de capturas.
+
+Antes de atualizar o servidor, faça backup dos arquivos locais de
 configuração. O código não sobrescreve `config/secrets.ini`,
 `config/settings.ini`, sessões ou os dados salvos pela automação.
