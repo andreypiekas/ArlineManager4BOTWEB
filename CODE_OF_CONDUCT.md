@@ -55,11 +55,13 @@ further defined and clarified by project maintainers.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported by contacting the project team via https://github.com/JavierOlmedo. All
-complaints will be reviewed and investigated and will result in a response that
-is deemed necessary and appropriate to the circumstances. The project team is
-obligated to maintain confidentiality with regard to the reporter of an incident.
-Further details of specific enforcement policies may be posted separately.
+reported to the project maintainers by opening an issue at
+https://github.com/andreypiekas/ArlineManager4BOTWEB/issues/new.
+Public issues are visible to everyone: do not publish personal, confidential
+or sensitive information. If privacy is necessary, request a private reporting
+channel from the maintainers before sharing details. Reports will be reviewed
+and investigated, with appropriate action taken by the project maintainers.
+Further details of enforcement policies may be posted separately.
 
 Project maintainers who do not follow or enforce the Code of Conduct in good
 faith may face temporary or permanent repercussions as determined by other
