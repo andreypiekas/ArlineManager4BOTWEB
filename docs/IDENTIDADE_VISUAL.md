@@ -31,7 +31,14 @@ A aplicação desktop CustomTkinter compartilha a paleta por meio de
 - **Telemetria:** seis instrumentos com prioridade visual para saldo, seguido
   de reputação, combustível, CO₂, frota e meta.
 - **Centro de operações:** console de eventos com filtro de categoria e
-  parâmetros divididos em Mercado, Frota, Aeronaves e Opções.
+  um quadro compacto de confirmação da última alteração feita na sessão.
+- **Configurações em tela própria:** navegação lateral por Parâmetros, com as
+  categorias Mercado, Frota, Aeronaves e Opções, separadas da telemetria.
+  Os interruptores são salvos imediatamente; campos numéricos e modelos
+  exigem o botão **Salvar alterações**, com aviso visual de alteração
+  pendente, salvamento confirmado ou falha.
+- **Rascunhos preservados:** mudar de categoria ou retornar ao painel não
+  descarta campos numéricos ainda não salvos durante a sessão do navegador.
 - **Dispositivos móveis:** o trilho passa para uma faixa de comandos e
   os instrumentos reorganizam suas colunas em telas estreitas.
 

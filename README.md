@@ -10,6 +10,8 @@
 
 O painel web e o aplicativo desktop agora usam a identidade **AM/04 — Torre de Controle**: design técnico de alto contraste, telemetria com leitura rápida, console de eventos e comandos separados dos parâmetros. O painel web é responsivo e não depende de fontes, CSS ou serviços externos.
 
+**No painel web, os parâmetros agora ficam em uma tela própria.** Use **Parâmetros** no menu lateral para alterar as categorias Mercado, Frota, Aeronaves e Opções. A tela principal mantém indicadores, registros e um resumo textual da última alteração. Interruptores são salvos ao clicar; números e modelos exibem aviso de edição pendente até escolher **Salvar alterações**. Rascunhos continuam disponíveis ao mudar de categoria durante a sessão.
+
 **[Conheça a arquitetura visual e os contratos da interface](docs/IDENTIDADE_VISUAL.md)**
 
 As capturas históricas abaixo ainda mostram a interface anterior e serão atualizadas posteriormente em uma instalação real, sem dados fictícios de produção.
