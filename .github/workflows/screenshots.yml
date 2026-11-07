@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - docs/refresh-am04-screenshots
-      - feat/selecionar-modelo-compra-automatica
   workflow_dispatch:
 
 permissions:
