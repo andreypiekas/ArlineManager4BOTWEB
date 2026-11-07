@@ -4,7 +4,6 @@ from __future__ import annotations
 import logging
 from types import SimpleNamespace
 
-import pytest
 
 from bot import Bot
 from route_registry import RouteRegistry, eligible_for_reroute, endpoint, reroute_block_reason
