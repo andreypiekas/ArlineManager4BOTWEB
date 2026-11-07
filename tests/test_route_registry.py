@@ -93,3 +93,29 @@ def test_web_route_workplace_has_dedicated_navigation():
     assert 'id="routesTable"' in page
     assert 'api("/api/routes")' in page
     assert 'api("/api/routes", {action: "register", ...data})' in page
+
+
+def test_game_observation_required_before_reroute(tmp_path):
+    from route_registry import eligible_for_reroute
+    registry = RouteRegistry(tmp_path / "routes_registry.json")
+    first, last = endpoint("101"), endpoint("202")
+    registry.record("a", "XP", "A320", first, last, source="registro_manual", at_base=True)
+    assert not eligible_for_reroute(registry.snapshot()["relations"][0])
+    registry.record("a", "XP", "A320", first, last, source="game", at_base=True)
+    verified = registry.snapshot()["relations"][0]
+    assert eligible_for_reroute(verified, now=verified["game_verified_at"] + 30)
+    assert not eligible_for_reroute(verified, now=verified["game_verified_at"] + 181)
+    registry.observe("a", "XP", "A320", at_base=False)
+    assert not eligible_for_reroute(registry.snapshot()["relations"][0])
+
+
+def test_parked_without_route_invalidates_old_assignment(tmp_path):
+    registry = RouteRegistry(tmp_path / "routes_registry.json")
+    first, last = endpoint("101"), endpoint("202")
+    registry.record("a", "XP", "A320", first, last)
+    registry.unassign("a", "XP", "A320")
+    snapshot = registry.snapshot()
+    assert snapshot["relations"][0]["status"] == "sem_rota"
+    assert snapshot["duplicate_routes"] == 0
+    assert not registry.is_occupied(first, last)
+    assert snapshot["history"][0]["action"] == "rota_removida_no_jogo"
