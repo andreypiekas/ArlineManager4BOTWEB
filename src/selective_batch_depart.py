@@ -104,6 +104,14 @@ def targeted_depart(bot, registry: RouteRegistry, approvals: list) -> dict:
     if bot.stopping or bot.dry_run:
         outcome["status"] = "bot_parando_ou_simulacao"
         return outcome
+    if not registry.claim_experimental_departure(target):
+        log.warning(
+            "Despacho experimental: piloto único já utilizado anteriormente. "
+            "Nenhum novo pedido por IDs será enviado automaticamente. "
+            "Revisão manual necessária."
+        )
+        outcome["status"] = "piloto_experimental_ja_utilizado"
+        return outcome
     # Two independent reference implementations send mode=all&ids=<numeric IDs>.
     # It is not proven that the game *honors* the filter, hence opt-in + 1/run.
     uri = "route_depart.php?" + urlencode({"mode": "all", "ids": target})
@@ -119,11 +127,21 @@ def targeted_depart(bot, registry: RouteRegistry, approvals: list) -> dict:
     except Exception as exc:
         log.error(
             "Despacho experimental: falha/timeout após possível envio de %s (%s); "
-            "não repetir neste ciclo.", target, type(exc).__name__,
+            "piloto bloqueado para outros ciclos.", target, type(exc).__name__,
         )
         outcome["status"] = "pedido_experimental_resultado_desconhecido"
+        registry.finish_experimental_departure(target, outcome["status"])
         return outcome
-    after = bot.js(_STATUS_JS) or {}
+    try:
+        after = bot.js(_STATUS_JS) or {}
+    except Exception as exc:
+        log.error(
+            "Despacho experimental: não foi possível verificar a resposta (%s). "
+            "Piloto bloqueado até revisão manual.", type(exc).__name__,
+        )
+        outcome["status"] = "pedido_experimental_resultado_desconhecido"
+        registry.finish_experimental_departure(target, outcome["status"])
+        return outcome
     new_landed = _valid_ids(after.get("landed"))
     new_inflight = _valid_ids(after.get("inflight"))
     unexpected = (new_inflight - inflight) - {target}
@@ -135,6 +153,7 @@ def targeted_depart(bot, registry: RouteRegistry, approvals: list) -> dict:
             ", ".join(sorted(unexpected)),
         )
         outcome["status"] = "alteracao_inesperada_no_jogo"
+        registry.finish_experimental_departure(target, outcome["status"])
         return outcome
     if target in new_inflight and target not in new_landed:
         outcome["status"] = "decolagem_experimental_confirmada"
@@ -145,7 +164,8 @@ def targeted_depart(bot, registry: RouteRegistry, approvals: list) -> dict:
         outcome["status"] = "pedido_experimental_sem_confirmacao"
         log.warning(
             "Despacho experimental: solicitação do ID %s não foi confirmada "
-            "na lista de voos; não reenviar antes de revisão.",
+            "na lista de voos; piloto bloqueado para outros ciclos.",
             target,
         )
+    registry.finish_experimental_departure(target, outcome["status"])
     return outcome
