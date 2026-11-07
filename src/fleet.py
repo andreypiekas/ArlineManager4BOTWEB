@@ -29,6 +29,7 @@ from economy import (find_model, fmt_days, fmt_money, goal_progress, is_auto_goa
 from gamemode import EASY, GameMode
 from helpers import clean_response, fmt, to_int
 from notify import esc
+from route_optimizer import rank_candidates
 
 if TYPE_CHECKING:
     from bot import Bot
@@ -37,7 +38,7 @@ log = logging.getLogger("am4bot.rutas")
 log_fleet = logging.getLogger("am4bot.flota")
 log_market = logging.getLogger("am4bot.aviones")
 
-MAX_ROUTE_TRIES = 8  # busiest candidate routes checked per parked aircraft
+MAX_ROUTE_TRIES = 16  # compare more profit-ranked destinations, including occupied-route fallbacks
 BIG_SEATS = 150      # from this capacity an aircraft is "big": long routes, goal candidate
 GOAL_SAFETY = 2      # a small aircraft must pay back in less than half the time left to the goal
 
@@ -272,14 +273,36 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
             if distance < 500 or bot.stopping:
                 break
             candidates = [c for c in search_routes(bot, hub_id, distance, min_runway) if c.arr_id not in used]
-            candidates.sort(key=lambda c: _route_demand(c, premium), reverse=True)
-            # Prefer routes with enough daily demand to fill this aircraft at the measured occupancy
-            # (a B737 put on a 560 pax/day route ran out of passengers by mid-day).
-            enough = [c for c in candidates
-                      if _route_demand(c, premium) >= _daily_seats_sold(aircraft, known, c.distance, bot.load_factor(), bot.mode)]
-            if enough and len(enough) < len(candidates):
-                log.debug("%d de %d rotas têm demanda suficiente para preencher o %s.", len(enough), len(candidates), aircraft.model)
-            tries = (enough or candidates)[:MAX_ROUTE_TRIES]
+            # Use the game's known demand and the latest cached aircraft model to
+            # estimate daily revenue minus fuel/CO2; missing model data keeps the
+            # original demand-based ordering (no fabricated fuel/speed values).
+            ranked = rank_candidates(
+                candidates, seats=aircraft.seats, model=known, mode=bot.mode,
+                load_factor=bot.load_factor(),
+                fuel_price=bot.fuel_cost_basis(), co2_price=bot.co2_cost_basis(),
+                premium=premium,
+            )
+            has_estimates = any(estimate is not None for _, estimate in ranked)
+            if has_estimates:
+                tries = [candidate for candidate, _ in ranked[:MAX_ROUTE_TRIES]]
+                best = ranked[0][1]
+                if best is not None:
+                    log.info(
+                        "%s: previsão de melhor rota: lucro ~ $%s/dia, receita ~ $%s/dia, "
+                        "combustível ~ $%s/dia, CO₂ ~ $%s/dia (estimativas, não valores garantidos).",
+                        aircraft.reg, fmt(int(best.profit_per_day)), fmt(int(best.revenue_per_day)),
+                        fmt(int(best.fuel_cost_per_day)), fmt(int(best.co2_cost_per_day)),
+                    )
+            else:
+                # No cached model yet: retain the known working demand heuristic.
+                sorted_candidates = [candidate for candidate, _ in ranked]
+                enough = [
+                    c for c in sorted_candidates
+                    if _route_demand(c, premium) >= _daily_seats_sold(
+                        aircraft, known, c.distance, bot.load_factor(), bot.mode
+                    )
+                ]
+                tries = (enough or sorted_candidates)[:MAX_ROUTE_TRIES]
             if not tries:
                 log.info("Nenhuma rota candidata a até %d km (pista >= %d pés).", distance, min_runway)
                 continue
@@ -301,7 +324,9 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                     continue
                 outcome = create_route(bot, aircraft, candidate)
                 break
-            if outcome != "none" or capable_found:
+            # An occupied route is not a valid outcome: continue with a shorter
+            # search instead of giving up on this parked aircraft prematurely.
+            if outcome != "none":
                 break
         if outcome in ("created", "dry"):
             created += 1
