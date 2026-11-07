@@ -21,8 +21,8 @@ def test_hub_selector_can_omit_both_route_endpoints():
 
 def test_hub_options_without_codes_do_not_guess_city():
     result = explain_hub_options("DAC", "OSL", [
-        {"id": "11", "text": "São Paulo", "code": ""},
-        {"id": "12", "text": "Chapecó", "code": ""},
+        {"id": "90001", "text": "São Paulo", "code": ""},
+        {"id": "90002", "text": "Chapecó", "code": ""},
     ])
     assert result["reason"] == "etiquetas_sem_codigos_aeroportos"
 

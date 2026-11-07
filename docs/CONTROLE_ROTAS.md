@@ -90,3 +90,9 @@ python -m pytest -q tests/test_route_registry.py tests/test_route_optimizer.py
 Para inspecionar o relatório em execução, use a aba **Rotas e aeronaves**
 no painel web. Não habilite execução de compras/alterações reais antes de
 validar os registros da frota com **Simulação (sem gastos)**.
+
+## Catálogo offline de aeroportos
+
+A pesquisa do jogo lista bases pelo nome e ID (ex.: `2926: Chapecó, Brazil`) e frequentemente não apresenta IATA/ICAO. O bot usa `assets/airports_am4_codes.csv` para associar IDs a códigos, sem acessar rede durante o ciclo. Referência factual: https://github.com/eaingaran/airline-manager4/blob/master/airports.json; informações técnicas também presentes em https://github.com/abc8747/am4.
+
+O catálogo é auxiliar e pode ficar desatualizado. IDs são confirmados pelo jogo antes de qualquer ação. DAC (3499), OSL (645), LAX (1440) e PBM (3146) podem ser extremos de rotas sem serem bases próprias. Se ambos faltam na lista de bases do jogador, o status correto é `rota_fora_das_bases`. O bot não inventa uma origem operacional nem autoriza troca de rota somente com o catálogo. A manutenção confirma se uma aeronave está numa base, mas não identifica qual é essa base.
