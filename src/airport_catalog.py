@@ -32,6 +32,7 @@ _ICAO = re.compile(r"^[A-Z]{4}$")
 def _index() -> tuple[dict[str, Airport], dict[str, Airport]]:
     by_id: dict[str, Airport] = {}
     by_code: dict[str, Airport] = {}
+    ambiguous_codes: set[str] = set()
     try:
         with _DATA.open(encoding="utf-8", newline="") as handle:
             for id_, iata, icao in csv.reader(
@@ -44,7 +45,10 @@ def _index() -> tuple[dict[str, Airport], dict[str, Airport]]:
                 by_id[id_] = airport
                 # Ambiguous codes are intentionally not treated as unique.
                 for code in (iata, icao):
+                    if code in ambiguous_codes:
+                        continue
                     if code in by_code and by_code[code] != airport:
+                        ambiguous_codes.add(code)
                         by_code.pop(code)
                     else:
                         by_code[code] = airport
