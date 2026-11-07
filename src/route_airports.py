@@ -75,3 +75,62 @@ def code_from_candidate(row: Mapping[str, object]) -> str:
         return head[1]
     tail = re.search(r"\s+[/|]\s*([A-Z]{3,4})$", label)
     return tail[1] if tail else ""
+
+
+def explain_hub_options(first_code: str, second_code: str,
+                        options: Iterable[Mapping[str, object]]) -> dict:
+    """Explain a failed game-hub lookup without guessing airport identities.
+
+    The game's hub selector represents selectable airline hubs, not a global
+    airport registry. A route endpoint may legitimately be absent from it.
+    Public-facing diagnostics contain only airport selectors (no cookies,
+    credentials, aircraft state, or entire HTML fragments).
+    """
+    options = list(options)
+    matched: dict[str, list[str]] = {_code(first_code): [], _code(second_code): []}
+    matched.pop("", None)
+    codes_seen = 0
+    valid_ids = 0
+    details = []
+    for opt in options:
+        airport_id = str(opt.get("id") or "").strip()
+        label = " ".join(str(opt.get(k) or "") for k in ("text", "code", "title")).strip()
+        if not _GAME_ID.fullmatch(airport_id):
+            continue
+        valid_ids += 1
+        declared = _code(opt.get("code"))
+        text = label.upper().strip()
+        # Plain four-letter city names such as "Oslo" are NOT airport codes.
+        explicitly_coded = bool(
+            _CODE.fullmatch(text)
+            or re.search(r"\([A-Z]{3,4}\)", text)
+            or re.search(r"(?:^|\s)[A-Z]{3,4}\s*[-–|/]\s", text)
+            or re.search(r"\s[-–|/]\s*[A-Z]{3,4}$", text)
+        )
+        if declared or explicitly_coded:
+            codes_seen += 1
+        for code in matched:
+            if code_in_label(code, label):
+                matched[code].append(airport_id)
+        if len(details) < 5:
+            # Strip control characters and cap label length.
+            safe = "".join(char for char in label if char.isprintable())[:75]
+            details.append(f"{airport_id}: {safe}")
+    if valid_ids == 0:
+        reason = "seletor_sem_ids_validos"
+    elif any(len(hits) > 1 for hits in matched.values()) or sum(map(len, matched.values())) > 1:
+        reason = "bases_ambiguas"
+    elif sum(map(len, matched.values())) == 1:
+        reason = "base_identificada"
+    elif codes_seen == 0:
+        reason = "etiquetas_sem_codigos_aeroportos"
+    else:
+        reason = "nenhuma_ponta_da_rota_nas_bases"
+    return {
+        "reason": reason,
+        "total_options": len(options),
+        "valid_ids": valid_ids,
+        "labels_with_possible_codes": codes_seen,
+        "matched": matched,
+        "samples": details,
+    }
