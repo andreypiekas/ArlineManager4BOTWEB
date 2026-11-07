@@ -534,11 +534,11 @@ class Bot:
                 "Diagnóstico de decolagem: automático DESATIVADO nas configurações; "
                 "nenhum comando de decolagem será enviado neste ciclo."
             )
-            RouteRegistry().record_dispatch_summary({
+            self._guard(lambda: RouteRegistry().record_dispatch_summary({
                 "status": "decolagem_automatica_desativada",
                 "mode": "desativado",
                 "simulation": self.dry_run,
-            })
+            }), "registrar status de decolagem")
         if opt("autobuy_fuel") or opt("autobuy_co2"):
             self._guard(self._check_market, "verificar o mercado de combustível / CO₂")
         if opt("auto_checklist"):
