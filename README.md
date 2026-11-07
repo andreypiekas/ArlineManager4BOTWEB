@@ -31,6 +31,26 @@ As capturas abaixo são geradas **diretamente a partir do aplicativo**, com uma 
 
 As estimativas adaptam-se aos modos Fácil e Realista e dependem das informações disponíveis da companhia.
 
+## Controle de rotas e duplicidades
+
+A aba **Rotas e aeronaves** apresenta o registro persistente por companhia, com
+aeronave, matrícula, origem, destino, lucro aproximado, duplicidades, últimas
+leituras, propostas de troca e histórico de alterações. As rotas são comparadas
+sem considerar o sentido: `DUB → GRU` e `GRU → DUB` são equivalentes.
+
+Em **Parâmetros → Frota**, a opção **Permitir aeronaves na mesma rota
+(ida/volta)** determina se o bot poderá criar rotas repetidas. Desativada por
+padrão, ela impede novas duplicidades e propõe uma rota alternativa lucrativa
+para registros já duplicados. A troca automática só ocorre com identificação
+e confirmação confiáveis no jogo, com a aeronave na base, e após verificação
+de custo e elegibilidade. Quando os dados são insuficientes, o relatório
+mantém uma pendência e **não altera** o jogo.
+
+O controle é cumulativo e **não presume que já leu toda a frota**, já que o
+jogo pode exibir listas parciais por página. Permite corrigir manualmente um
+vínculo no cadastro, sem modificar a rota real. Consulte o
+[guia de controle e segurança das rotas](docs/CONTROLE_ROTAS.md).
+
 ## Interface — AM/04 Torre de Controle
 
 ### Painel operacional
