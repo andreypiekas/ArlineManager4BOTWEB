@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from urllib.parse import parse_qs
 
 from route_registry import RouteRegistry
+from selective_batch_depart import targeted_depart
 
 log = logging.getLogger("am4bot.vuelos")
 _ID = re.compile(r"^[0-9]{1,14}$")
@@ -191,6 +192,22 @@ def selective_dispatch(bot, registry: RouteRegistry, *, limit: int = 20) -> dict
         ],
     }
     registry.record_dispatch_summary(summary)
+    experimental = (
+        getattr(getattr(bot, "config", None), "get_bool", lambda *a: False)(
+            "options", "experimental_id_batch_depart", False
+        )
+    )
+    if not exposed and experimental:
+        # This optional fallback is isolated: the real server might ignore
+        # the explicit IDs and depart others. A deliberate user opt-in is
+        # required, so the default path never contacts the endpoint.
+        result = targeted_depart(bot, registry, eligible)
+        summary["mode"] = "seletivo_experimental"
+        summary["status"] = result["status"]
+        summary["departed"] = result["departed"]
+        summary["target_id"] = result.get("target_id", "")
+        registry.record_dispatch_summary(summary)
+        return summary
     if bot.dry_run:
         log.info("[SIMULAÇÃO] Despacho individual: nenhuma ordem enviada.")
         return summary
@@ -198,7 +215,8 @@ def selective_dispatch(bot, registry: RouteRegistry, *, limit: int = 20) -> dict
         log.warning(
             "Despacho individual indisponível: a interface do jogo não expôs "
             "um comando específico para nenhuma aeronave aprovada. "
-            "O botão geral permanece bloqueado para proteger as rotas duplicadas."
+            "O botão geral permanece bloqueado; modo experimental por IDs está "
+            "DESATIVADO por padrão porque o servidor ainda pode ignorar os IDs."
         )
         summary["status"] = "controle_individual_nao_disponivel"
         registry.record_dispatch_summary(summary)

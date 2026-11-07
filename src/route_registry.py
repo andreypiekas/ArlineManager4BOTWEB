@@ -283,6 +283,38 @@ class RouteRegistry:
             }
             self._save(data)
 
+    def claim_experimental_departure(self, aircraft_id: str) -> bool:
+        """One-shot pilot interlock across cycles/restarts, never auto-reset.
+
+        A crash or timeout after issuing a game order must not lead to
+        repeated departures. Claim is persisted *before* the network call.
+        """
+        if not re.fullmatch(r"[0-9]{1,14}", str(aircraft_id or "")):
+            return False
+        with _LOCK:
+            data = _state(self.path)
+            if data.get("experimental_departure_pilot"):
+                return False
+            data["experimental_departure_pilot"] = {
+                "at": int(time.time()),
+                "aircraft_id": str(aircraft_id),
+                "status": "claimed_before_request",
+            }
+            self._save(data)
+            return True
+
+    def finish_experimental_departure(self, aircraft_id: str, status: str) -> bool:
+        """Record confirmation or uncertainty; the one-shot latch stays armed."""
+        with _LOCK:
+            data = _state(self.path)
+            pilot = data.get("experimental_departure_pilot")
+            if not isinstance(pilot, dict) or pilot.get("aircraft_id") != str(aircraft_id):
+                return False
+            pilot["status"] = str(status)[:100]
+            pilot["finished_at"] = int(time.time())
+            self._save(data)
+            return True
+
     def record_dispatch_summary(self, summary: dict) -> None:
         """Persist a bounded dispatch decision summary for the read-only panel."""
         safe = {
@@ -294,6 +326,7 @@ class RouteRegistry:
             "not_supported": max(0, int(summary.get("not_supported") or 0)),
             "departed": max(0, int(summary.get("departed") or 0)),
             "status": str(summary.get("status") or "")[:80],
+            "target_id": str(summary.get("target_id") or "")[:20],
             "mode": str(summary.get("mode") or "seletivo")[:24],
             "simulation": bool(summary.get("simulation", False)),
             "duplicates_known": max(0, int(summary.get("duplicates_known") or 0)),
@@ -341,6 +374,7 @@ class RouteRegistry:
             "allow_duplicates": bool(allow_duplicates),
             "last_scan": data.get("last_scan"),
             "last_dispatch": data.get("last_dispatch"),
+            "experimental_departure_pilot": data.get("experimental_departure_pilot"),
             "partial": True,  # the game may expose only a page of the fleet at a time
         }
 
