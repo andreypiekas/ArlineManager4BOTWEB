@@ -30,6 +30,7 @@ from gamemode import EASY, GameMode
 from helpers import clean_response, fmt, to_int
 from notify import esc
 from route_optimizer import rank_candidates
+from route_airports import match_hub_options, code_from_candidate
 from route_registry import RouteRegistry, eligible_for_reroute, endpoint
 
 if TYPE_CHECKING:
@@ -70,9 +71,20 @@ _CANDIDATES_JS = """
 return Array.from(document.querySelectorAll("#resResult #list .sorter")).map(el => {
   const arr = ((el.getAttribute("onclick") || "").match(/arr=(\\d+)/) || [])[1];
   const title = el.querySelector(".exo");
-  return {arr: arr || null, name: title ? title.textContent.trim() : "?", distance: el.dataset.distance || "0",
+  return {arr: arr || null, name: title ? title.textContent.trim() : "?",
+          code: el.dataset.iata || el.dataset.icao || el.dataset.code || (title ? title.getAttribute("data-code") || title.title || "" : ""),
+          distance: el.dataset.distance || "0",
           y: el.dataset.yclass || "0", j: el.dataset.jclass || "0", f: el.dataset.fclass || "0", rwy: el.dataset.rwy || "0"};
 });
+"""
+
+_HUB_OPTIONS_JS = """
+const select = document.getElementById("hubSelect");
+return select ? Array.from(select.options).map(opt => ({
+  id: opt.value, text: opt.textContent.trim(),
+  code: opt.dataset.iata || opt.dataset.icao || opt.dataset.code || "",
+  title: opt.title || ""
+})) : [];
 """
 
 _MODELS_JS = """
@@ -105,6 +117,7 @@ class RouteCandidate:
     j: int
     f: int
     runway: int
+    code: str = ""  # game-confirmed IATA/ICAO when available
 
 
 @dataclass
@@ -335,6 +348,10 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 f" (IDs dos aeroportos ausentes; códigos disponíveis: "
                 f"{origin.get('code') or '?'} ↔ {destination.get('code') or '?'})"
             )
+        elif reason == "aguardando_identificacao_da_base":
+            details = " (o seletor de bases do jogo não informou um único ID para os códigos da rota)"
+        elif reason == "sem_destino_com_codigo_validado":
+            details = " (pesquisa não exibiu um código IATA/ICAO verificável para a alternativa)"
         elif reason == "aguardando_confirmacao_no_jogo":
             details = " (necessário comprovar localização na base e rota atual)"
         if proposal:
@@ -371,7 +388,12 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             origin = row.get("origin", {})
             destination = row.get("destination", {})
             hub_id = str(origin.get("id") or "")
-            if not hub_id or not destination.get("id"):
+            hub_code = origin.get("code") or ""
+            current_dest_code = destination.get("code") or ""
+            # The route list often exposes only IATA/ICAO codes, not numeric
+            # airport IDs. Those codes are sufficient for a read-only lookup
+            # against the game's real hub selection, not for guessing an ID.
+            if not (hub_id and destination.get("id")) and not (hub_code and current_dest_code):
                 pending(aircraft_id, "aguardando_identificacao_da_rota")
                 continue
             if not cfg.get_bool("options", "auto_route"):
@@ -390,6 +412,24 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 limit = min(limit, int(model["range"]))
             bot.open_popup("routes_main.php", "Routes", "nav_routes")
             bot.ajax("research_main.php", "routeAction")
+            # Route labels are not direction-of-flight proof: for OSL↔DAC
+            # either airport may be the actual hub. The unique match in the
+            # authenticated game selector decides the planning origin.
+            hub_match = match_hub_options(
+                hub_code, current_dest_code, bot.js(_HUB_OPTIONS_JS) or []
+            ) if hub_code and current_dest_code else None
+            if hub_match:
+                hub_id = hub_match.airport_id
+                hub_code = hub_match.code
+                current_dest_code = hub_match.opposite_code
+                log.info(
+                    "Controle de rotas: %s — base %s (ID do jogo %s) confirmada no seletor; "
+                    "destino atual %s.",
+                    row["registration"], hub_code, hub_id, current_dest_code,
+                )
+            elif not (hub_id and destination.get("id")):
+                pending(aircraft_id, "aguardando_identificacao_da_base")
+                continue
             # The game's hub picker must prove we are searching the same origin
             # as the existing assignment. Never optimize from an unrelated hub.
             selected = bot.js(
@@ -405,19 +445,28 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             for distance in (limit, limit // 2, limit // 4):
                 if distance < 500 or bot.stopping:
                     break
-                options = [
-                    candidate for candidate in search_routes(
-                        bot, hub_id, distance, cfg.get_int("settings", "route_min_runway", 5000)
-                    )
-                    if not registry.is_occupied(
-                        endpoint(hub_id), endpoint(candidate.arr_id), aircraft_id
-                    ) and not (destination.get("id") == candidate.arr_id)
-                ]
+                options = []
+                for candidate in search_routes(
+                    bot, hub_id, distance, cfg.get_int("settings", "route_min_runway", 5000)
+                ):
+                    # Only a game-verifiable airport code allows comparison with
+                    # the historical code-only records, in both directions.
+                    if not candidate.code:
+                        continue
+                    if current_dest_code and candidate.code == current_dest_code:
+                        continue
+                    if destination.get("id") and destination["id"] == candidate.arr_id:
+                        continue
+                    if registry.is_occupied(
+                        endpoint(code=hub_code), endpoint(code=candidate.code), aircraft_id
+                    ):
+                        continue
+                    options.append(candidate)
                 destination_options.extend(options)
                 if options:
                     break
             if not destination_options:
-                pending(aircraft_id, "sem_destino_alternativo")
+                pending(aircraft_id, "sem_destino_com_codigo_validado")
                 continue
             ranked = rank_candidates(
                 destination_options, seats=seats, model=model, mode=bot.mode,
@@ -431,14 +480,15 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 continue
             candidate, economics = alternative
             proposal = {
-                "origin_id": hub_id, "destination_id": candidate.arr_id,
+                "origin_id": hub_id, "origin_code": hub_code,
+                "destination_id": candidate.arr_id, "destination_code": candidate.code,
                 "destination": candidate.name, "distance_km": round(candidate.distance),
                 "profit_per_day": round(economics.profit_per_day),
                 "current_route": row.get("route_key", ""),
             }
             # The stored report identifies a collision, but a *fresh*, explicit
             # game reading must confirm the aircraft at base before changing it.
-            if not eligible_for_reroute(row):
+            if not eligible_for_reroute(row, verified_hub=hub_match is not None):
                 pending(aircraft_id, "aguardando_confirmacao_no_jogo", proposal=proposal)
                 continue
             if bot.dry_run:
@@ -502,6 +552,7 @@ def search_routes(bot: "Bot", hub_id: str, max_distance: int, min_runway: int) -
         candidates.append(RouteCandidate(
             row["arr"], row["name"], distance,
             to_int(row["y"]) or 0, to_int(row["j"]) or 0, to_int(row["f"]) or 0, to_int(row["rwy"]) or 0,
+            code_from_candidate(row),
         ))
     return candidates
 
