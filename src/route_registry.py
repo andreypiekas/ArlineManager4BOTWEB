@@ -242,6 +242,22 @@ class RouteRegistry:
             self._save(data)
             return True
 
+    def record_scan(self, visible: int, identified: int, missing_airports: int) -> None:
+        """Persist the audit outcome even if no aircraft route was identified.
+
+        Does not change any existing assignment; the panel can explain why
+        the last attempt produced no new route relations.
+        """
+        with _LOCK:
+            data = _state(self.path)
+            data["last_scan"] = {
+                "at": int(time.time()),
+                "visible": max(0, int(visible)),
+                "identified": max(0, int(identified)),
+                "missing_airports": max(0, int(missing_airports)),
+            }
+            self._save(data)
+
     def snapshot(self, *, allow_duplicates: bool = True) -> dict:
         with _LOCK:
             data = deepcopy(_state(self.path))
@@ -269,6 +285,7 @@ class RouteRegistry:
             "total": len(rows), "duplicate_routes": len(duplicates),
             "affected_aircraft": len(duplicate_ids),
             "allow_duplicates": bool(allow_duplicates),
+            "last_scan": data.get("last_scan"),
             "partial": True,  # the game may expose only a page of the fleet at a time
         }
 
