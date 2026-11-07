@@ -54,6 +54,7 @@ HELP: dict[str, str] = {
     "engine_preference": "Padrão do jogo mantém o comportamento anterior. Escolha motor específico, mais rápido ou mais econômico para validar a motorização antes de comprar. Se não for possível confirmar a seleção, a compra será bloqueada.",
     "aircraft_max_price": "Limite de preço sem meta definida; zero remove o limite.",
     "auto_depart": "Decola as aeronaves disponíveis em cada ciclo.",
+    "selective_depart": "Com duplicidades proibidas, tenta decolar somente aeronaves aprovadas e com um controle individual explícito no jogo. Nunca envia Decolar todas nessa situação; se o jogo não oferecer esse comando, não decola nenhuma por segurança.",
     "autobuy_fuel": "Compra combustível conforme os critérios da aba Mercado.",
     "autobuy_co2": "Compra CO₂ conforme os critérios da aba Mercado.",
     "auto_marketing": "Inicia campanhas de reputação se o retorno justificar o custo.",
