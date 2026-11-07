@@ -7,7 +7,6 @@ confirmamos uma aquisição quando o motor solicitado não foi verificado.
 from __future__ import annotations
 
 import logging
-import re
 import unicodedata
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
