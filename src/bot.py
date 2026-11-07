@@ -915,9 +915,17 @@ class Bot:
             tlog.info("O tanque de %s está cheio; nada a comprar.", label)
             return
         window = int(time.time() // PRICE_WINDOW_SECONDS)
-        if self._bought_in_window(kind, window) and not excellent:
+        # A user-configured CO2 price is an explicit standing buy instruction:
+        # allow more than one purchase in a price window when stock and funds permit.
+        # Keep the once-per-window safeguard for fuel and for CO2 bought only
+        # through the adaptive history threshold or emergency stock replenishment.
+        fixed_co2_limit = self.config.get_int("settings", "co2_price_good", 0)
+        repeat_co2_at_fixed_price = kind == "co2" and fixed_co2_limit > 0 and price <= fixed_co2_limit
+        if self._bought_in_window(kind, window) and not (excellent or repeat_co2_at_fixed_price):
             tlog.info("%s já adquirido nesta janela de preço.", label.capitalize())
             return
+        if repeat_co2_at_fixed_price and self._bought_in_window(kind, window):
+            tlog.info("CO₂ continua dentro do limite configurado ($%s ≤ $%s); nova compra permitida se houver saldo e espaço.", fmt(price), fmt(fixed_co2_limit))
         money = self.stats().money
         if money is not None:
             # Topping up a nearly empty tank keeps the aircraft flying: it may use the reserve.
