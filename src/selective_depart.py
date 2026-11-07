@@ -180,6 +180,8 @@ def selective_dispatch(bot, registry: RouteRegistry, *, limit: int = 20) -> dict
         log.info("Despacho retido: %s (ID %s): %s.", d.registration, d.aircraft_id, d.reason)
     summary = {
         "at": int(time.time()), "ready_seen": len(decisions),
+        "mode": "seletivo", "simulation": bool(bot.dry_run),
+        "duplicates_known": report["duplicate_routes"],
         "approved": len(eligible), "blocked": len(rejected),
         "native_individual": len(exposed), "not_supported": unexposed,
         "departed": 0, "status": "simulacao" if bot.dry_run else "pendente",
