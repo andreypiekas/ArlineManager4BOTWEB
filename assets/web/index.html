@@ -471,7 +471,7 @@ footer strong { font-weight: 600; color: var(--aqua); }
     <div class="route-summary" id="routeSummary" aria-live="polite"></div>
     <section class="card" aria-label="Relações entre aeronaves e rotas">
       <div class="routes-header">
-        <div><strong data-t="REGISTRO DA FROTA">REGISTRO DA FROTA</strong><p data-t="Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.">Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.</p><p id="routeAuditStatus" role="status" aria-live="polite"></p></div>
+        <div><strong data-t="REGISTRO DA FROTA">REGISTRO DA FROTA</strong><p data-t="Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.">Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.</p><p id="routeAuditStatus" role="status" aria-live="polite"></p><p id="routeDispatchStatus" role="status" aria-live="polite"></p></div>
         <div class="routes-controls">
           <input id="routeSearch" type="search" aria-label="Buscar aeronave ou aeroporto" placeholder="Buscar aeronave ou aeroporto">
           <button id="routeRefresh" type="button" data-t="Atualizar relatório">Atualizar relatório</button>
@@ -1075,6 +1075,23 @@ function renderRoutes(report) {
       explanation += " " + tr("Nenhuma aeronave encontrada na página atual; confira o carregamento do jogo.");
     }
     $("routeAuditStatus").textContent = explanation;
+  }
+  const dispatch = report.last_dispatch;
+  if (!dispatch) {
+    $("routeDispatchStatus").textContent = "Despacho individual: ainda não verificado.";
+  } else {
+    const noun = dispatch.status === "simulacao" ? "SIMULAÇÃO" : dispatch.status;
+    const summary = "Despacho individual · " +
+      (dispatch.ready_seen || 0) + " prontas na interface · " +
+      (dispatch.approved || 0) + " aprovadas · " +
+      (dispatch.blocked || 0) + " retidas · " +
+      (dispatch.native_individual || 0) + " com comando individual · " +
+      (dispatch.departed || 0) + " decolagens confirmadas. Estado: " + noun + ".";
+    const blocked = (dispatch.blocked_aircraft || []).slice(0, 5)
+      .map(row => (row.registration || row.id) + " (" + row.reason.replaceAll("_", " ") + ")")
+      .join("; ");
+    $("routeDispatchStatus").textContent = summary +
+      (blocked ? " Retidas: " + blocked + "." : "");
   }
   const metrics = $("routeSummary");
   metrics.textContent = "";
