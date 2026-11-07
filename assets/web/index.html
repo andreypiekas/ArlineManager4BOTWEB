@@ -490,6 +490,17 @@ const EN = {
   "O bot economizará e comprará somente o modelo escolhido quando houver saldo e vaga no hangar.": "The bot will save and buy only your selected aircraft when funds and hangar space are available.",
   "Progressão automática: o bot seleciona o próximo modelo conforme retorno estimado e orçamento.": "Automatic progression: the bot chooses the next model based on expected returns and budget.",
   "Selecione uma aeronave específica antes de salvar.": "Choose an aircraft model before saving.",
+  "Configuração do motor": "Engine configuration",
+  "Critério de motorização": "Engine selection",
+  "Padrão do jogo (não alterar)": "Game default (unchanged)",
+  "Mais rápido (dados confirmados)": "Fastest (verified data)",
+  "Menor consumo (dados confirmados)": "Lowest fuel burn (verified data)",
+  "Motor específico (nome)": "Specific engine (name)",
+  "Nome do motor": "Engine name",
+  "Ex.: Trent 972": "E.g. Trent 972",
+  "Motor selecionado antes da compra. Se o jogo não confirmar a opção ou não informar os dados necessários, a compra será bloqueada.":
+    "Engine selected before purchase. If the game cannot confirm it or lacks metrics, the purchase will be blocked.",
+  "Informe o nome do motor antes de salvar.": "Enter the engine name before saving.",
   "Sem conexão com o bot": "No connection with the bot", "Resposta inválida": "Invalid answer",
 };
 let LANG = "pt_BR";
@@ -761,6 +772,50 @@ function renderSettings() {
       inputs.push(["text", fixedSetting.key, input]);
       values.appendChild(field(fixedSetting.key, fixedSetting.label, fixedSetting.help, input));
     }
+
+    // Motor é selecionado somente ao abrir a compra do modelo no jogo.
+    // Nunca supor que os motores de aeronaves diferentes sejam iguais.
+    const engineSetting = settings.text.find(s => s.key === "engine_preference");
+    if (engineSetting) {
+      const saved = (pendingDrafts.get(draftKey("text", "engine_preference")) ??
+        (engineSetting.value || "default")).trim();
+      const motorTitle = document.createElement("div"); motorTitle.className = "section-title";
+      motorTitle.textContent = tr("Configuração do motor"); values.appendChild(motorTitle);
+      const strategy = document.createElement("select");
+      const modes = [
+        ["default", tr("Padrão do jogo (não alterar)")],
+        ["fastest", tr("Mais rápido (dados confirmados)")],
+        ["economical", tr("Menor consumo (dados confirmados)")],
+        ["name", tr("Motor específico (nome)")]
+      ];
+      for (const [value, label] of modes) {
+        const option = document.createElement("option");
+        option.value = value; option.textContent = label; strategy.appendChild(option);
+      }
+      strategy.value = saved.startsWith("name:") ? "name" :
+        ["fastest", "economical"].includes(saved) ? saved : "default";
+      values.appendChild(field("engine_strategy", tr("Critério de motorização"), engineSetting.help, strategy));
+
+      const engineName = document.createElement("input");
+      engineName.type = "text"; engineName.maxLength = 75;
+      engineName.placeholder = tr("Ex.: Trent 972");
+      engineName.value = saved.startsWith("name:") ? saved.substring(5) : "";
+      engineName.disabled = strategy.value !== "name";
+      values.appendChild(field("engine_name", tr("Nome do motor"), engineSetting.help, engineName));
+
+      const engineNote = document.createElement("p"); engineNote.className = "model-hint";
+      engineNote.textContent = tr("Motor selecionado antes da compra. Se o jogo não confirmar a opção ou não informar os dados necessários, a compra será bloqueada.");
+      values.appendChild(engineNote);
+      const engineValue = () => strategy.value === "name" ? "name:" + engineName.value.trim() : strategy.value;
+      const markEngine = () => {
+        engineName.disabled = strategy.value !== "name";
+        pendingDrafts.set(draftKey("text", "engine_preference"), engineValue());
+        showMsg({pending: true, message: tr("Alteração pendente: {x}", engineSetting.label) + " " + tr("Clique em Salvar.")});
+      };
+      strategy.onchange = markEngine;
+      engineName.oninput = markEngine;
+      inputs.push(["text", "engine_preference", {get value() {return engineValue();}}]);
+    }
   }
 
   if (tab.fields.length) {
@@ -784,6 +839,11 @@ function renderSettings() {
     save.onclick = async () => {
       if (inputs.some(([kind, key, input]) => kind === "text" && key === "goal_model" && !input.value.trim())) {
         showMsg({ok: false, message: tr("Selecione uma aeronave específica antes de salvar.")});
+        return;
+      }
+      if (inputs.some(([kind, key, input]) => kind === "text" && key === "engine_preference" &&
+          input.value.startsWith("name:") && !input.value.substring(5).trim())) {
+        showMsg({ok: false, message: tr("Informe o nome do motor antes de salvar.")});
         return;
       }
       const body = {settings: {}, text: {}};

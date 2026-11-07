@@ -510,12 +510,26 @@ def save_for_goal(bot: "Bot", models: list[AircraftModel], goal_name: str, budge
 
 def order_aircraft(bot: "Bot", choice: AircraftModel, goal: bool = False) -> bool:
     detail = bot.ajax(f"ac_orders.php?mode=detail&id={choice.id}&charter=0", "acModel")
+    # O motor só pode ser escolhido antes de encomendar. Uma preferência
+    # explícita NÃO aceita fallback silencioso para a seleção padrão do jogo.
+    from engine_selection import EngineSelectionError, prepare_engine
+
+    try:
+        motor = prepare_engine(bot, bot.config.get("settings", "engine_preference", "default"))
+    except EngineSelectionError as exc:
+        log_market.warning("Compra de %s bloqueada: %s", choice.name, exc)
+        return False
+    if motor and not bot.dry_run:
+        # A alteração de motor pode reconstruir todo o fragmento Ajax.
+        detail = bot.driver.find_element(By.ID, "acModel")
     low = detail.find_elements(By.XPATH, ".//*[@id='accountLow']")
     if low and low[0].is_displayed():
         log_market.info("O jogo informa que não há saldo suficiente para um %s.", choice.name)
         return False
     reg = bot.js("return $('#acReg').val();") or ""
     summary = f"1 x {choice.name} por ${fmt(choice.price)} (matrícula {reg}, {choice.capacity} passageiros, {fmt(choice.range_km)} km de autonomia)"
+    if motor:
+        summary += f" | motor: {motor}"
     if bot.dry_run:
         log_market.info("[SIMULAÇÃO] Encomendaria %s.", summary)
         bot.notify(f"🧪 SIMULAÇÃO: encomendaria {esc(summary)}.", silent=True)

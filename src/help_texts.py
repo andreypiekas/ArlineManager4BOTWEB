@@ -50,6 +50,7 @@ HELP: dict[str, str] = {
     "goal_model": "Escolha Progressão automática para o bot selecionar aeronaves por rentabilidade, ou Modelo específico para economizar e comprar a aeronave escolhida do mercado. Requer a opção Economizar para uma aeronave desejada ativa.",
     "goal_invest": "Ativada: o bot pode comprar outras aeronaves rentáveis enquanto economiza para a escolhida. Desative para comprar somente o modelo definido na meta.",
     "aircraft_model": "Modelo fixo usado somente quando Economizar para uma aeronave desejada estiver desativado. Deixe vazio para comprar a aeronave mais rentável.",
+    "engine_preference": "Padrão do jogo mantém o comportamento anterior. Escolha motor específico, mais rápido ou mais econômico para validar a motorização antes de comprar. Se não for possível confirmar a seleção, a compra será bloqueada.",
     "aircraft_max_price": "Limite de preço sem meta definida; zero remove o limite.",
     "auto_depart": "Decola as aeronaves disponíveis em cada ciclo.",
     "autobuy_fuel": "Compra combustível conforme os critérios da aba Mercado.",

@@ -227,6 +227,16 @@ A compra automática oferece duas estratégias quando **Economizar para uma aero
 - **Permitir compras intermediárias antes da meta** — Permite aquisições complementares somente quando antecipam a meta.
 - **Modelo da compra automática** — Progressão automática ou aeronave específica escolhida na lista do mercado; salva em `goal_model`.
 - **Modelo fixo (sem meta ativa)** — Usado somente quando **Economizar para uma aeronave desejada** está desativado. Vazio significa comprar a aeronave mais rentável disponível.
+
+**Motor da aeronave — nova configuração:** fica na mesma aba **Aeronaves** e vale tanto para a progressão automática quanto para compras de modelo específico.
+
+- **Padrão do jogo:** preserva a escolha de motorização feita pelo jogo (comportamento anterior).
+- **Mais rápido:** seleciona a opção com maior velocidade **somente se o formulário fornecer velocidades comparáveis**.
+- **Menor consumo:** seleciona a opção de menor consumo **somente se o formulário fornecer dados comparáveis**.
+- **Motor específico:** informe um nome que apareça na opção de compra, por exemplo `Trent 972`. A correspondência deve ser única.
+
+**Segurança:** o bot inspeciona as opções de motor na janela real de aquisição antes de clicar em **Comprar**. Se a página não apresentar um seletor nativo identificável, se houver ambiguidade ou se a seleção não for confirmada pelo formulário, **não realiza o pedido**. Isso é especialmente importante para aeronaves caras. O recurso não contorna CAPTCHA e não troca motores de aeronaves já adquiridas. Como não há um HTML autenticado do jogo incluído neste repositório, a compatibilidade da seleção automática com a página real ainda precisa ser validada no servidor; os testes atuais usam formulários simulados.
+
 - **Preço máximo sem meta (0 = livre)** — Limite aplicável à estratégia sem meta; zero remove o limite.
 
 A lista de modelos é preenchida após o bot consultar o mercado. Caso esteja vazia, é possível digitar o nome manualmente; o bot só efetuará o pedido quando conseguir localizar o modelo.

@@ -81,6 +81,7 @@ ALL_SWITCHES = MARKET_SWITCHES + FLEET_SWITCHES + AIRCRAFT_SWITCHES + OPTION_SWI
 TEXT_SETTINGS = [
     ("goal_model", "Modelo da compra automática"),
     ("aircraft_model", "Modelo fixo (sem meta ativa)"),
+    ("engine_preference", "Motorização da aeronave"),
 ]
 
 # Tabs in display order: (name, icon, fields, switches)
