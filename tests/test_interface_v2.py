@@ -86,7 +86,7 @@ def test_desktop_usando_design_de_operacoes():
 
 
 def test_estados_e_abas_partem_do_portugues():
-    assert [nome for nome, *_ in TABS] == ["Mercado", "Frota", "Aeronaves", "Opções"]
+    assert [nome for nome, *_ in TABS] == ["Mercado", "Frota", "Aeronaves", "Opções", "Telegram"]
     assert BotState.STARTING.value == "Abrindo navegador"
     assert BotState.LOGGING_IN.value == "Fazendo login"
     assert BotState.RUNNING.value == "Em execução"

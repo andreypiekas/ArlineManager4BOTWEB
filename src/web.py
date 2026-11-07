@@ -220,6 +220,18 @@ class WebDashboard:
         return True, t("Salvo.")
 
     def control(self, action: str) -> tuple[bool, str]:
+        if action == "telegram_test":
+            from notify import Telegram
+            self.cfg.reload_secrets()
+            token, chat_id = self.cfg.telegram
+            if not token or not chat_id:
+                return False, t("Telegram não configurado: informe bot_token e chat_id em config/secrets.ini.")
+            ok, detail = Telegram(token, chat_id).send_now("✅ <b>Teste AM/04</b>: notificações conectadas.")
+            if not ok:
+                log.warning("Teste do Telegram falhou: %s", detail)
+            return (True, t("Mensagem de teste enviada ao Telegram.")) if ok else (
+                False, t("Não foi possível enviar a mensagem. Consulte os registros do servidor.")
+            )
         if action == "start":
             if self.bot.is_alive():
                 return False, t("O bot já está em execução.")
