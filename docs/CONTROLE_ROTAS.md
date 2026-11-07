@@ -67,28 +67,36 @@ O bot continuará calculando, simulando e registrando propostas, inclusive
 fora do modo simulação, mas marcará `troca_de_rota_ainda_nao_validada`
 em vez de enviar ordens de compra de nova rota.
 
-A opção **Permitir aeronaves na mesma rota (ida/volta)** desligada
-protege as decolagens por meio do novo **Despacho individual seguro**. O
-bot planeja quais aviões podem sair (no máximo um por rota duplicada),
-consulta a lista de aeronaves prontas da interface e só tenta clicar em
-**um comando nativo do jogo explicitamente associado ao ID daquele avião**.
-O endpoint geral `route_depart.php?mode=all` é sempre rejeitado para despacho
-individual, mesmo que venha acompanhado de IDs. Cada clique precisa ser
-confirmado pela mudança da aeronave para a lista de voos em andamento.
+### Deixar de criar rotas não interrompe as decolagens
 
-Se o jogo não expuser um comando individual comprovável, **não dispara
-`Decolar todas` nem inventa uma chamada alternativa**. Registra a falta
-de capacidade no log e no painel, que mostra aprovadas, retidas,
-comando individual disponível e decolagens efetivamente confirmadas.
-A configuração **Despacho individual seguro quando houver rotas duplicadas**
-controla esse comportamento (ligada por padrão).
-O relatório é parcial e acumula aeronaves de páginas anteriores; a ausência
-de novas duplicidades não comprova que toda a frota foi auditada.
+As políticas **não são a mesma configuração**:
 
-Para liberar decolagens com duplicidades conscientemente aceitas,
-a opção **Permitir aeronaves na mesma rota** pode ser ativada manualmente.
-Isso desliga a restrição, mas também permite novas duplicidades; faça-o
-somente se essa for a política desejada.
+- **Criar rotas para aeronaves estacionadas** (`auto_route`): ativa ou
+  desativa exclusivamente a criação automática de novas rotas.
+- **Permitir aeronaves na mesma rota** (`allow_duplicate_routes`):
+  permite ou proíbe **novas atribuições duplicadas**; o otimizador ainda
+  pode sinalizar duplicidades existentes.
+- **Decolar aeronaves** (`auto_depart`): habilita o despacho operacional.
+- **Bloquear decolagens com rotas duplicadas**
+  (`block_duplicate_departures`): **DESATIVADA por padrão**. Se ativada
+  explicitamente, bloqueia `Decolar todas` quando existem duplicidades
+  no registro histórico e tenta o despacho seletivo, se habilitado.
+
+Por padrão, **rotas automáticas desligadas + proibição de criar rotas
+duplicadas + decolagens ativadas** mantém o botão geral de decolagem
+funcionando para rotas já cadastradas. Essa decisão **também pode
+despachar aeronaves que compartilham rotas**: a política de criação de
+novas rotas não impõe uma restrição operacional às existentes.
+
+Quem deseja **proibir a decolagem de rotas repetidas** pode ativar
+`block_duplicate_departures` na aba Opções. O bot então tentará
+**Despacho individual seguro**, lendo a lista de aeronaves prontas
+e aceitando só controles individuais nativos e identificados. Se o
+jogo não expuser comandos individuais, nenhuma decolagem é enviada;
+o endpoint por IDs é experimental e fica desligado por padrão.
+
+O relatório é parcial e acumula aeronaves de páginas anteriores; a
+ausência de duplicidades não comprova que toda a frota foi auditada.
 
 A funcionalidade de criar rotas para aeronaves **sem rota** continua
 independente e exige confirmações do próprio jogo, incluindo simulação,

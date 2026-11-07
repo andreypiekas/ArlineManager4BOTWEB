@@ -55,8 +55,10 @@ class FakeButton:
 class FakeDepartBot:
     dry_run = False
 
-    def __init__(self, allow: bool = False):
+    def __init__(self, allow: bool = False, block_depart: bool = False, auto_route: bool = True):
         self.allow = allow
+        self.block_depart = block_depart
+        self.auto_route = auto_route
         self.clicked = 0
         self.closed = 0
         self._stop = SimpleNamespace(wait=lambda x: None)
@@ -65,6 +67,10 @@ class FakeDepartBot:
             def get_bool(_, section, name, default=False):
                 if name == "allow_duplicate_routes":
                     return allow
+                if name == "block_duplicate_departures":
+                    return block_depart
+                if name == "auto_route":
+                    return auto_route
                 if name == "selective_depart":
                     return False  # regression covers the explicit disabled setting
                 if name == "telegram_departures":
@@ -103,7 +109,7 @@ def test_bulk_depart_blocked_by_known_duplicate_routes(tmp_path, monkeypatch, ca
     registry.record("2", "PP2", "A320", osl, dac, source="game")
     monkeypatch.setattr(bot_module, "RouteRegistry", lambda: registry)
 
-    fake = FakeDepartBot(allow=False)
+    fake = FakeDepartBot(allow=False, block_depart=True)
     with caplog.at_level(logging.WARNING, logger="am4bot.vuelos"):
         Bot._depart_all(fake)
     assert fake.clicked == 0
@@ -147,7 +153,7 @@ def test_bot_uses_selective_flow_instead_of_global_depart_when_duplicates_exist(
 
     class Config:
         def get_bool(self, section, name, default=False):
-            return name == "selective_depart"
+            return name in ("selective_depart", "block_duplicate_departures")
 
     fake = FakeDepartBot(allow=False)
     fake.config = Config()

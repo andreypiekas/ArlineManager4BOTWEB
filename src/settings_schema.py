@@ -62,6 +62,7 @@ AIRCRAFT_SWITCHES = [
 ]
 OPTION_SWITCHES = [
     ("auto_depart", "Decolar aeronaves"),
+    ("block_duplicate_departures", "Bloquear decolagens com rotas duplicadas"),
     ("selective_depart", "Despacho individual seguro quando houver rotas duplicadas"),
     ("experimental_id_batch_depart", "EXPERIMENTAL: decolagem por ID (API não verificada)"),
     ("autobuy_fuel", "Comprar combustível"),

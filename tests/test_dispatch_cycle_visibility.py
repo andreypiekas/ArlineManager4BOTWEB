@@ -29,7 +29,7 @@ def test_allowed_duplicate_uses_bulk_but_reports_unconfirmed_dispatch(tmp_path, 
     assert status["duplicates_known"] == 1
     assert status["status"] == "comando_geral_enviado_sem_confirmacao_individual"
     assert status["departed"] == 0
-    assert "permitir duplicidades=SIM" in caplog.text
+    assert "permitir novas duplicidades=SIM" in caplog.text
     assert "comando geral enviado" in caplog.text
 
 
@@ -38,7 +38,7 @@ def test_disallowed_duplicate_explicitly_disabled_selective_is_reported(tmp_path
 
     reg = registry_with_pair(tmp_path)
     monkeypatch.setattr(module, "RouteRegistry", lambda: reg)
-    fake = FakeDepartBot(allow=False)
+    fake = FakeDepartBot(allow=False, block_depart=True)
     Bot._depart_all(fake)
     assert fake.clicked == 0
     status = reg.snapshot()["last_dispatch"]

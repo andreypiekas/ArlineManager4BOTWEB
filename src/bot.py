@@ -803,30 +803,43 @@ class Bot:
     def _depart_all(self) -> None:
         registry = RouteRegistry()
         allow_duplicates = self.config.get_bool("options", "allow_duplicate_routes", False)
+        auto_route = self.config.get_bool("options", "auto_route", False)
+        # Creation/optimization policy must NOT silently control departure.
+        # Existing identical routes remain eligible for Depart All unless the
+        # operator independently enables the departure interlock.
+        block_duplicate_departures = self.config.get_bool(
+            "options", "block_duplicate_departures", False
+        )
         selective = self.config.get_bool("options", "selective_depart", True)
         report = registry.snapshot(allow_duplicates=allow_duplicates)
         duplicates = report["duplicate_routes"]
-        mode = "seletivo" if duplicates and not allow_duplicates and selective else (
-            "bloqueado" if duplicates and not allow_duplicates else "geral"
+        must_hold = block_duplicate_departures and duplicates > 0
+        mode = "seletivo" if must_hold and selective else (
+            "bloqueado" if must_hold else "geral"
         )
         log_flights.info(
             "Diagnóstico de decolagem: automático ATIVADO | simulação=%s | "
-            "permitir duplicidades=%s | despacho individual=%s | "
+            "rotas automáticas=%s | permitir novas duplicidades=%s | "
+            "bloquear decolagens duplicadas=%s | despacho individual=%s | "
             "duplicidades conhecidas=%d (%d aeronaves) | modo=%s. "
             "O histórico de rotas pode estar incompleto.",
             "SIM" if self.dry_run else "NÃO",
+            "SIM" if auto_route else "NÃO",
             "SIM" if allow_duplicates else "NÃO",
+            "SIM" if block_duplicate_departures else "NÃO",
             "SIM" if selective else "NÃO",
             duplicates, report["affected_aircraft"], mode,
         )
-        if allow_duplicates and duplicates:
+        if duplicates and not block_duplicate_departures:
             log_flights.warning(
-                "Diagnóstico de decolagem: o comando geral está permitido apesar de "
-                "%d rota(s) duplicada(s) no histórico.",
+                "Diagnóstico de decolagem: %d rota(s) duplicada(s) conhecidas. "
+                "Decolagem geral PERMITIDA pela política de DESPACHO independente "
+                "da criação de rotas; poderá decolar aeronaves dessas rotas. "
+                "Para impedir isso, ative Bloquear decolagens com rotas duplicadas.",
                 duplicates,
             )
         self.open_popup("routes_main.php", "Routes", "nav_routes")
-        if not allow_duplicates and duplicates:
+        if must_hold:
             if selective:
                 log_flights.warning(
                     "Decolagem geral desativada por %d rota(s) duplicada(s). "
