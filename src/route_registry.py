@@ -118,7 +118,7 @@ class RouteRegistry:
                 "destination": destination,
                 "route_key": route_key(origin, destination),
                 "source": source,
-                "status": "ativa",
+                "status": "ativa" if previous.get("route_key") != route_key(origin, destination) else previous.get("status", "ativa"),
                 "last_seen": int(time.time()),
             })
             if profit_per_day is not None:
@@ -134,6 +134,30 @@ class RouteRegistry:
                     "previous": previous.get("route_key"), "route": entry["route_key"], "source": source,
                 })
                 data["history"] = data["history"][-_MAX_HISTORY:]
+            data["aircraft"][aircraft_id] = entry
+            self._save(data)
+            return True
+
+    def observe(self, aircraft_id: str, registration: str = "", model: str = "",
+                at_base: Optional[bool] = None) -> bool:
+        """Register an aircraft seen on the current routes page even if no route can be verified."""
+        aircraft_id = str(aircraft_id or "").strip()
+        if not aircraft_id:
+            return False
+        with _LOCK:
+            data = _state(self.path)
+            previous = data["aircraft"].get(aircraft_id, {})
+            entry = dict(previous)
+            entry.update({
+                "aircraft_id": aircraft_id,
+                "registration": str(registration or previous.get("registration") or aircraft_id),
+                "model": str(model or previous.get("model") or "?"),
+                "last_seen": int(time.time()),
+            })
+            if not previous:
+                entry["status"] = "rota_nao_identificada"
+            if at_base is not None:
+                entry["at_base"] = bool(at_base)
             data["aircraft"][aircraft_id] = entry
             self._save(data)
             return True
