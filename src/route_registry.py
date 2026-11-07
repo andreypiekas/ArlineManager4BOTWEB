@@ -294,6 +294,9 @@ class RouteRegistry:
             "not_supported": max(0, int(summary.get("not_supported") or 0)),
             "departed": max(0, int(summary.get("departed") or 0)),
             "status": str(summary.get("status") or "")[:80],
+            "mode": str(summary.get("mode") or "seletivo")[:24],
+            "simulation": bool(summary.get("simulation", False)),
+            "duplicates_known": max(0, int(summary.get("duplicates_known") or 0)),
             "blocked_aircraft": [
                 {
                     "id": str(row.get("id") or "")[:20],
