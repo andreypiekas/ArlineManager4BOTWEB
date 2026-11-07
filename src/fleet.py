@@ -30,6 +30,7 @@ from gamemode import EASY, GameMode
 from helpers import clean_response, fmt, to_int
 from notify import esc
 from route_optimizer import rank_candidates
+from route_airports import match_hub_options, code_from_candidate
 from route_registry import RouteRegistry, eligible_for_reroute, endpoint
 
 if TYPE_CHECKING:
@@ -70,9 +71,20 @@ _CANDIDATES_JS = """
 return Array.from(document.querySelectorAll("#resResult #list .sorter")).map(el => {
   const arr = ((el.getAttribute("onclick") || "").match(/arr=(\\d+)/) || [])[1];
   const title = el.querySelector(".exo");
-  return {arr: arr || null, name: title ? title.textContent.trim() : "?", distance: el.dataset.distance || "0",
+  return {arr: arr || null, name: title ? title.textContent.trim() : "?",
+          code: el.dataset.iata || el.dataset.icao || el.dataset.code || (title ? title.getAttribute("data-code") || title.title || "" : ""),
+          distance: el.dataset.distance || "0",
           y: el.dataset.yclass || "0", j: el.dataset.jclass || "0", f: el.dataset.fclass || "0", rwy: el.dataset.rwy || "0"};
 });
+"""
+
+_HUB_OPTIONS_JS = """
+const select = document.getElementById("hubSelect");
+return select ? Array.from(select.options).map(opt => ({
+  id: opt.value, text: opt.textContent.trim(),
+  code: opt.dataset.iata || opt.dataset.icao || opt.dataset.code || "",
+  title: opt.title || ""
+})) : [];
 """
 
 _MODELS_JS = """
@@ -105,6 +117,7 @@ class RouteCandidate:
     j: int
     f: int
     runway: int
+    code: str = ""  # game-confirmed IATA/ICAO when available
 
 
 @dataclass
@@ -502,6 +515,7 @@ def search_routes(bot: "Bot", hub_id: str, max_distance: int, min_runway: int) -
         candidates.append(RouteCandidate(
             row["arr"], row["name"], distance,
             to_int(row["y"]) or 0, to_int(row["j"]) or 0, to_int(row["f"]) or 0, to_int(row["rwy"]) or 0,
+            code_from_candidate(row),
         ))
     return candidates
 
