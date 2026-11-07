@@ -151,8 +151,13 @@ def daily_profit(model: AircraftModel, distance: int, load: float, fuel_price: f
 # evidence; never infer airports from general row text or the aircraft's model.
 _ROUTE_AUDIT_JS = """
 return Array.from(document.querySelectorAll("#popContent [id^='routeMainList']")).map(row => {
-  const aircraftId = (row.id.match(/^routeMainList(\\d+)$/) || [])[1] || "";
-  const link = row.querySelector("a");
+  // The existing seats module identifies routes by this real game link.
+  const detailLink = row.querySelector("a[onclick*='fleet_details.php']");
+  const link = detailLink || row.querySelector("a");
+  const idFromLink = ((detailLink ? detailLink.getAttribute("onclick") : "") || "")
+    .match(/fleet_details\\.php\\?id=(\\d+)/);
+  const aircraftId = (idFromLink && idFromLink[1]) ||
+    (row.id.match(/^routeMainList(\\d+)$/) || [])[1] || "";
   const label = link ? link.textContent.trim() : "";
   const tableData = Array.from(row.querySelectorAll("[data-dep], [data-arr], [data-origin], [data-destination], [data-route]"));
   const attrs = [row, ...tableData];
@@ -163,9 +168,12 @@ return Array.from(document.querySelectorAll("#popContent [id^='routeMainList']")
     }
     return "";
   };
-  const routeEl = row.querySelector("[data-route], .route-name, .route-code, .routeName");
-  const routeText = routeEl ? (routeEl.getAttribute("data-route") || routeEl.textContent || "") : "";
-  const codes = routeText.match(/\\b([A-Za-z]{3,4})\\s*(?:→|↔|–|-|\\/|to)\\s*([A-Za-z]{3,4})\\b/i);
+  // Game-confirmed route label: .col-10 .s-text = "LEMD - EPRZ".
+  // This selector already powers src/seats.py and works even without data-* attributes.
+  const routeEl = row.querySelector(".col-10 .s-text") ||
+    row.querySelector("[data-route], .route-name, .route-code, .routeName");
+  const routeText = routeEl ? (routeEl.getAttribute("data-route") || routeEl.textContent || "").trim() : "";
+  const codes = routeText.match(/\\b([A-Za-z]{3,4})\\s*(?:→|↔|–|—|-|\\/|to)\\s*([A-Za-z]{3,4})\\b/i);
   // An explicit hook containing BOTH dep and arr IDs is safe route evidence.
   const endpointHook = Array.from(row.querySelectorAll("[onclick], [href]"))
     .map(e => e.getAttribute("onclick") || e.getAttribute("href") || "")
@@ -183,6 +191,7 @@ return Array.from(document.querySelectorAll("#popContent [id^='routeMainList']")
     destination_id: getAttr("data-arr", "data-destination-id") || arrFromHook,
     origin_code: getAttr("data-origin-code", "data-dep-code") || (codes ? codes[1] : ""),
     destination_code: getAttr("data-destination-code", "data-arr-code") || (codes ? codes[2] : ""),
+    route_label: routeText.slice(0, 80),
     at_base: atBaseRaw === "1" || atBaseRaw === "true" ? true :
       atBaseRaw === "0" || atBaseRaw === "false" ? false : null,
     in_flight: !!row.querySelector("[id^='routesTimer']")
