@@ -81,3 +81,38 @@ def test_realistic_mode_changes_expected_revenue_and_flights():
     )
     assert easy.legs_per_day > realism.legs_per_day
     assert easy.revenue_per_day > realism.revenue_per_day
+
+
+def test_profit_ranking_prefers_longer_but_more_profitable_route():
+    from route_optimizer import rank_candidates
+    short = Candidate(600, 1800)
+    long = Candidate(2200, 1200)
+    ranked = rank_candidates(
+        [short, long], seats=180, model=MODEL, mode=EASY,
+        load_factor=0.8, fuel_price=650, co2_price=125, premium=False,
+    )
+    assert ranked[0][0] is long
+    assert ranked[0][1].profit_per_day > ranked[1][1].profit_per_day
+
+
+def test_fallback_ranking_prefers_demand_with_missing_model():
+    from route_optimizer import rank_candidates
+    less = Candidate(1000, 1200)
+    more = Candidate(1000, 1500)
+    ranked = rank_candidates(
+        [less, more], seats=180, model=None, mode=EASY,
+        load_factor=0.8, fuel_price=650, co2_price=125, premium=False,
+    )
+    assert ranked[0][0] is more
+    assert all(estimate is None for _, estimate in ranked)
+
+
+def test_seat_class_demand_is_not_double_counted():
+    from route_optimizer import rank_candidates
+    first = Candidate(2000, 50, 0, 350)
+    second = Candidate(2000, 600, 0, 0)
+    ranked = rank_candidates(
+        [first, second], seats=180, model=None, mode=EASY,
+        load_factor=0.8, fuel_price=650, co2_price=125, premium=True,
+    )
+    assert ranked[0][0] is first
