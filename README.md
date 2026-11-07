@@ -213,12 +213,23 @@ Passe o mouse sobre uma configuração para abrir a ajuda contextual em portugu�
 
 ### Aba Aeronaves
 
-- **Preço máximo sem meta (0 = livre)** — Limite de preço sem meta definida; zero remove o limite.
-- **Comprar aeronaves** — Permite comprar aeronaves, desde que não haja outras estacionadas sem rota.
-- **Economizar para uma aeronave desejada** — Economiza para comprar a aeronave desejada sem comprometer a reserva.
-- **Investir em aeronaves menores se anteciparem a meta** — Compra aeronaves menores somente se ajudarem a atingir a meta mais cedo.
-- **Aeronave desejada** — Escolha um modelo ou a progressão automática, que evolui conforme o lucro da companhia.
-- **Modelo fixo sem meta** — Modelo fixo a comprar quando não houver uma meta de aquisição.
+A compra automática oferece duas estratégias quando **Economizar para uma aeronave desejada** está ativado:
+
+1. **Progressão automática (bot escolhe):** seleciona a próxima aeronave conforme orçamento, lucratividade prevista e prazo de retorno.
+2. **Modelo específico (você escolhe):** abre uma lista com os modelos que o bot leu do mercado do jogo. Escolha ou digite o modelo, clique em **Salvar alterações** e o bot aguardará saldo suficiente e vaga no hangar para comprá-lo.
+
+**Importante:** a opção **Permitir compras intermediárias antes da meta** permite que o bot compre outras aeronaves enquanto economiza para o modelo selecionado. **Desative-a se deseja comprar somente o modelo escolhido.** A seleção respeita a reserva de caixa e não faz compras quando a frota exige tratamento de rotas.
+
+![Seleção de aeronaves no painel web](screenshots/web-config-aeronaves.png)
+
+- **Comprar aeronaves** — Ativa ou desativa a automação de aquisição de aeronaves.
+- **Economizar para uma aeronave desejada** — Ativa a estratégia de progressão ou de modelo específico; sem ela, o bot ignora a meta.
+- **Permitir compras intermediárias antes da meta** — Permite aquisições complementares somente quando antecipam a meta.
+- **Modelo da compra automática** — Progressão automática ou aeronave específica escolhida na lista do mercado; salva em `goal_model`.
+- **Modelo fixo (sem meta ativa)** — Usado somente quando **Economizar para uma aeronave desejada** está desativado. Vazio significa comprar a aeronave mais rentável disponível.
+- **Preço máximo sem meta (0 = livre)** — Limite aplicável à estratégia sem meta; zero remove o limite.
+
+A lista de modelos é preenchida após o bot consultar o mercado. Caso esteja vazia, é possível digitar o nome manualmente; o bot só efetuará o pedido quando conseguir localizar o modelo.
 
 ### Aba Opções
 

@@ -36,6 +36,7 @@ def tip(key: str):
 # Origem pt-BR → inglês. Adicionar novos textos de interface diretamente
 # em português e registrar aqui apenas quando houver tradução para inglês.
 EN: dict[str, str] = {
+    "Escolha a progressão automática ou selecione uma aeronave na lista. Para comprar apenas o modelo escolhido, desative compras intermediárias.": "Choose automatic progression or select an aircraft from the list. Disable interim purchases to buy only the selected model.",
     "Mercado": "Market",
     "Frota": "Fleet",
     "Aeronaves": "Aircraft",
@@ -74,7 +75,7 @@ EN: dict[str, str] = {
     "Assentos executiva / primeira conforme a demanda": "Business / first seats by demand",
     "Comprar aeronaves": "Buy aircraft",
     "Economizar para uma aeronave desejada": "Save for a goal aircraft",
-    "Investir em aeronaves menores se anteciparem a meta": "Buy small ones if they bring the goal closer",
+    "Permitir compras intermediárias antes da meta": "Allow interim aircraft purchases before reaching the goal",
     "Decolar aeronaves": "Depart aircraft",
     "Comprar combustível": "Buy fuel",
     "Comprar CO₂": "Buy CO2",
@@ -88,8 +89,8 @@ EN: dict[str, str] = {
     "Telegram: avisar também as decolagens": "Telegram: departures too",
     "Reiniciar automaticamente após erro": "Restart by itself after an error",
     "Simulação (sem gastos)": "Dry run (spends nothing)",
-    "Aeronave desejada": "Goal aircraft",
-    "Modelo fixo sem meta": "Fixed model without goal",
+    "Modelo da compra automática": "Automatic purchase model",
+    "Modelo fixo (sem meta ativa)": "Fixed model (when savings goal is off)",
     "PERFIL": "PROFILE",
     "➕ Novo perfil…": "➕ New profile…",
     "CONTA": "ACCOUNT",
@@ -146,7 +147,7 @@ EN: dict[str, str] = {
     "Telegram não configurado: informe bot_token e chat_id na seção [telegram] de config/secrets.ini.": "Telegram not set up: add bot_token and chat_id to the [telegram] section of config/secrets.ini.",
     "🎯 Sem meta": "🎯 No goal",
     "🎯 Escolha uma aeronave desejada": "🎯 Pick a goal aircraft",
-    "Digite ou selecione um modelo em «Aeronave desejada» e clique em Salvar configurações.": "Type or pick a model in “Goal aircraft” and press Save settings.",
+    "Selecione a progressão automática ou escolha um modelo na lista de aeronaves e salve as configurações.": "Select automatic progression or choose an aircraft model from the list and save the settings.",
     "Modelo não encontrado no mercado salvo. Confira o nome ou aguarde a próxima consulta ao mercado.": "That model is not in the saved market. Check the name or wait until the bot reads the market.",
     "Economizado {have} ({pct}%), sem contar a reserva.": "Saved {have} ({pct}%), the reserve kept apart.",
     "Meta alcançada! O pedido será feito na próxima verificação se houver vaga no hangar.": "Enough! It is ordered at the next check if the hangar has room.",

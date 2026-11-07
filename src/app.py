@@ -391,16 +391,16 @@ class App(ctk.CTk):
         form = ctk.CTkFrame(left, fg_color="transparent")
         form.grid(row=len(AIRCRAFT_SWITCHES), column=0, sticky="ew", pady=(6, 0))
         form.grid_columnconfigure(0, weight=1)
-        goal_label = ctk.CTkLabel(form, text=t("Aeronave desejada"), font=self.font, anchor="w")
+        goal_label = ctk.CTkLabel(form, text=t("Modelo da compra automática"), font=self.font, anchor="w")
         goal_label.grid(row=0, column=0, sticky="w", pady=2)
-        self.goal_combo = ctk.CTkComboBox(form, width=180, height=28, font=self.font_bold, values=self._goal_values(),
+        self.goal_combo = ctk.CTkComboBox(form, width=220, height=28, font=self.font_bold, values=self._goal_values(),
                                           command=lambda _value: self._refresh_goal_panel())
         saved_goal = self.cfg.get("settings", "goal_model")
         self.goal_combo.set(t(AUTO_GOAL_LABEL) if is_auto_goal(saved_goal) else saved_goal)
         self.goal_combo.grid(row=0, column=1, sticky="e", pady=2, padx=(8, 0))
         self.goal_combo.bind("<KeyRelease>", lambda _e: self._refresh_goal_panel())
         add_tooltip(goal_label, tip("goal_model"))
-        model_label = ctk.CTkLabel(form, text=t("Modelo fixo sem meta"), font=self.font, anchor="w")
+        model_label = ctk.CTkLabel(form, text=t("Modelo fixo (sem meta ativa)"), font=self.font, anchor="w")
         model_label.grid(row=1, column=0, sticky="w", pady=2)
         self.entry_model = ctk.CTkEntry(form, width=180, height=28, font=self.font_bold, placeholder_text=t("vazio = mais rentável"))
         model = self.cfg.get("settings", "aircraft_model")
@@ -412,6 +412,13 @@ class App(ctk.CTk):
         for row, (key, text) in enumerate(AIRCRAFT_FIELDS, start=2):
             self._int_field(form, row, key, text)
         self._save_button(form, row=3, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ctk.CTkLabel(
+            form,
+            text=t("Escolha a progressão automática ou selecione uma aeronave na lista. "
+                   "Para comprar apenas o modelo escolhido, desative compras intermediárias."),
+            font=self.font_small, text_color=MUTED, justify="left", anchor="w",
+            wraplength=390,
+        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(9, 0))
 
         right = ctk.CTkFrame(aircraft, fg_color="transparent")
         right.grid(row=0, column=1, sticky="nsew")
@@ -653,8 +660,9 @@ class App(ctk.CTk):
         return rate if rate is not None else income_per_day(self._state)
 
     def _goal_values(self) -> list[str]:
-        models = sorted((m for m in self._market if m.get("capacity", 0) >= 100), key=lambda m: -m.get("price", 0))
-        return [t(AUTO_GOAL_LABEL)] + [m["name"] for m in models]
+        models = sorted({m["name"].strip() for m in self._market if isinstance(m.get("name"), str) and m["name"].strip()},
+                        key=str.casefold)
+        return [t(AUTO_GOAL_LABEL)] + models
 
     def _refresh_goal_panel(self) -> None:
         goal = goal_status(self.cfg, self._market, self._money(), self._income(), goal_text=self.goal_combo.get(),
@@ -665,7 +673,7 @@ class App(ctk.CTk):
         if not name:
             self.goal_title.configure(text=t("🎯 Escolha uma aeronave desejada"))
             self.goal_bar.set(0)
-            self.goal_detail.configure(text=t("Digite ou selecione um modelo em «Aeronave desejada» e clique em Salvar configurações."))
+            self.goal_detail.configure(text=t("Selecione a progressão automática ou escolha um modelo na lista de aeronaves e salve as configurações."))
         elif not price:
             self.goal_title.configure(text=f"🎯 {name}")
             self.goal_bar.set(0)
