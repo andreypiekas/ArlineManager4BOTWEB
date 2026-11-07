@@ -65,6 +65,8 @@ class FakeDepartBot:
             def get_bool(_, section, name, default=False):
                 if name == "allow_duplicate_routes":
                     return allow
+                if name == "selective_depart":
+                    return False  # regression covers the explicit disabled setting
                 if name == "telegram_departures":
                     return False
                 return default
