@@ -99,7 +99,15 @@ def explain_hub_options(first_code: str, second_code: str,
             continue
         valid_ids += 1
         declared = _code(opt.get("code"))
-        if declared or re.search(r"(?<![A-Z0-9])[A-Z]{3,4}(?![A-Z0-9])", label.upper()):
+        text = label.upper().strip()
+        # Plain four-letter city names such as "Oslo" are NOT airport codes.
+        explicitly_coded = bool(
+            _CODE.fullmatch(text)
+            or re.search(r"\\([A-Z]{3,4}\\)", text)
+            or re.search(r"(?:^|\\s)[A-Z]{3,4}\\s*[-–|/]\\s", text)
+            or re.search(r"\\s[-–|/]\\s*[A-Z]{3,4}$", text)
+        )
+        if declared or explicitly_coded:
             codes_seen += 1
         for code in matched:
             if code_in_label(code, label):
