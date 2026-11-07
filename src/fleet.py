@@ -264,6 +264,145 @@ def manage_fleet(bot: "Bot") -> None:
     bot.close_popup()
 
 
+# ---------------------------------------------------------------------- duplicate-route correction
+def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -> int:
+    """Use persisted verified route relationships to propose and correct duplicates.
+
+    A live reroute is attempted only if the aircraft is explicitly reported at
+    its origin base, the hub and new destination are confirmed by the page, the
+    aircraft appears in the eligible selector, and the real game's route order
+    succeeds. Unverified records are reported but never used for blind writes.
+    """
+    report = registry.snapshot(allow_duplicates=False)
+    if not report["duplicate_routes"]:
+        return 0
+    log.warning(
+        "Controle de rotas: %d rotas duplicadas, %d aeronaves envolvidas.",
+        report["duplicate_routes"], report["affected_aircraft"],
+    )
+    records = {row["aircraft_id"]: row for row in report["relations"]}
+    changed = 0
+    cfg = bot.config
+    market = load_market()
+    for duplicate in report["duplicates"]:
+        members = [records[a["id"]] for a in duplicate["aircraft"] if a["id"] in records]
+        if len(members) < 2:
+            continue
+        # Prefer keeping the aircraft whose last estimated operating profit was
+        # higher. Ties keep the longest-established route to minimize churn.
+        members.sort(key=lambda row: (
+            -(row["profit_per_day"] if isinstance(row.get("profit_per_day"), (int, float)) else -1),
+            row.get("assigned_at", 0), row["aircraft_id"],
+        ))
+        for row in members[1:]:
+            aircraft_id = row["aircraft_id"]
+            if changed >= budget or bot.stopping:
+                registry.note(aircraft_id, "pendente_limite_ciclo")
+                continue
+            origin = row.get("origin", {})
+            destination = row.get("destination", {})
+            hub_id = str(origin.get("id") or "")
+            if not hub_id or not destination.get("id"):
+                registry.note(aircraft_id, "aguardando_identificacao_da_rota")
+                continue
+            if not cfg.get_bool("options", "auto_route"):
+                registry.note(aircraft_id, "aguardando_ativacao_de_rotas")
+                continue
+            model = find_model(market, row.get("model") or "")
+            if not model or not model.get("speed") or not model.get("fuel"):
+                registry.note(aircraft_id, "aguardando_dados_do_modelo")
+                continue
+            seats = int(model.get("capacity") or 0)
+            if seats <= 0:
+                registry.note(aircraft_id, "aguardando_dados_do_modelo")
+                continue
+            limit = cfg.get_int("settings", "route_max_distance_big" if seats >= BIG_SEATS else "route_max_distance", 6000)
+            if model.get("range"):
+                limit = min(limit, int(model["range"]))
+            bot.open_popup("routes_main.php", "Routes", "nav_routes")
+            bot.ajax("research_main.php", "routeAction")
+            # The game's hub picker must prove we are searching the same origin
+            # as the existing assignment. Never optimize from an unrelated hub.
+            selected = bot.js(
+                "var e=document.getElementById('hubSelect');"
+                "if(!e || !Array.from(e.options).some(x=>x.value===arguments[0]))return false;"
+                "e.value=arguments[0];e.dispatchEvent(new Event('change',{bubbles:true}));"
+                "return e.value===arguments[0];", hub_id,
+            )
+            if not selected:
+                registry.note(aircraft_id, "aguardando_confirmacao_da_base")
+                continue
+            destination_options = []
+            for distance in (limit, limit // 2, limit // 4):
+                if distance < 500 or bot.stopping:
+                    break
+                options = [
+                    candidate for candidate in search_routes(
+                        bot, hub_id, distance, cfg.get_int("settings", "route_min_runway", 5000)
+                    )
+                    if not registry.is_occupied(
+                        endpoint(hub_id), endpoint(candidate.arr_id), aircraft_id
+                    ) and not (destination.get("id") == candidate.arr_id)
+                ]
+                destination_options.extend(options)
+                if options:
+                    break
+            if not destination_options:
+                registry.note(aircraft_id, "sem_destino_alternativo")
+                continue
+            ranked = rank_candidates(
+                destination_options, seats=seats, model=model, mode=bot.mode,
+                load_factor=bot.load_factor(), fuel_price=bot.fuel_cost_basis(),
+                co2_price=bot.co2_cost_basis(), premium=cfg.get_bool("options", "auto_seats"),
+            )
+            alternative = next(((candidate, economics) for candidate, economics in ranked
+                                if economics is not None and economics.profit_per_day > 0), None)
+            if alternative is None:
+                registry.note(aircraft_id, "sem_alternativa_lucrativa")
+                continue
+            candidate, economics = alternative
+            proposal = {
+                "origin_id": hub_id, "destination_id": candidate.arr_id,
+                "destination": candidate.name, "distance_km": round(candidate.distance),
+                "profit_per_day": round(economics.profit_per_day),
+                "current_route": row.get("route_key", ""),
+            }
+            if row.get("at_base") is not True:
+                registry.note(aircraft_id, "aguardando_aeronave_na_base", proposal=proposal)
+                continue
+            if bot.dry_run:
+                registry.note(aircraft_id, "simulacao_redirecionamento", proposal=proposal)
+                log.info("[SIMULAÇÃO] Redirecionaria %s para %s (lucro estimado ~ $%s/dia).",
+                         row["registration"], candidate.name, fmt(proposal["profit_per_day"]))
+                continue
+            details = bot.ajax(
+                f"route_research_route.php?dep={hub_id}&arr={candidate.arr_id}", "rDetails",
+            )
+            capable = details.find_elements(
+                By.XPATH, f".//*[@id='capAc']/option[starts-with(@value, '{aircraft_id};')]",
+            )
+            if not capable:
+                registry.note(aircraft_id, "aeronave_indisponivel_para_nova_rota", proposal=proposal)
+                continue
+            occupied_in_game = to_int(bot.js(_ON_ROUTE_JS)) or 0
+            if occupied_in_game:
+                registry.note(aircraft_id, "destino_ocupado_no_jogo", proposal=proposal)
+                continue
+            aircraft = ParkedAircraft(aircraft_id, row.get("model", ""), row["registration"], seats)
+            outcome = create_route(
+                bot, aircraft, candidate, origin_id=hub_id, reroute=True,
+                profit_per_day=economics.profit_per_day,
+            )
+            if outcome == "created":
+                changed += 1
+                log.info("Duplicidade resolvida: %s mudou para %s (~$%s/dia).",
+                         aircraft.reg, candidate.name, fmt(proposal["profit_per_day"]))
+            elif outcome == "stop":
+                registry.note(aircraft_id, "falha_ao_confirmar_redirecionamento", proposal=proposal)
+                return changed
+    return changed
+
+
 # ---------------------------------------------------------------------- routes
 def read_parked(bot: "Bot") -> list[ParkedAircraft]:
     bot.ajax("fleet_parked.php", "routesContainer")
