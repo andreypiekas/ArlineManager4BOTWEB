@@ -55,6 +55,7 @@ HELP: dict[str, str] = {
     "aircraft_max_price": "Limite de preço sem meta definida; zero remove o limite.",
     "auto_depart": "Decola as aeronaves disponíveis em cada ciclo.",
     "selective_depart": "Com duplicidades proibidas, tenta decolar somente aeronaves aprovadas e com um controle individual explícito no jogo. Nunca envia Decolar todas nessa situação; se o jogo não oferecer esse comando, não decola nenhuma por segurança.",
+    "experimental_id_batch_depart": "RISCO: força uma única decolagem por ciclo via route_depart.php?mode=all&ids=<ID aprovado>. Outros bots usam este parâmetro, mas NÃO comprovamos se o jogo respeita a seleção. Pode decolar outras aeronaves. Desligado por padrão; use apenas se aceitar esse risco.",
     "autobuy_fuel": "Compra combustível conforme os critérios da aba Mercado.",
     "autobuy_co2": "Compra CO₂ conforme os critérios da aba Mercado.",
     "auto_marketing": "Inicia campanhas de reputação se o retorno justificar o custo.",
@@ -179,6 +180,7 @@ HELP_EN = {
     # ---- options
     "auto_depart": "Departs every aircraft that is ready at each check.",
     "selective_depart": "When duplicate routes are prohibited, searches for native per-aircraft departure controls and only dispatches independently approved flights. Never uses the bulk button if a duplicate is known; if the game offers only Depart All, it pauses without sending unverified requests.",
+    "experimental_id_batch_depart": "RISK: attempts one approved aircraft per cycle using route_depart.php?mode=all&ids=<ID>. Other bots use this parameter but the game backend may IGNORE the filter and depart other planes. OFF by default; enable only after accepting this risk.",
     "autobuy_fuel": "Buys fuel with the rules of the Market tab.",
     "autobuy_co2": "Buys CO2 with the rules of the Market tab.",
     "auto_marketing": "Keeps a reputation campaign running: aircraft fly as full as the reputation, so every departure "
