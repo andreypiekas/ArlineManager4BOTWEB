@@ -53,4 +53,4 @@ def test_duplicate_logged_with_aircraft_and_missing_numeric_airport_ids(tmp_path
     assert "code:DUB ↔ code:GRU" in log
     snapshot = registry.snapshot()
     assert snapshot["duplicate_routes"] == 1
-    assert any(r["status"] == "aguardando_identificacao_da_rota" for r in snapshot["relations"])
+    assert any(r["status"] == "aguardando_identificacao_da_base" for r in snapshot["relations"])
