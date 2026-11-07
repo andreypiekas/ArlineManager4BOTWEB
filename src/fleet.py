@@ -308,7 +308,6 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 continue
             log.info("%s (%s, %d assentos): analisando as %d rotas com maior demanda até %d km ...",
                      aircraft.reg, aircraft.model, aircraft.seats, len(tries), distance)
-            capable_found = False
             for candidate in tries:
                 if bot.stopping:
                     break
@@ -317,7 +316,6 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 if not capable:
                     log.debug("%s não pode voar para %s (alcance ou pista).", aircraft.reg, candidate.name)
                     continue
-                capable_found = True
                 on_route = to_int(bot.js(_ON_ROUTE_JS)) or 0
                 if on_route:
                     log.debug("%s já tem %d aeronaves.", candidate.name, on_route)
