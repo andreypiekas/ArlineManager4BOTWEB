@@ -826,36 +826,34 @@ class Bot:
                 duplicates,
             )
         self.open_popup("routes_main.php", "Routes", "nav_routes")
-        if not allow_duplicates:
-            if duplicates:
-            if report["duplicate_routes"]:
-                if selective:
-                    log_flights.warning(
-                        "Decolagem geral desativada por %d rota(s) duplicada(s). "
-                        "Verificando controles individuais do jogo para liberar "
-                        "apenas as aeronaves aprovadas.",
-                        report["duplicate_routes"],
-                    )
-                    try:
-                        selective_dispatch(self, registry)
-                    finally:
-                        self.close_popup()
-                else:
-                    log_flights.warning(
-                        "Decolagem geral bloqueada pela política de rotas: "
-                        "%d rotas duplicadas (%d aeronaves envolvidas). "
-                        "Ative Despacho individual seguro para tentar decolar "
-                        "apenas os aviões aprovados.",
-                        report["duplicate_routes"], report["affected_aircraft"],
-                    )
-                    registry.record_dispatch_summary({
-                        "status": "duplicidades_sem_despacho_seletivo",
-                        "mode": "bloqueado",
-                        "duplicates_known": duplicates,
-                        "simulation": self.dry_run,
-                    })
+        if not allow_duplicates and duplicates:
+            if selective:
+                log_flights.warning(
+                    "Decolagem geral desativada por %d rota(s) duplicada(s). "
+                    "Verificando controles individuais do jogo para liberar "
+                    "apenas as aeronaves aprovadas.",
+                    duplicates,
+                )
+                try:
+                    selective_dispatch(self, registry)
+                finally:
                     self.close_popup()
-                return
+            else:
+                log_flights.warning(
+                    "Decolagem geral bloqueada pela política de rotas: "
+                    "%d rotas duplicadas (%d aeronaves envolvidas). "
+                    "Ative Despacho individual seguro para tentar decolar "
+                    "apenas os aviões aprovados.",
+                    duplicates, report["affected_aircraft"],
+                )
+                registry.record_dispatch_summary({
+                    "status": "duplicidades_sem_despacho_seletivo",
+                    "mode": "bloqueado",
+                    "duplicates_known": duplicates,
+                    "simulation": self.dry_run,
+                })
+                self.close_popup()
+            return
         button = self._find(self._sel("depart_all"), timeout=5)
         dispatch_status = "sem_aeronaves_prontas"
         if button is None:
@@ -880,7 +878,7 @@ class Bot:
             )
             self.count("departures")
             if self.config.get_bool("options", "telegram_departures"):
-                self.notify("✈️ Aeronaves decolaram.", silent=True, category="departures")
+                self.notify("✈️ Comando geral de decolagem enviado. Confirmação individual pendente.", silent=True, category="departures")
             self._stop.wait(2)
         registry.record_dispatch_summary({
             "status": dispatch_status,
