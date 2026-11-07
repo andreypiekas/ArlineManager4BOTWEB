@@ -10,6 +10,7 @@ from route_registry import RouteRegistry, endpoint
 class NoWriteBot:
     stopping = False
     dry_run = True
+    config = object()  # Config is read but never used while numeric airport IDs are missing.
 
     def __getattr__(self, name):
         raise AssertionError(f"Unexpected game action: {name}")
