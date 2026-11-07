@@ -178,6 +178,7 @@ HELP_EN = {
     "aircraft_max_price": "Without a goal: never buys aircraft more expensive than this. 0 = no limit.",
     # ---- options
     "auto_depart": "Departs every aircraft that is ready at each check.",
+    "selective_depart": "When duplicate routes are prohibited, searches for native per-aircraft departure controls and only dispatches independently approved flights. Never uses the bulk button if a duplicate is known; if the game offers only Depart All, it pauses without sending unverified requests.",
     "autobuy_fuel": "Buys fuel with the rules of the Market tab.",
     "autobuy_co2": "Buys CO2 with the rules of the Market tab.",
     "auto_marketing": "Keeps a reputation campaign running: aircraft fly as full as the reputation, so every departure "
