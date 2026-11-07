@@ -257,7 +257,11 @@ def manage_fleet(bot: "Bot") -> None:
         budget -= created
         parked -= created
     if cfg.get_bool("options", "autobuy_aircraft") and budget > 0:
-        if parked > 0:
+        pending_duplicates = (not cfg.get_bool("options", "allow_duplicate_routes", False)
+                              and registry.snapshot(allow_duplicates=False)["duplicate_routes"] > 0)
+        if pending_duplicates:
+            log_market.info("Compra de aeronave adiada: existem rotas duplicadas aguardando correção.")
+        elif parked > 0:
             log_market.info("Não comprarei aeronaves enquanto houver %d estacionadas sem rota.", parked)
         else:
             buy_aircraft(bot)
