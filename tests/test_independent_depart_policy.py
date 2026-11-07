@@ -12,10 +12,15 @@ from test_route_readiness_and_departure_policy import FakeDepartBot
 
 def _registry(tmp_path):
     registry = RouteRegistry(tmp_path / "routes.json")
+    codes = (
+        "XAP", "GRU", "DTW", "TXL", "DAC", "OSL", "LAX", "PBM",
+        "DUB", "SIN", "JFK", "LHR", "NRT", "HND", "CDG", "FRA",
+        "AMS", "MIA", "DXB", "HKG", "PEK", "SFO",
+    )
     for idx in range(11):
-        # The reported account has 11 duplicated route pairs.
-        origin = endpoint(code="DAC" if idx % 2 == 0 else "LAX")
-        destination = endpoint(code="OSL" if idx % 2 == 0 else "PBM")
+        # Reproduce 11 different duplicated airport pairs.
+        origin = endpoint(code=codes[2 * idx])
+        destination = endpoint(code=codes[2 * idx + 1])
         registry.record(str(100 + idx * 2), f"PP-{idx}-A", "A380", origin, destination, source="game")
         registry.record(str(101 + idx * 2), f"PP-{idx}-B", "A380", destination, origin, source="game")
     return registry
@@ -28,7 +33,7 @@ def test_existing_duplicate_flights_depart_independently_of_route_creation(
     import bot as module
 
     registry = _registry(tmp_path)
-    assert registry.snapshot()["duplicate_routes"] == 2  # two unique airport pairs
+    assert registry.snapshot()["duplicate_routes"] == 11
     monkeypatch.setattr(module, "RouteRegistry", lambda: registry)
     fake = FakeDepartBot(
         allow=False, block_depart=False, auto_route=auto_route
