@@ -95,3 +95,25 @@ def estimate_route(candidate, *, seats: int, model: Optional[dict],
     fuel = legs * fuel_rate * ENGINE_FUEL * distance * price_fuel / 1000
     co2 = sum(sold[i] * CLASS_WEIGHTS[i] for i in range(3)) * CO2_PER_PAX_KM * distance * price_co2 / 1000
     return RouteEconomics(revenue - fuel - co2, revenue, fuel, co2, legs, layout, sold)
+
+
+def rank_candidates(candidates, **estimate_kwargs):
+    """Return (candidate, estimate) best-first; fall back to demand when data is missing."""
+    ranked = [(candidate, estimate_route(candidate, **estimate_kwargs)) for candidate in candidates]
+    if any(result is not None for _, result in ranked):
+        ranked.sort(
+            key=lambda item: (
+                item[1] is not None,
+                item[1].profit_per_day if item[1] is not None else float("-inf"),
+                item[0].y + (2 * item[0].j + 3 * item[0].f if estimate_kwargs["premium"] else 0),
+            ),
+            reverse=True,
+        )
+    else:
+        ranked.sort(
+            key=lambda item: item[0].y + (
+                2 * item[0].j + 3 * item[0].f if estimate_kwargs["premium"] else 0
+            ),
+            reverse=True,
+        )
+    return ranked
