@@ -81,6 +81,7 @@ HELP: dict[str, str] = {
     "auto_restart": "Reinicia automaticamente após falhas, com intervalo crescente.",
     "dry_run": "Simula ações sem executar compras ou mudanças no jogo.",
     "summary_hour": "Horário de envio do resumo diário pelo Telegram.",
+    "cash_sync_seconds": "A cada 30 a 600 segundos, durante a espera entre ciclos, o bot recarrega a página do jogo e lê o saldo real. Reflete compras e alterações feitas pelo celular sem aguardar o ciclo completo. O navegador é acessado apenas pela thread do bot.",
     "telegram_test": "Testa o envio para o chat configurado.",
     "save": "Salva os valores desta aba; as opções são salvas imediatamente.",
     "open_log": "Abre o arquivo de registro completo da operação.",
@@ -210,6 +211,7 @@ HELP_EN = {
     "auto_restart": "If the bot stops because of an error, it starts again by itself after 2 minutes (then 4, 8... up to 30).",
     "dry_run": "Dry run: the bot does everything the same but buys and plans nothing; it only writes what it would do.",
     "summary_hour": "Hour from which the daily Telegram summary is sent.",
+    "cash_sync_seconds": "Every 30 to 600 seconds between runs, refresh the game page and read the real balance, including changes made on mobile. Never opens Selenium from the web thread.",
     "telegram_test": "Sends a test message to check the token and chat id of config/secrets.ini.",
     # ---- panels
     "save": "Saves the numbers of this tab. Switches are saved as soon as you change them.",

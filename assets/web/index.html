@@ -512,6 +512,9 @@ const EN = {
   "Enviando teste do Telegram…": "Sending Telegram test…",
   "Falha ao enviar. Verifique a conexão.": "Could not send. Check the connection.",
   "Sem conexão com o bot": "No connection with the bot", "Resposta inválida": "Invalid answer",
+  "Saldo ainda não conferido": "Balance not checked yet",
+  "Saldo conferido às {x}": "Balance verified at {x}",
+  "Leitura do saldo desatualizada: {x}": "Stale balance reading: {x}",
 };
 let LANG = "pt_BR";
 const tr = (text, x) => { const s = LANG === "en" ? (EN[text] || text) : text; return x === undefined ? s : s.replace("{x}", x); };
@@ -554,8 +557,14 @@ function renderStatus(s) {
   $("btnNow").disabled = !(s.alive && s.next_cycle_in != null);
 
   $("kMoney").textContent = money(s.money);
+  const moneyAge = s.money_read_at != null ? Math.max(0, Date.now() / 1000 - s.money_read_at) : null;
+  const moneyFreshness = s.money_read_at == null ? tr("Saldo ainda não conferido") :
+    s.alive && moneyAge > (s.money_sync_seconds || 60) * 2 + 30 ?
+      tr("Leitura do saldo desatualizada: {x}", timeText(s.money_read_at)) :
+      tr("Saldo conferido às {x}", timeText(s.money_read_at));
   setText("kMoneySub", [s.income_day != null ? tr("+{x}/dia", compact(s.income_day)) : null,
-                        s.points != null ? tr("{x} pontos", nf.format(s.points)) : null].filter(Boolean).join(" · "));
+                         s.points != null ? tr("{x} pontos", nf.format(s.points)) : null,
+                         moneyFreshness].filter(Boolean).join(" · "));
   $("kRep").textContent = pct(s.reputation);
   setText("kRepSub", s.campaign_left != null ? tr("campanha {x}", clock(s.campaign_left)) : tr("sem campanha ativa"));
   setBar("bRep", s.reputation);

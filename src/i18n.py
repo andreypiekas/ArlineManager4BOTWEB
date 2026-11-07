@@ -37,6 +37,7 @@ def tip(key: str):
 # em português e registrar aqui apenas quando houver tradução para inglês.
 EN: dict[str, str] = {
     "Telegram": "Telegram",
+    "Sincronizar saldo a cada (segundos)": "Refresh cash every (seconds)",
     "Ativar notificações do Telegram": "Enable Telegram notifications",
     "Erros e interrupções": "Errors and interruptions",
     "Início e parada do bot": "Bot startup and shutdown",
