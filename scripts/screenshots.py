@@ -39,6 +39,8 @@ def _patched_get(self, section, key, fallback=""):
         return str(LOG_FILE)
     if (section, key) == ("app", "appearance_mode"):
         return APPEARANCE["mode"]
+    if (section, key) == ("settings", "goal_model"):
+        return "B737-800"  # Exemplo visual de modelo específico, nunca uma compra real.
     return _get(self, section, key, fallback)
 
 
@@ -60,6 +62,18 @@ config.AppConfig.save = lambda self: None
 config.AppConfig.credentials = property(lambda self: ("demo@example.invalid", "senha-de-exemplo"))
 config.AppConfig.telegram = property(lambda self: ("000000000:DEMONSTRACAO", "000000000"))
 config.AppConfig.web_token = property(lambda self: "")
+
+SAMPLE_MARKET = [
+    {"id": "demo-1", "name": "Cessna 172", "capacity": 4, "price": 125_000,
+     "range": 1100, "speed": 200, "fuel": 40, "score": 0.2, "profit": 16_000},
+    {"id": "demo-2", "name": "A320-200", "capacity": 180, "price": 14_000_000,
+     "range": 5900, "speed": 830, "fuel": 1600, "score": 0.11, "profit": 340_000},
+    {"id": "demo-3", "name": "B737-800", "capacity": 189, "price": 25_000_000,
+     "range": 5700, "speed": 810, "fuel": 1450, "score": 0.10, "profit": 390_000},
+    {"id": "demo-4", "name": "A330-300", "capacity": 295, "price": 58_000_000,
+     "range": 9600, "speed": 880, "fuel": 3600, "score": 0.09, "profit": 650_000},
+]
+
 
 SAMPLE_STATS = dict(
     money=18740005, points=140, fuel=19502400, fuel_capacity=21102000,
@@ -123,7 +137,10 @@ def desktop_shots() -> None:
     if os.name != "nt" and not os.environ.get("DISPLAY"):
         raise RuntimeError("Sem DISPLAY. Execute sob xvfb-run para capturar o desktop no Linux.")
 
+    import app as desktop_app
     from app import App, tab_title
+
+    desktop_app.load_market = lambda: SAMPLE_MARKET
 
     # Nunca executar automações durante uma captura.
     App.start_bot = lambda self: None
@@ -163,7 +180,10 @@ def web_shots() -> None:
 
     from bot import Bot
     from logsetup import LogBuffer, setup_logging
+    import web as web_module
     from web import WebDashboard
+
+    web_module.load_market = lambda: SAMPLE_MARKET
 
     cfg = config.AppConfig()
     buffer = LogBuffer()
