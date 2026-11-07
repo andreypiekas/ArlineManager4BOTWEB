@@ -120,9 +120,9 @@ def test_duplicate_can_propose_new_destination_from_live_hub_only(tmp_path, monk
         assert resolve_duplicate_routes(Bot(), registry, 2) == 0
     assert seen == ["145"]
     affected = next(r for r in registry.snapshot()["relations"] if r["registration"] == "PP-0103-10")
-    assert affected["status"] == "aguardando_confirmacao_no_jogo"
+    assert affected["status"] == "aeronave_fora_da_base"
     assert affected["proposal"]["destination_code"] == "SIN"
     assert affected["proposal"]["origin_code"] == "DAC"
     assert affected["proposal"]["profit_per_day"] > 0
     assert registry.snapshot()["duplicate_routes"] == 1
-    assert "base DAC" in caplog.text
+    assert "aeroporto DAC" in caplog.text
