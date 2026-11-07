@@ -81,6 +81,20 @@ def same_route(first: dict, second: dict) -> bool:
                 (endpoint_matches(a, d) and endpoint_matches(b, c)))
 
 
+def eligible_for_reroute(row: dict, now: Optional[float] = None) -> bool:
+    """Fail closed unless an actual game scan freshly verified both route and base."""
+    now = time.time() if now is None else now
+    if row.get("source") != "game" or row.get("at_base") is not True:
+        return False
+    if not row.get("origin", {}).get("id") or not row.get("destination", {}).get("id"):
+        return False
+    for stamp in ("game_verified_at", "grounded_confirmed_at"):
+        elapsed = now - (row.get(stamp) or 0)
+        if elapsed < 0 or elapsed >= 180:
+            return False
+    return True
+
+
 def _state(path: Path) -> dict:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
