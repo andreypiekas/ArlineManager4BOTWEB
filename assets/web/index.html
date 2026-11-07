@@ -329,6 +329,11 @@ footer strong { font-weight: 600; color: var(--aqua); }
 .model-hint { color: var(--muted); font: 11px/1.6 "Cascadia Mono", Consolas, monospace;
   border-left: 2px solid var(--aqua); padding: 9px 12px; margin: 8px 0 14px; }
 .row input[list] { width: 220px; max-width: 100%; }
+.telegram-group { grid-column: 1 / -1; }
+.telegram-switch-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 30px; }
+.telegram-switch-grid .row { min-height: 46px; }
+.telegram-group > button { margin: 8px 0 0; }
+@media (max-width: 950px) { .telegram-switch-grid { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
 <body>
@@ -501,6 +506,11 @@ const EN = {
   "Motor selecionado antes da compra. Se o jogo não confirmar a opção ou não informar os dados necessários, a compra será bloqueada.":
     "Engine selected before purchase. If the game cannot confirm it or lacks metrics, the purchase will be blocked.",
   "Informe o nome do motor antes de salvar.": "Enter the engine name before saving.",
+  "Preferências de notificação": "Notification preferences",
+  "Os filtros afetam somente o Telegram; os registros e as operações continuam normalmente. As alterações são salvas imediatamente.": "Filters affect Telegram only; local logs and bot operations are unchanged. Changes save immediately.",
+  "Enviar mensagem de teste": "Send test message",
+  "Enviando teste do Telegram…": "Sending Telegram test…",
+  "Falha ao enviar. Verifique a conexão.": "Could not send. Check the connection.",
   "Sem conexão com o bot": "No connection with the bot", "Resposta inválida": "Invalid answer",
 };
 let LANG = "pt_BR";
@@ -646,7 +656,14 @@ function renderSettings() {
   if (tab.switches.length) {
     const switches = document.createElement("section"); switches.className = "settings-group";
     const heading = document.createElement("div"); heading.className = "section-title";
-    heading.textContent = tr("Automações"); switches.appendChild(heading);
+    heading.textContent = tr(tab.key === "Telegram" ? "Preferências de notificação" : "Automações");
+    switches.appendChild(heading);
+    const switchRows = tab.key === "Telegram" ? document.createElement("div") : switches;
+    if (tab.key === "Telegram") {
+      switches.classList.add("telegram-group");
+      switchRows.className = "telegram-switch-grid";
+      switches.appendChild(switchRows);
+    }
     for (const s of tab.switches) {
       const wrap = document.createElement("label"); wrap.className = "switch";
       const input = document.createElement("input"); input.type = "checkbox"; input.checked = s.value;
@@ -675,7 +692,25 @@ function renderSettings() {
       const row = field(s.key, s.label, s.help, wrap);
       row.querySelector("label").htmlFor = "";
       row.onclick = e => { if (e.target === row.firstChild && !input.disabled) { input.click(); } };
-      switches.appendChild(row);
+      switchRows.appendChild(row);
+    }
+    if (tab.key === "Telegram") {
+      const info = document.createElement("p"); info.className = "model-hint";
+      info.textContent = tr("Os filtros afetam somente o Telegram; os registros e as operações continuam normalmente. As alterações são salvas imediatamente.");
+      switches.appendChild(info);
+      const test = document.createElement("button");
+      test.type = "button"; test.textContent = tr("Enviar mensagem de teste");
+      test.onclick = async () => {
+        test.disabled = true;
+        showMsg({pending: true, message: tr("Enviando teste do Telegram…")});
+        try {
+          const result = await api("/api/control", {action: "telegram_test"});
+          showMsg(result);
+        } catch (_error) {
+          showMsg({ok: false, message: tr("Falha ao enviar. Verifique a conexão.")});
+        } finally { test.disabled = false; }
+      };
+      switches.appendChild(test);
     }
     panel.appendChild(switches);
   }

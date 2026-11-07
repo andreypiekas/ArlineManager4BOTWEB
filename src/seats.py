@@ -375,7 +375,7 @@ def apply_plan(bot: "Bot", plan: SeatPlan, max_payback: float, do_seats: bool = 
         return None
     if bot.dry_run:
         log.info("[SIMULAÇÃO] Executaria na oficina: %s.", detail)
-        bot.notify(f"🧪 SIMULAÇÃO: executaria na oficina {esc(detail)}.", silent=True)
+        bot.notify(f"🧪 SIMULAÇÃO: executaria na oficina {esc(detail)}.", silent=True, category="simulation")
         return 1
     # Same request the game's own Modify button sends after moving the seat slider and ticking the modifications.
     bot.js("window.eSeat = arguments[0]; window.bSeat = arguments[1]; window.fSeat = arguments[2];"
@@ -398,5 +398,5 @@ def apply_plan(bot: "Bot", plan: SeatPlan, max_payback: float, do_seats: bool = 
         bot.remember("mods_installed", known)
     log.info("Oficina: %s. %s", detail, clean_response(response))
     icon = "💺" if seats_change else "🛠️"
-    bot.notify(f"{icon} <b>Oficina</b>: {esc(detail)}.\n{esc(clean_response(response, 200))}".rstrip())
+    bot.notify(f"{icon} <b>Oficina</b>: {esc(detail)}.\n{esc(clean_response(response, 200))}".rstrip(), category="workshop")
     return 1

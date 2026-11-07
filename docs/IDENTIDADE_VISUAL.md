@@ -47,7 +47,7 @@ os dados exibidos e os endpoints de automação existentes.
 - **Centro de operações:** console de eventos com filtro de categoria e
   um quadro compacto de confirmação da última alteração feita na sessão.
 - **Configurações em tela própria:** navegação lateral por Parâmetros, com as
-  categorias Mercado, Frota, Aeronaves e Opções, separadas da telemetria.
+  categorias Mercado, Frota, Aeronaves, Opções e Telegram, separadas da telemetria.
   Os interruptores são salvos imediatamente; campos numéricos e modelos
   exigem o botão **Salvar alterações**, com aviso visual de alteração
   pendente, salvamento confirmado ou falha.

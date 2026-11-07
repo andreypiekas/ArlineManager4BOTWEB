@@ -183,5 +183,5 @@ def start_campaign(bot: "Bot", kind: int, reputation: Optional[int] = None) -> s
     bot.count("campaigns")
     bot.count("campaign_spent", cost or 0)
     log.info("Campanha iniciada: %s por $%s%s. %s", what, fmt(cost), gain, clean_response(response))
-    bot.notify(f"📣 <b>Iniciada {esc(what)}</b> por ${fmt(cost)}{esc(gain)}.")
+    bot.notify(f"📣 <b>Iniciada {esc(what)}</b> por ${fmt(cost)}{esc(gain)}.", category="marketing")
     return "started"

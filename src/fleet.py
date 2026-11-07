@@ -341,7 +341,7 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
     )
     if bot.dry_run:
         log.info("[SIMULAÇÃO] Criaria a rota %s.", summary)
-        bot.notify(f"🧪 SIMULAÇÃO: criaria a rota {esc(summary)}.", silent=True)
+        bot.notify(f"🧪 SIMULAÇÃO: criaria a rota {esc(summary)}.", silent=True, category="simulation")
         bot.js("$('#newRouteInfo').hide();")
         return "dry"
 
@@ -354,7 +354,7 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
     bot.spent(fee, invest=True)
     bot.count("routes")
     log.info("Rota criada: %s. %s", summary, clean_response(response))
-    bot.notify(f"🛫 <b>Rota criada</b>: {esc(summary)}.\n{esc(clean_response(response, 200))}".rstrip())
+    bot.notify(f"🛫 <b>Rota criada</b>: {esc(summary)}.\n{esc(clean_response(response, 200))}".rstrip(), category="routes")
     bot.js("$('#newRouteInfo').hide();")
     return "created"
 
@@ -532,7 +532,7 @@ def order_aircraft(bot: "Bot", choice: AircraftModel, goal: bool = False) -> boo
         summary += f" | motor: {motor}"
     if bot.dry_run:
         log_market.info("[SIMULAÇÃO] Encomendaria %s.", summary)
-        bot.notify(f"🧪 SIMULAÇÃO: encomendaria {esc(summary)}.", silent=True)
+        bot.notify(f"🧪 SIMULAÇÃO: encomendaria {esc(summary)}.", silent=True, category="simulation")
         return True
     before = bot.read_money()
     bot.click_element(detail.find_element(By.XPATH, ".//*[@id='btnPurchaseIntro']"))
@@ -546,5 +546,5 @@ def order_aircraft(bot: "Bot", choice: AircraftModel, goal: bool = False) -> boo
         bot.update_stats(hangar_free=max(0, free - 1))
     log_market.info("Pedido: %s. %s", summary, clean_response(response))
     title = "🎯 <b>Meta alcançada! Aeronave encomendada</b>" if goal else "🛒 <b>Aeronave encomendada</b>"
-    bot.notify(f"{title}: {esc(summary)}.\n{esc(clean_response(response, 200))}".rstrip())
+    bot.notify(f"{title}: {esc(summary)}.\n{esc(clean_response(response, 200))}".rstrip(), category="aircraft")
     return True

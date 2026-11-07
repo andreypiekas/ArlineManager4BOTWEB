@@ -33,7 +33,7 @@ from market import PriceHistory, history_file
 from notify import Telegram
 from settings_schema import (AIRCRAFT_FIELDS, AIRCRAFT_SWITCHES, ALL_FIELDS, FLEET_FIELDS, FLEET_SWITCHES,
                              MARKET_FIELDS, MARKET_SWITCHES, MARKETING_FIELDS, OPTION_DEFAULTS, OPTION_SWITCHES, TABS,
-                             clamp_settings, parse_int)
+                             TELEGRAM_FIELDS, TELEGRAM_SWITCHES, clamp_settings, parse_int)
 from supervisor import AutoRestart
 from shortcuts import create_desktop_shortcut, launch
 from web import WebDashboard, profile_running, profile_token, running_instance
@@ -483,13 +483,21 @@ class App(ctk.CTk):
             label.grid(row=1, column=column, sticky="nw", padx=(0 if column == 0 else 12, 0))
         ideas.bind("<Configure>", lambda e: [label.configure(wraplength=max(160, e.width // 2 - 16)) for label in self.goal_ideas])
 
-        # --- Opções: controles, campanhas, resumo diário e Telegram
+        # --- Opções: automações e campanhas
         options = tab("Opções")
         self._columns(options, OPTION_SWITCHES, 3, self._switch)
         numbers = ctk.CTkFrame(options, fg_color="transparent")
         numbers.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(10, 0))
-        self._columns(numbers, MARKETING_FIELDS + [("summary_hour", "Hora del resumen diario (0-23)")], 3, self._int_field)
-        foot = ctk.CTkFrame(options, fg_color="transparent")
+        self._columns(numbers, MARKETING_FIELDS, 3, self._int_field)
+        self._save_button(options, row=2, column=0, sticky="w", pady=(12, 0))
+
+        # --- Telegram: preferências individuais de notificações
+        telegram_tab = tab("Telegram")
+        self._columns(telegram_tab, TELEGRAM_SWITCHES, 3, self._switch)
+        times = ctk.CTkFrame(telegram_tab, fg_color="transparent")
+        times.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(10, 0))
+        self._columns(times, TELEGRAM_FIELDS, 3, self._int_field)
+        foot = ctk.CTkFrame(telegram_tab, fg_color="transparent")
         foot.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(8, 0))
         foot.grid_columnconfigure(0, weight=1)
         self.telegram_label = ctk.CTkLabel(foot, text=self._telegram_status(), font=self.font_small, text_color=MUTED, anchor="w")

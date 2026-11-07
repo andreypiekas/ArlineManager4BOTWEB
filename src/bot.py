@@ -324,12 +324,18 @@ class Bot:
         log_flights.debug("Ocupação medida %.0f %% (média %.0f %%).", measured * 100, value * 100)
 
     # ------------------------------------------------------------------ notifications and counters
-    def notify(self, text: str, silent: bool = False) -> None:
-        """Send a Telegram message (HTML) when notifications are enabled and configured."""
-        if self.config.get_bool("options", "telegram") and self.telegram.enabled:
-            profile = self.config.profile
-            # With several airlines on the same chat, say which one is talking.
-            self.telegram.send(text if profile.is_main else f"[{esc(profile.label)}] {text}", silent)
+    def notify(self, text: str, silent: bool = False, *, category: str | None = None) -> bool:
+        """Queue Telegram messages according to independently configurable event filters.
+
+        Legacy calls without an event category remain supported.
+        """
+        if not self.config.get_bool("options", "telegram") or not self.telegram.enabled:
+            return False
+        if category and not self.config.get_bool("options", f"telegram_{category}", True):
+            return False
+        profile = self.config.profile
+        self.telegram.send(text if profile.is_main else f"[{esc(profile.label)}] {text}", silent)
+        return True
 
     def count(self, key: str, amount: int = 1) -> None:
         counters = self._state.setdefault("counters", {})
@@ -433,8 +439,10 @@ class Bot:
                              f"{fmt_money(stats.goal_price)}); previsão {fmt_days(progress['eta_days'])}")
         if self.dry_run:
             lines.append("🧪 Simulação ativa: nenhuma compra ou programação foi realizada.")
-        self.notify("\n".join(lines))
-        log_telegram.info("Resumo diário enviado.")
+        if self.notify("\n".join(lines), category="daily"):
+            log_telegram.info("Resumo diário enfileirado para envio.")
+        else:
+            log_telegram.debug("Resumo diário não enviado: filtro ou Telegram desativado.")
         self._state["last_summary_date"] = today
         self._state["money_day_start"] = stats.money
         self._state["counters"] = {}
@@ -448,7 +456,7 @@ class Bot:
             self.telegram = Telegram(*self.config.telegram)
             if self.config.get_bool("options", "telegram") and not self.telegram.enabled:
                 log_telegram.info("As notificações estão ativadas, mas faltam bot_token / chat_id em config/secrets.ini.")
-            self.notify(f"🟢 <b>Bot iniciado</b>{' (simulação)' if self.dry_run else ''}", silent=True)
+            self.notify(f"🟢 <b>Bot iniciado</b>{' (simulação)' if self.dry_run else ''}", silent=True, category="status")
             log.info("Abrindo Chrome ...")
             self.driver = create_driver(
                 url=self.config.get("app", "url", "https://www.airlinemanager.com/"),
@@ -467,7 +475,7 @@ class Bot:
         except Exception as exc:  # noqa: BLE001 - every failure must reach the GUI log
             if self._stop.is_set():
                 log.info("Bot parado.")
-                self.notify("⏹ Bot parado.", silent=True)
+                self.notify("⏹ Bot parado.", silent=True, category="status")
             else:
                 self.state = BotState.ERROR
                 self.last_error = (str(exc).splitlines() or [exc.__class__.__name__])[0]
@@ -480,10 +488,10 @@ class Bot:
                         "sudo journalctl -k -n 100 --no-pager (possível OOM)."
                     )
                 log.debug("Traceback:", exc_info=True)
-                self.notify(f"🔴 <b>Bot interrompido por erro</b>: {esc(self.last_error)}")
+                self.notify(f"🔴 <b>Bot interrompido por erro</b>: {esc(self.last_error)}", category="errors")
         else:
             log.info("Bot parado.")
-            self.notify("⏹ Bot parado.", silent=True)
+            self.notify("⏹ Bot parado.", silent=True, category="status")
         finally:
             self._quit_driver()
             self.next_cycle_at = None
@@ -744,7 +752,7 @@ class Bot:
             log_flights.info("Todas as aeronaves decolaram.")
             self.count("departures")
             if self.config.get_bool("options", "telegram_departures"):
-                self.notify("✈️ Aeronaves decolaram.", silent=True)
+                self.notify("✈️ Aeronaves decolaram.", silent=True, category="departures")
             self._stop.wait(2)
         self.close_popup()
 
@@ -880,7 +888,7 @@ class Bot:
         icon = "🌿" if kind == "co2" else "⛽"
         if self.dry_run:
             tlog.info("[SIMULAÇÃO] Compraria %s %s a $%s (cerca de $%s, %s).", fmt(quantity), label, fmt(price), fmt(cost), reason)
-            self.notify(f"🧪 SIMULAÇÃO: compraria {fmt(quantity)} {label} a ${fmt(price)} (cerca de ${fmt(cost)}, {esc(reason)}).", silent=True)
+            self.notify(f"🧪 SIMULAÇÃO: compraria {fmt(quantity)} {label} a ${fmt(price)} (cerca de ${fmt(cost)}, {esc(reason)}).", silent=True, category="simulation")
             self._mark_bought(kind, window)
             return
 
@@ -913,7 +921,7 @@ class Bot:
         self.count(f"{kind}_bought", quantity)
         self.count(f"{kind}_spent", cost)
         tlog.info("Comprado: %s %s a $%s (cerca de $%s, %s).", fmt(quantity), label, fmt(price), fmt(cost), reason)
-        self.notify(f"{icon} <b>Comprado: {fmt(quantity)} {label}</b> a ${fmt(price)} (cerca de ${fmt(cost)}, {esc(reason)}).")
+        self.notify(f"{icon} <b>Comprado: {fmt(quantity)} {label}</b> a ${fmt(price)} (cerca de ${fmt(cost)}, {esc(reason)}).", category=kind)
         self._stop.wait(1.5)
 
     # ------------------------------------------------------------------ page helpers (used by fleet.py / maintenance.py)

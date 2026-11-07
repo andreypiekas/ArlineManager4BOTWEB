@@ -156,7 +156,7 @@ def check_hangar(bot: "Bot") -> None:
     bot.count("hangar")
     bot.update_stats(hangar_capacity=(capacity or 0) + 1)
     log.info("Ampliação concluída: %s. Estará pronto em alguns minutos.", detail)
-    bot.notify(f"🏗️ <b>Hangar ampliado</b>: {esc(detail)}.", silent=True)
+    bot.notify(f"🏗️ <b>Hangar ampliado</b>: {esc(detail)}.", silent=True, category="hangar")
 
 
 def plan(bot: "Bot", aircraft: Aircraft, kind: str) -> bool:
@@ -186,7 +186,7 @@ def plan(bot: "Bot", aircraft: Aircraft, kind: str) -> bool:
               f"{aircraft.hours_to_check} h até a revisão) por ${fmt(cost)}")
     if bot.dry_run:
         log.info("[SIMULAÇÃO] Programaria %s.", detail)
-        bot.notify(f"🧪 SIMULAÇÃO: programaria {esc(detail)}.", silent=True)
+        bot.notify(f"🧪 SIMULAÇÃO: programaria {esc(detail)}.", silent=True, category="simulation")
         return True
     before = bot.read_money()
     bot.click_element(buttons[0])
@@ -196,5 +196,5 @@ def plan(bot: "Bot", aircraft: Aircraft, kind: str) -> bool:
     bot.spent(cost)
     bot.count("repairs" if kind == "repair" else "checks")
     log.info("Programado: %s. %s", detail, clean_response(response))
-    bot.notify(f"🔧 <b>Programado: {esc(detail)}</b>.\n{esc(clean_response(response, 200))}".rstrip())
+    bot.notify(f"🔧 <b>Programado: {esc(detail)}</b>.\n{esc(clean_response(response, 200))}".rstrip(), category="maintenance")
     return True

@@ -10,7 +10,7 @@
 
 O painel web e o aplicativo desktop agora usam a identidade **AM/04 — Torre de Controle**: design técnico de alto contraste, telemetria com leitura rápida, console de eventos e comandos separados dos parâmetros. O painel web é responsivo e não depende de fontes, CSS ou serviços externos.
 
-**No painel web, os parâmetros agora ficam em uma tela própria.** Use **Parâmetros** no menu lateral para alterar as categorias Mercado, Frota, Aeronaves e Opções. A tela principal mantém indicadores, registros e um resumo textual da última alteração. Interruptores são salvos ao clicar; números e modelos exibem aviso de edição pendente até escolher **Salvar alterações**. Rascunhos continuam disponíveis ao mudar de categoria durante a sessão.
+**No painel web, os parâmetros agora ficam em uma tela própria.** Use **Parâmetros** no menu lateral para alterar as categorias Mercado, Frota, Aeronaves, Opções e Telegram. A tela principal mantém indicadores, registros e um resumo textual da última alteração. Interruptores são salvos ao clicar; números e modelos exibem aviso de edição pendente até escolher **Salvar alterações**. Rascunhos continuam disponíveis ao mudar de categoria durante a sessão.
 
 **[Conheça a arquitetura visual e os contratos da interface](docs/IDENTIDADE_VISUAL.md)**
 
@@ -254,15 +254,32 @@ A lista de modelos é preenchida após o bot consultar o mercado. Caso esteja va
 - **Iniciar o bot ao abrir** — Inicia automaticamente o bot ao abrir o aplicativo.
 - **Manter a sessão do navegador** — Mantém os cookies e os dados da sessão do Chrome.
 - **Navegador em segundo plano (headless)** — Executa o navegador oculto; CAPTCHAs ainda exigem intervenção manual.
-- **Notificações pelo Telegram** — Envia eventos importantes e um resumo diário para o Telegram.
-- **Telegram: avisar também as decolagens** — Envia também avisos a cada decolagem.
 - **Reiniciar automaticamente após erro** — Reinicia automaticamente após falhas, com intervalo crescente.
 - **Simulação (sem gastos)** — Simula ações sem executar compras ou mudanças no jogo.
+
+### Aba Telegram — escolha exatamente quais alertas receber
+
+No painel web, abra **Parâmetros → Telegram**. No desktop, use a aba **Telegram**. Cada opção é independente e os interruptores são salvos automaticamente, sem reiniciar o bot:
+
+- **Chave geral** — Liga/desliga todos os envios. Ao religar, as preferências individuais são preservadas.
+- **Erros e interrupções** — Falhas operacionais e encerramentos inesperados; recomendado manter ligado.
+- **Início e parada** — Mensagens quando o bot inicia ou para normalmente.
+- **Resumo diário** — Saldo, estoques, frota, compras e resultado do dia; ajuste o horário de envio no mesmo painel.
+- **Decolagens** — Avisos de partidas.
+- **Compras de combustível e de CO₂** — Duas opções independentes, para receber somente os abastecimentos desejados.
+- **Rotas criadas e aeronaves encomendadas** — Avisos de expansão da malha e da frota.
+- **Reparos/A-checks, ampliação de hangar e oficina** — Três categorias distintas.
+- **Campanhas de marketing e tarefas** — Notificações de campanhas, atividades e recompensas.
+- **Simulação** — Avisos de ações simuladas (sem compras reais).
+
+A aba inclui um **teste de envio**, que pode ser usado mesmo com filtros desligados, para confirmar a comunicação com o Telegram. A configuração usa o token e o chat ID mantidos exclusivamente em `config/secrets.ini`; o painel não exibe esses segredos.
+
+Os filtros **não impedem decolagens, compras nem outras operações**, e não eliminam mensagens do log local. Eles apenas decidem quais eventos serão enviados ao Telegram. Todos os tipos permanecem habilitados por padrão após a atualização para preservar o comportamento anterior; personalize os interruptores conforme sua necessidade.
 
 ### Registros e notificações
 
 - **Registros** — O bot informa compras, partidas, rotas, manutenção, erros e tarefas executadas. O painel web e o aplicativo mostram os mesmos eventos.
-- **Telegram** — Configure a seção `[telegram]` em `config/secrets.ini`. Os alertas de decolagem podem ser desativados para reduzir notificações.
+- **Telegram** — Configure a seção `[telegram]` em `config/secrets.ini`. Em **Parâmetros → Telegram** selecione individualmente os avisos que deseja receber.
 - **Modo simulação** — Ative para verificar as decisões sem fazer compras nem modificar a companhia aérea.
 
 ### Painel web e operação contínua

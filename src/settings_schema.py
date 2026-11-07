@@ -38,10 +38,9 @@ MARKETING_FIELDS = [
     ("marketing_campaign", "Campanha de reputação (1-4)"),
     ("marketing_hours", "Duração da campanha (h)"),
 ]
-OPTIONS_FIELDS = MARKETING_FIELDS + [
-    ("summary_hour", "Horário do resumo diário (0-23)"),
-]
-ALL_FIELDS = MARKET_FIELDS + FLEET_FIELDS + AIRCRAFT_FIELDS + OPTIONS_FIELDS
+OPTIONS_FIELDS = MARKETING_FIELDS
+TELEGRAM_FIELDS = [("summary_hour", "Horário do resumo diário (0-23)")]
+ALL_FIELDS = MARKET_FIELDS + FLEET_FIELDS + AIRCRAFT_FIELDS + OPTIONS_FIELDS + TELEGRAM_FIELDS
 
 # (options key, label) for the switches of each tab
 MARKET_SWITCHES = [
@@ -70,12 +69,29 @@ OPTION_SWITCHES = [
     ("start_on_launch", "Iniciar o bot ao abrir"),
     ("keep_session", "Manter a sessão do navegador"),
     ("headless", "Navegador em segundo plano (headless)"),
-    ("telegram", "Notificações pelo Telegram"),
-    ("telegram_departures", "Telegram: avisar também as decolagens"),
     ("auto_restart", "Reiniciar automaticamente após erro"),
     ("dry_run", "Simulação (sem gastos)"),
 ]
-ALL_SWITCHES = MARKET_SWITCHES + FLEET_SWITCHES + AIRCRAFT_SWITCHES + OPTION_SWITCHES
+# Cada evento é independente. A opção "telegram" funciona como chave geral.
+# Defaults preservam o comportamento de instalações existentes.
+TELEGRAM_SWITCHES = [
+    ("telegram", "Ativar notificações do Telegram"),
+    ("telegram_errors", "Erros e interrupções"),
+    ("telegram_status", "Início e parada do bot"),
+    ("telegram_daily", "Resumo diário"),
+    ("telegram_departures", "Decolagens"),
+    ("telegram_fuel", "Compras de combustível"),
+    ("telegram_co2", "Compras de CO₂"),
+    ("telegram_routes", "Rotas criadas"),
+    ("telegram_aircraft", "Compras de aeronaves"),
+    ("telegram_maintenance", "Reparos e A-checks"),
+    ("telegram_hangar", "Ampliações do hangar"),
+    ("telegram_workshop", "Oficina: assentos e melhorias"),
+    ("telegram_marketing", "Campanhas de marketing"),
+    ("telegram_checklist", "Recompensas e tarefas"),
+    ("telegram_simulation", "Eventos da simulação"),
+]
+ALL_SWITCHES = MARKET_SWITCHES + FLEET_SWITCHES + AIRCRAFT_SWITCHES + OPTION_SWITCHES + TELEGRAM_SWITCHES
 
 # Configurações de modelos e metas (aba Aeronaves)
 TEXT_SETTINGS = [
@@ -90,6 +106,7 @@ TABS = [
     ("Frota", "🛩️", FLEET_FIELDS, FLEET_SWITCHES),
     ("Aeronaves", "✈️", AIRCRAFT_FIELDS, AIRCRAFT_SWITCHES),
     ("Opções", "⚙️", OPTIONS_FIELDS, OPTION_SWITCHES),
+    ("Telegram", "📨", TELEGRAM_FIELDS, TELEGRAM_SWITCHES),
 ]
 
 # Switches that default to on when the key is missing from config/defaults.ini too (tests/ keep both in step)

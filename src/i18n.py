@@ -36,6 +36,22 @@ def tip(key: str):
 # Origem pt-BR → inglês. Adicionar novos textos de interface diretamente
 # em português e registrar aqui apenas quando houver tradução para inglês.
 EN: dict[str, str] = {
+    "Telegram": "Telegram",
+    "Ativar notificações do Telegram": "Enable Telegram notifications",
+    "Erros e interrupções": "Errors and interruptions",
+    "Início e parada do bot": "Bot startup and shutdown",
+    "Resumo diário": "Daily summary",
+    "Decolagens": "Departures",
+    "Compras de combustível": "Fuel purchases",
+    "Compras de CO₂": "CO₂ purchases",
+    "Rotas criadas": "Routes created",
+    "Compras de aeronaves": "Aircraft purchases",
+    "Reparos e A-checks": "Repairs and A-checks",
+    "Ampliações do hangar": "Hangar expansions",
+    "Oficina: assentos e melhorias": "Workshop: seats and upgrades",
+    "Campanhas de marketing": "Marketing campaigns",
+    "Recompensas e tarefas": "Checklist tasks and rewards",
+    "Eventos da simulação": "Simulation events",
     "Motorização da aeronave": "Aircraft engine configuration",
     "Configuração do motor": "Engine configuration",
     "Critério de motorização": "Engine selection",
