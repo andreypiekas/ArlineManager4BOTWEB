@@ -81,12 +81,25 @@ def same_route(first: dict, second: dict) -> bool:
                 (endpoint_matches(a, d) and endpoint_matches(b, c)))
 
 
-def eligible_for_reroute(row: dict, now: Optional[float] = None) -> bool:
-    """Fail closed unless an actual game scan freshly verified both route and base."""
+def eligible_for_reroute(row: dict, now: Optional[float] = None,
+                         *, verified_hub: bool = False) -> bool:
+    """Fail closed unless the live game freshly confirms route, base and endpoints.
+
+    Some game route cards expose only airport codes. Accept those *only* when
+    this cycle also independently matched the operational hub's game ID to
+    one of the codes (verified_hub), and the game explicitly confirmed that
+    this exact aircraft is grounded at its base. The actual route change
+    still requires eligible aircraft selection and an unoccupied destination.
+    """
     now = time.time() if now is None else now
     if row.get("source") != "game" or row.get("at_base") is not True:
         return False
-    if not row.get("origin", {}).get("id") or not row.get("destination", {}).get("id"):
+    origin, destination = row.get("origin") or {}, row.get("destination") or {}
+    both_ids = bool(origin.get("id") and destination.get("id"))
+    verified_code_pair = bool(
+        verified_hub and origin.get("code") and destination.get("code")
+    )
+    if not (both_ids or verified_code_pair):
         return False
     for stamp in ("game_verified_at", "grounded_confirmed_at"):
         elapsed = now - (row.get(stamp) or 0)
