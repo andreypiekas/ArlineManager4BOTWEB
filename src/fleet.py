@@ -210,10 +210,23 @@ def audit_routes(bot: "Bot", registry: RouteRegistry) -> None:
             detected += 1
         else:
             registry.observe(identity, registration, model, at_base=base)
+    missing = sum(1 for row in rows
+                  if not ((row.get("origin_id") or row.get("origin_code"))
+                          and (row.get("destination_id") or row.get("destination_code"))))
+    registry.record_scan(len(rows), detected, missing)
     if rows:
-        log.info("Controle de rotas: %d aeronaves visíveis, %d relações verificadas nesta página.", len(rows), detected)
+        log.info(
+            "Controle de rotas: %d aeronaves visíveis, %d rotas identificadas, "
+            "%d sem os dois aeroportos no HTML da página. "
+            "Modo simulação não impede a leitura.",
+            len(rows), detected, missing,
+        )
     else:
-        log.debug("Controle de rotas: nenhuma aeronave reconhecida na página atual.")
+        log.warning(
+            "Controle de rotas: nenhuma aeronave reconhecida na página atual. "
+            "Confirme que o jogo carregou a lista de rotas; não é necessário "
+            "desativar o modo simulação para auditar."
+        )
 
 
 _ONBOARD_JS = """
