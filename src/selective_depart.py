@@ -239,7 +239,7 @@ def selective_dispatch(bot, registry: RouteRegistry, *, limit: int = 20) -> dict
         from selenium.common.exceptions import TimeoutException
         try:
             WebDriverWait(bot.driver, 8).until(
-                lambda driver: bool(driver.execute_script(_VERIFY_DEPARTED_JS, decision.aircraft_id))
+                lambda driver, aircraft_id=decision.aircraft_id: bool(driver.execute_script(_VERIFY_DEPARTED_JS, aircraft_id))
             )
         except TimeoutException:
             log.warning(
