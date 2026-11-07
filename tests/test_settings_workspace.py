@@ -72,7 +72,8 @@ def test_resumo_de_alteracoes_substitui_formulario_no_painel():
 def test_navegacao_por_fragmento_mantem_o_dashboard_ativo():
     html = HTML.read_text(encoding="utf-8")
     assert 'target === "#parameters"' in html
-    assert '$("overview").hidden = isSettings;' in html
+    assert '$("overview").hidden = isSettings || isRoutes;' in html
+    assert '$("routesView").hidden = !isRoutes;' in html
     assert '$("settingsView").hidden = !isSettings;' in html
     assert 'target === "#activity"' in html
     assert 'window.addEventListener("hashchange", activateWorkspaceFromHash)' in html

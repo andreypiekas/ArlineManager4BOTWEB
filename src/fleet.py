@@ -30,6 +30,7 @@ from gamemode import EASY, GameMode
 from helpers import clean_response, fmt, to_int
 from notify import esc
 from route_optimizer import rank_candidates
+from route_registry import RouteRegistry, eligible_for_reroute, endpoint
 
 if TYPE_CHECKING:
     from bot import Bot
@@ -146,6 +147,75 @@ def daily_profit(model: AircraftModel, distance: int, load: float, fuel_price: f
 
 
 # ---------------------------------------------------------------------- entry point
+# Only explicit DOM attributes or a dedicated route label count as game route
+# evidence; never infer airports from general row text or the aircraft's model.
+_ROUTE_AUDIT_JS = """
+return Array.from(document.querySelectorAll("#popContent [id^='routeMainList']")).map(row => {
+  const aircraftId = (row.id.match(/^routeMainList(\\d+)$/) || [])[1] || "";
+  const link = row.querySelector("a");
+  const label = link ? link.textContent.trim() : "";
+  const tableData = Array.from(row.querySelectorAll("[data-dep], [data-arr], [data-origin], [data-destination], [data-route]"));
+  const attrs = [row, ...tableData];
+  const getAttr = (...names) => {
+    for (const el of attrs) for (const name of names) {
+      const value = el.getAttribute(name);
+      if (value) return value.trim();
+    }
+    return "";
+  };
+  const routeEl = row.querySelector("[data-route], .route-name, .route-code, .routeName");
+  const routeText = routeEl ? (routeEl.getAttribute("data-route") || routeEl.textContent || "") : "";
+  const codes = routeText.match(/\\b([A-Za-z]{3,4})\\s*(?:→|↔|–|-|\\/|to)\\s*([A-Za-z]{3,4})\\b/i);
+  // An explicit hook containing BOTH dep and arr IDs is safe route evidence.
+  const endpointHook = Array.from(row.querySelectorAll("[onclick], [href]"))
+    .map(e => e.getAttribute("onclick") || e.getAttribute("href") || "")
+    .find(v => /(?:[?&]|\\b)dep=\\d+/.test(v) && /(?:[?&]|\\b)arr=\\d+/.test(v)) || "";
+  const depFromHook = (endpointHook.match(/(?:[?&]|\\b)dep=(\\d+)/) || [])[1] || "";
+  const arrFromHook = (endpointHook.match(/(?:[?&]|\\b)arr=(\\d+)/) || [])[1] || "";
+  const status = row.querySelector("[data-at-base], [data-at-hub], [data-grounded]");
+  const atBaseRaw = status ? (status.getAttribute("data-at-base") ||
+    status.getAttribute("data-at-hub") || status.getAttribute("data-grounded")) : "";
+  return {
+    aircraft_id: aircraftId,
+    registration: label.split(" - ")[0] || aircraftId,
+    model: label.includes(" - ") ? label.split(" - ").slice(1).join(" - ") : "",
+    origin_id: getAttr("data-dep", "data-origin-id") || depFromHook,
+    destination_id: getAttr("data-arr", "data-destination-id") || arrFromHook,
+    origin_code: getAttr("data-origin-code", "data-dep-code") || (codes ? codes[1] : ""),
+    destination_code: getAttr("data-destination-code", "data-arr-code") || (codes ? codes[2] : ""),
+    at_base: atBaseRaw === "1" || atBaseRaw === "true" ? true :
+      atBaseRaw === "0" || atBaseRaw === "false" ? false : null,
+    in_flight: !!row.querySelector("[id^='routesTimer']")
+  };
+});
+"""
+
+
+def audit_routes(bot: "Bot", registry: RouteRegistry) -> None:
+    """Accumulate verified relationships visible on the current page, never guess hidden pages."""
+    rows = bot.js(_ROUTE_AUDIT_JS) or []
+    detected = 0
+    for row in rows:
+        identity = str(row.get("aircraft_id") or "")
+        if not identity:
+            continue
+        registration = row.get("registration") or identity
+        model = row.get("model") or ""
+        base = row.get("at_base")
+        if row.get("in_flight"):
+            base = False
+        origin = endpoint(row.get("origin_id"), row.get("origin_code"))
+        destination = endpoint(row.get("destination_id"), row.get("destination_code"))
+        if registry.record(identity, registration, model, origin, destination, at_base=base):
+            detected += 1
+        else:
+            registry.observe(identity, registration, model, at_base=base)
+    if rows:
+        log.info("Controle de rotas: %d aeronaves visíveis, %d relações verificadas nesta página.", len(rows), detected)
+    else:
+        log.debug("Controle de rotas: nenhuma aeronave reconhecida na página atual.")
+
+
 _ONBOARD_JS = """
 return Array.from(document.querySelectorAll("#popContent [id^='routeMainList']"))
   .filter(row => row.querySelector("[id^='routesTimer']"))          // in flight: the row shows who is on board
@@ -182,26 +252,178 @@ def manage_fleet(bot: "Bot") -> None:
     bot.update_stats(parked=parked, pending=pending)
     log_fleet.info("%d aeronaves estacionadas sem rota, %d pendentes de entrega.", parked, pending)
 
+    registry = RouteRegistry()
+    audit_routes(bot, registry)
     budget = max(1, cfg.get_int("settings", "fleet_actions_per_cycle", 2))
-    if cfg.get_bool("options", "auto_route") and parked > 0:
+    if not cfg.get_bool("options", "allow_duplicate_routes", True):
+        repaired = resolve_duplicate_routes(bot, registry, budget)
+        budget -= repaired
+    if cfg.get_bool("options", "auto_route") and parked > 0 and budget > 0:
         created = create_routes(bot, budget)
         budget -= created
         parked -= created
     if cfg.get_bool("options", "autobuy_aircraft") and budget > 0:
-        if parked > 0:
+        pending_duplicates = (not cfg.get_bool("options", "allow_duplicate_routes", False)
+                              and registry.snapshot(allow_duplicates=False)["duplicate_routes"] > 0)
+        if pending_duplicates:
+            log_market.info("Compra de aeronave adiada: existem rotas duplicadas aguardando correção.")
+        elif parked > 0:
             log_market.info("Não comprarei aeronaves enquanto houver %d estacionadas sem rota.", parked)
         else:
             buy_aircraft(bot)
     bot.close_popup()
 
 
+# ---------------------------------------------------------------------- duplicate-route correction
+def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -> int:
+    """Use persisted verified route relationships to propose and correct duplicates.
+
+    A live reroute is attempted only if the aircraft is explicitly reported at
+    its origin base, the hub and new destination are confirmed by the page, the
+    aircraft appears in the eligible selector, and the real game's route order
+    succeeds. Unverified records are reported but never used for blind writes.
+    """
+    report = registry.snapshot(allow_duplicates=False)
+    if not report["duplicate_routes"]:
+        return 0
+    log.warning(
+        "Controle de rotas: %d rotas duplicadas, %d aeronaves envolvidas.",
+        report["duplicate_routes"], report["affected_aircraft"],
+    )
+    records = {row["aircraft_id"]: row for row in report["relations"]}
+    changed = 0
+    cfg = bot.config
+    market = load_market()
+    for duplicate in report["duplicates"]:
+        members = [records[a["id"]] for a in duplicate["aircraft"] if a["id"] in records]
+        if len(members) < 2:
+            continue
+        # Prefer keeping the aircraft whose last estimated operating profit was
+        # higher. Ties keep the longest-established route to minimize churn.
+        members.sort(key=lambda row: (
+            -(row["profit_per_day"] if isinstance(row.get("profit_per_day"), (int, float)) else -1),
+            row.get("assigned_at", 0), row["aircraft_id"],
+        ))
+        for row in members[1:]:
+            aircraft_id = row["aircraft_id"]
+            if changed >= budget or bot.stopping:
+                registry.note(aircraft_id, "pendente_limite_ciclo")
+                continue
+            origin = row.get("origin", {})
+            destination = row.get("destination", {})
+            hub_id = str(origin.get("id") or "")
+            if not hub_id or not destination.get("id"):
+                registry.note(aircraft_id, "aguardando_identificacao_da_rota")
+                continue
+            if not cfg.get_bool("options", "auto_route"):
+                registry.note(aircraft_id, "aguardando_ativacao_de_rotas")
+                continue
+            model = find_model(market, row.get("model") or "")
+            if not model or not model.get("speed") or not model.get("fuel"):
+                registry.note(aircraft_id, "aguardando_dados_do_modelo")
+                continue
+            seats = int(model.get("capacity") or 0)
+            if seats <= 0:
+                registry.note(aircraft_id, "aguardando_dados_do_modelo")
+                continue
+            limit = cfg.get_int("settings", "route_max_distance_big" if seats >= BIG_SEATS else "route_max_distance", 6000)
+            if model.get("range"):
+                limit = min(limit, int(model["range"]))
+            bot.open_popup("routes_main.php", "Routes", "nav_routes")
+            bot.ajax("research_main.php", "routeAction")
+            # The game's hub picker must prove we are searching the same origin
+            # as the existing assignment. Never optimize from an unrelated hub.
+            selected = bot.js(
+                "var e=document.getElementById('hubSelect');"
+                "if(!e || !Array.from(e.options).some(x=>x.value===arguments[0]))return false;"
+                "e.value=arguments[0];e.dispatchEvent(new Event('change',{bubbles:true}));"
+                "return e.value===arguments[0];", hub_id,
+            )
+            if not selected:
+                registry.note(aircraft_id, "aguardando_confirmacao_da_base")
+                continue
+            destination_options = []
+            for distance in (limit, limit // 2, limit // 4):
+                if distance < 500 or bot.stopping:
+                    break
+                options = [
+                    candidate for candidate in search_routes(
+                        bot, hub_id, distance, cfg.get_int("settings", "route_min_runway", 5000)
+                    )
+                    if not registry.is_occupied(
+                        endpoint(hub_id), endpoint(candidate.arr_id), aircraft_id
+                    ) and not (destination.get("id") == candidate.arr_id)
+                ]
+                destination_options.extend(options)
+                if options:
+                    break
+            if not destination_options:
+                registry.note(aircraft_id, "sem_destino_alternativo")
+                continue
+            ranked = rank_candidates(
+                destination_options, seats=seats, model=model, mode=bot.mode,
+                load_factor=bot.load_factor(), fuel_price=bot.fuel_cost_basis(),
+                co2_price=bot.co2_cost_basis(), premium=cfg.get_bool("options", "auto_seats"),
+            )
+            alternative = next(((candidate, economics) for candidate, economics in ranked
+                                if economics is not None and economics.profit_per_day > 0), None)
+            if alternative is None:
+                registry.note(aircraft_id, "sem_alternativa_lucrativa")
+                continue
+            candidate, economics = alternative
+            proposal = {
+                "origin_id": hub_id, "destination_id": candidate.arr_id,
+                "destination": candidate.name, "distance_km": round(candidate.distance),
+                "profit_per_day": round(economics.profit_per_day),
+                "current_route": row.get("route_key", ""),
+            }
+            # The stored report identifies a collision, but a *fresh*, explicit
+            # game reading must confirm the aircraft at base before changing it.
+            if not eligible_for_reroute(row):
+                registry.note(aircraft_id, "aguardando_confirmacao_no_jogo", proposal=proposal)
+                continue
+            if bot.dry_run:
+                registry.note(aircraft_id, "simulacao_redirecionamento", proposal=proposal)
+                log.info("[SIMULAÇÃO] Redirecionaria %s para %s (lucro estimado ~ $%s/dia).",
+                         row["registration"], candidate.name, fmt(proposal["profit_per_day"]))
+                continue
+            details = bot.ajax(
+                f"route_research_route.php?dep={hub_id}&arr={candidate.arr_id}", "rDetails",
+            )
+            capable = details.find_elements(
+                By.XPATH, f".//*[@id='capAc']/option[starts-with(@value, '{aircraft_id};')]",
+            )
+            if not capable:
+                registry.note(aircraft_id, "aeronave_indisponivel_para_nova_rota", proposal=proposal)
+                continue
+            occupied_in_game = to_int(bot.js(_ON_ROUTE_JS)) or 0
+            if occupied_in_game:
+                registry.note(aircraft_id, "destino_ocupado_no_jogo", proposal=proposal)
+                continue
+            aircraft = ParkedAircraft(aircraft_id, row.get("model", ""), row["registration"], seats)
+            outcome = create_route(
+                bot, aircraft, candidate, origin_id=hub_id, reroute=True,
+                profit_per_day=economics.profit_per_day,
+            )
+            if outcome == "created":
+                changed += 1
+                log.info("Duplicidade resolvida: %s mudou para %s (~$%s/dia).",
+                         aircraft.reg, candidate.name, fmt(proposal["profit_per_day"]))
+            elif outcome == "stop":
+                registry.note(aircraft_id, "falha_ao_confirmar_redirecionamento", proposal=proposal)
+                return changed
+    return changed
+
+
 # ---------------------------------------------------------------------- routes
 def read_parked(bot: "Bot") -> list[ParkedAircraft]:
     bot.ajax("fleet_parked.php", "routesContainer")
     parked = []
+    registry = RouteRegistry()
     for row in bot.js(_PARKED_JS) or []:
         if row.get("id"):
             parked.append(ParkedAircraft(row["id"], row["model"], row["reg"] or row["id"], to_int(row["seats"]) or 0))
+            registry.unassign(row["id"], row["reg"] or row["id"], row["model"])
     return parked
 
 
@@ -251,6 +473,8 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
     premium = cfg.get_bool("options", "auto_seats")
     created = 0
     used: set[str] = set()
+    registry = RouteRegistry()
+    allow_duplicates = cfg.get_bool("options", "allow_duplicate_routes", True)
 
     for aircraft in parked:
         if created >= max_routes or bot.stopping:
@@ -272,7 +496,10 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
         for distance in (limit, limit // 2, limit // 4):
             if distance < 500 or bot.stopping:
                 break
-            candidates = [c for c in search_routes(bot, hub_id, distance, min_runway) if c.arr_id not in used]
+            candidates = [c for c in search_routes(bot, hub_id, distance, min_runway)
+                          if c.arr_id not in used and
+                          (allow_duplicates or not registry.is_occupied(
+                              endpoint(hub_id), endpoint(c.arr_id), aircraft.id))]
             # Use the game's known demand and the latest cached aircraft model to
             # estimate daily revenue minus fuel/CO2; missing model data keeps the
             # original demand-based ordering (no fabricated fuel/speed values).
@@ -282,6 +509,7 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 fuel_price=bot.fuel_cost_basis(), co2_price=bot.co2_cost_basis(),
                 premium=premium,
             )
+            estimates = {c.arr_id: estimate for c, estimate in ranked}
             has_estimates = any(estimate is not None for _, estimate in ranked)
             if has_estimates:
                 tries = [candidate for candidate, _ in ranked[:MAX_ROUTE_TRIES]]
@@ -317,10 +545,14 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                     log.debug("%s não pode voar para %s (alcance ou pista).", aircraft.reg, candidate.name)
                     continue
                 on_route = to_int(bot.js(_ON_ROUTE_JS)) or 0
-                if on_route:
+                if on_route and not allow_duplicates:
                     log.debug("%s já tem %d aeronaves.", candidate.name, on_route)
                     continue
-                outcome = create_route(bot, aircraft, candidate)
+                estimated = estimates.get(candidate.arr_id)
+                outcome = create_route(
+                    bot, aircraft, candidate, origin_id=hub_id,
+                    profit_per_day=estimated.profit_per_day if estimated is not None else None,
+                )
                 break
             # An occupied route is not a valid outcome: continue with a shorter
             # search instead of giving up on this parked aircraft prematurely.
@@ -336,12 +568,14 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
     return created
 
 
-def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate) -> str:
+def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate,
+                 *, origin_id: str = "", reroute: bool = False,
+                 profit_per_day: Optional[float] = None) -> str:
     """Returns 'created', 'dry' (dry run) or 'stop' (money or page problem)."""
     bot.js("if (typeof hideFlightInfo === 'function') { hideFlightInfo(); } arrId = arguments[0];", int(candidate.arr_id))
     panel = bot.ajax(f"new_route_info.php?id={aircraft.id}&airportId={candidate.arr_id}&mode=res", "newRouteInfo")
     fee = to_int(bot.js(_ROUTE_FEE_JS))
-    if not bot.can_spend(fee, f"a rota {candidate.name}", essential=True):  # an aircraft without a route earns nothing
+    if not bot.can_spend(fee, f"a rota {candidate.name}", essential=not reroute):  # reroutes must preserve cash reserve
         bot.js("$('#newRouteInfo').hide();")
         return "stop"
 
@@ -376,7 +610,18 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
         return "stop"
     bot.spent(fee, invest=True)
     bot.count("routes")
-    log.info("Rota criada: %s. %s", summary, clean_response(response))
+    if origin_id:
+        RouteRegistry().record(
+            aircraft.id, aircraft.reg, aircraft.model,
+            endpoint(origin_id, name=bot.js(
+                "var e=document.getElementById('hubSelect');"
+                "return e && e.selectedIndex>=0 ? e.options[e.selectedIndex].text : '';"
+            ) or ""), endpoint(candidate.arr_id, name=candidate.name),
+            source="redirecionamento" if reroute else "criacao_confirmada",
+            profit_per_day=profit_per_day,
+            at_base=True,
+        )
+    log.info("%s: %s. %s", "Rota alterada" if reroute else "Rota criada", summary, clean_response(response))
     bot.notify(f"🛫 <b>Rota criada</b>: {esc(summary)}.\n{esc(clean_response(response, 200))}".rstrip(), category="routes")
     bot.js("$('#newRouteInfo').hide();")
     return "created"

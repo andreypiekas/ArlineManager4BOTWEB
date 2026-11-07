@@ -50,6 +50,7 @@ FLEET_SWITCHES = [
     ("auto_repair", "Reparar aeronaves desgastadas"),
     ("auto_check", "Programar A-checks"),
     ("auto_route", "Criar rotas para aeronaves estacionadas"),
+    ("allow_duplicate_routes", "Permitir aeronaves na mesma rota (ida/volta)"),
     ("auto_hangar", "Ampliar o hangar quando estiver cheio"),
     ("auto_seats", "Assentos executiva / primeira conforme a demanda"),
     ("auto_mods", "Melhorias: velocidade, combustível e CO₂"),

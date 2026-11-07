@@ -33,6 +33,7 @@ HELP: dict[str, str] = {
     "auto_repair": "Programa reparos das aeronaves que atingirem o desgaste definido.",
     "auto_check": "Programa o A-check quando restarem poucas horas.",
     "auto_route": "Cria rotas com demanda adequada para aeronaves estacionadas.",
+    "allow_duplicate_routes": "Desativado: bloqueia novas rotas duplicadas nos dois sentidos e planeja mudar aeronaves repetidas para destinos lucrativos quando elas estiverem confirmadamente na base. Ativado: permite duplicidades.",
     "auto_hangar": "Compra expansão do hangar quando estiver perto do limite.",
     "repair_wear_pct": "Desgaste percentual a partir do qual deve reparar uma aeronave.",
     "check_hours_min": "Horas restantes para iniciar a programação do A-check.",

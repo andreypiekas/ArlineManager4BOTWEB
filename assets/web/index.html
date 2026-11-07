@@ -334,6 +334,33 @@ footer strong { font-weight: 600; color: var(--aqua); }
 .telegram-switch-grid .row { min-height: 46px; }
 .telegram-group > button { margin: 8px 0 0; }
 @media (max-width: 950px) { .telegram-switch-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Route registry: compact, data-first table with status markers and responsive overflow. */
+.routes-header { display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:12px; padding:17px 20px; }
+.routes-header p { margin:4px 0 0; color:var(--muted); font-size:12px; }
+.routes-controls { display:flex; flex-wrap:wrap; align-items:center; gap:9px; }
+.routes-controls input, .route-manual input { background:var(--panel-hi); color:var(--ink); border:1px solid var(--border-strong);
+  border-radius:4px; padding:10px 11px; min-width:0; }
+.route-summary { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 17px; }
+.route-summary span { border:1px solid var(--border); background:var(--panel); padding:12px 15px; font-size:12px; }
+.route-summary b { color:var(--signal); font-size:18px; margin-right:8px; }
+.routes-table-wrap { overflow:auto; max-height:60vh; }
+.routes-table { width:100%; min-width:760px; border-collapse:collapse; text-align:left; font-size:12px; }
+.routes-table th { position:sticky; top:0; background:var(--rail); color:var(--muted);
+  font:10px "Cascadia Mono", Consolas, monospace; text-transform:uppercase; letter-spacing:.08em; }
+.routes-table td, .routes-table th { padding:13px 15px; border-bottom:1px solid var(--border); }
+.routes-table tr:hover td { background:var(--panel-hi); }
+.routes-table td:first-child { font-weight:700; }
+.route-pill { display:inline-block; padding:4px 7px; border:1px solid var(--border-strong); border-radius:3px; font-size:10px; }
+.route-pill.duplicate { border-color:var(--warn); color:var(--warn); }
+.route-notes { display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:17px; }
+.route-notes .card { padding:18px; }
+.route-notes h2 { font-size:15px; margin:0 0 12px; }
+.route-notes p, #routeHistory, #routeDuplicates { font-size:12px; color:var(--muted); line-height:1.65; }
+.route-manual { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:14px; }
+.route-manual label { display:grid; gap:5px; color:var(--muted); font-size:11px; }
+.route-manual button, .route-manual .manual-result { grid-column:1/-1; }
+@media (max-width:950px) { .route-notes {grid-template-columns:1fr;} .route-manual {grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
@@ -354,6 +381,7 @@ footer strong { font-weight: 600; color: var(--aqua); }
       <a href="#overview"><span class="index">01/</span><span data-t="Visão geral">Visão geral</span></a>
       <a href="#activity"><span class="index">02/</span><span data-t="Registro operacional">Registro operacional</span></a>
       <a href="#parameters"><span class="index">03/</span><span data-t="Parâmetros">Parâmetros</span></a>
+      <a href="#routes"><span class="index">04/</span><span data-t="Rotas e aeronaves">Rotas e aeronaves</span></a>
     </nav>
     <div class="side-actions">
       <span class="eyebrow" data-t="COMANDOS / CONTROLE">COMANDOS / CONTROLE</span>
@@ -432,6 +460,53 @@ footer strong { font-weight: 600; color: var(--aqua); }
     </section>
     <footer><span data-t="Configurações persistidas no perfil ativo.">Configurações persistidas no perfil ativo.</span><strong>AM4 / CONFIGURATION SYSTEM</strong></footer>
   </main>
+  <main class="workspace settings-workspace" id="routesView" hidden>
+    <div class="topline"><span class="path">AM4 / OPERATIONS / ROUTES</span><span data-t="CADASTRO DA MALHA">CADASTRO DA MALHA</span><span class="live">● ROUTE REGISTRY</span></div>
+    <header class="settings-hero">
+      <span class="eyebrow" data-t="CONTROLE / HISTÓRICO">CONTROLE / HISTÓRICO</span>
+      <h1>ROTAS<span>.</span></h1>
+      <p data-t="Relações entre aeronaves e aeroportos, histórico de alterações, duplicidades e propostas de redirecionamento.">Relações entre aeronaves e aeroportos, histórico de alterações, duplicidades e propostas de redirecionamento.</p>
+      <a href="#overview" class="settings-back" data-t="← Voltar ao painel">← Voltar ao painel</a>
+    </header>
+    <div class="route-summary" id="routeSummary" aria-live="polite"></div>
+    <section class="card" aria-label="Relações entre aeronaves e rotas">
+      <div class="routes-header">
+        <div><strong data-t="REGISTRO DA FROTA">REGISTRO DA FROTA</strong><p data-t="Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.">Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.</p></div>
+        <div class="routes-controls">
+          <input id="routeSearch" type="search" aria-label="Buscar aeronave ou aeroporto" placeholder="Buscar aeronave ou aeroporto">
+          <button id="routeRefresh" type="button" data-t="Atualizar relatório">Atualizar relatório</button>
+        </div>
+      </div>
+      <div class="routes-table-wrap">
+        <table class="routes-table">
+          <thead><tr>
+            <th data-t="Aeronave">Aeronave</th><th data-t="Modelo">Modelo</th>
+            <th data-t="Origem">Origem</th><th data-t="Destino">Destino</th>
+            <th data-t="Lucro estimado/dia">Lucro estimado/dia</th><th data-t="Situação">Situação</th>
+            <th data-t="Última leitura">Última leitura</th>
+          </tr></thead>
+          <tbody id="routesTable"><tr><td colspan="7">—</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    <div class="route-notes">
+      <section class="card"><h2 data-t="Rotas repetidas">Rotas repetidas</h2><div id="routeDuplicates">—</div></section>
+      <section class="card"><h2 data-t="Histórico de alterações">Histórico de alterações</h2><div id="routeHistory">—</div></section>
+    </div>
+    <details class="card" style="margin-top:15px;padding:17px">
+      <summary data-t="Corrigir cadastro de uma aeronave">Corrigir cadastro de uma aeronave</summary>
+      <p data-t="A correção manual afeta somente o relatório local, nunca altera a rota no jogo.">A correção manual afeta somente o relatório local, nunca altera a rota no jogo.</p>
+      <form id="routeManual" class="route-manual">
+        <label><span data-t="ID da aeronave">ID da aeronave</span><input name="aircraft_id" required maxlength="64"></label>
+        <label><span data-t="Matrícula">Matrícula</span><input name="registration" maxlength="80"></label>
+        <label><span data-t="Modelo">Modelo</span><input name="model" maxlength="100"></label>
+        <label><span data-t="Origem (IATA/ICAO)">Origem (IATA/ICAO)</span><input name="origin_code" maxlength="4" required></label>
+        <label><span data-t="Destino (IATA/ICAO)">Destino (IATA/ICAO)</span><input name="destination_code" maxlength="4" required></label>
+        <button class="primary" type="submit" data-t="Salvar no relatório">Salvar no relatório</button>
+        <div id="routeManualResult" class="manual-result" role="status"></div>
+      </form>
+    </details>
+  </main>
 </div>
 <script>
 "use strict";
@@ -470,6 +545,23 @@ const EN = {
 
   "Ir para o conteúdo": "Skip to content", "● SISTEMA / ESTADO": "● SYSTEM / STATUS",
   "Visão geral": "Overview", "Registro operacional": "Operations log", "Parâmetros": "Parameters",
+  "Aeronaves registradas": "Registered aircraft", "Rotas duplicadas": "Duplicate routes", "Aeronaves envolvidas": "Affected aircraft",
+  "Política de duplicidade": "Duplicate policy", "Permitidas": "Allowed", "Bloqueadas": "Blocked",
+  "Alternativa": "Alternative", "dia": "day", "Nenhuma relação encontrada.": "No route relations found.",
+  "Nenhuma duplicidade identificada no histórico disponível.": "No duplicates detected in available history.",
+  "Nenhuma alteração registrada.": "No recorded changes.", "Não foi possível consultar o controle de rotas.": "Could not load route registry.",
+  "Rotas e aeronaves": "Routes and aircraft", "CADASTRO DA MALHA": "ROUTE REGISTRY", "CONTROLE / HISTÓRICO": "CONTROL / HISTORY",
+  "Relações entre aeronaves e aeroportos, histórico de alterações, duplicidades e propostas de redirecionamento.": "Aircraft/airport assignments, change history, duplicates and reroute proposals.",
+  "REGISTRO DA FROTA": "FLEET REGISTRY",
+  "Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.": "Per-profile cumulative report. Unknown data and unscanned pages are never inferred.",
+  "Buscar aeronave ou aeroporto": "Find aircraft or airport", "Atualizar relatório": "Refresh report",
+  "Aeronave": "Aircraft", "Modelo": "Model", "Origem": "Origin", "Destino": "Destination",
+  "Lucro estimado/dia": "Est. profit/day", "Situação": "Status", "Última leitura": "Last seen",
+  "Rotas repetidas": "Duplicate routes", "Histórico de alterações": "Change history",
+  "Corrigir cadastro de uma aeronave": "Correct an aircraft record",
+  "A correção manual afeta somente o relatório local, nunca altera a rota no jogo.": "Manual corrections affect only the local registry, not routes in the game.",
+  "ID da aeronave": "Aircraft ID", "Matrícula": "Registration", "Origem (IATA/ICAO)": "Origin (IATA/ICAO)",
+  "Destino (IATA/ICAO)": "Destination (IATA/ICAO)", "Salvar no relatório": "Save to registry",
   "COMANDOS / CONTROLE": "COMMAND / CONTROL", "SUA COMPANHIA EM TEMPO REAL": "YOUR AIRLINE IN REAL TIME",
   "Uma visão clara de tudo que importa. Decisões, recursos e atividade da frota em um só lugar.": "Everything that matters. Decisions, resources and fleet activity in one place.",
   "01 / TELEMETRIA DA COMPANHIA": "01 / AIRLINE TELEMETRY", "02 / CENTRO DE OPERAÇÕES": "02 / OPERATIONS CENTER",
@@ -932,9 +1024,12 @@ async function loadSettings() {
 function activateWorkspaceFromHash() {
   const target = location.hash;
   const isSettings = target === "#parameters";
-  $("overview").hidden = isSettings;
+  const isRoutes = target === "#routes";
+  $("overview").hidden = isSettings || isRoutes;
   $("settingsView").hidden = !isSettings;
-  const current = isSettings ? "#parameters" : target === "#activity" ? "#activity" : "#overview";
+  $("routesView").hidden = !isRoutes;
+  if (isRoutes) { loadRoutes(); }
+  const current = isRoutes ? "#routes" : isSettings ? "#parameters" : target === "#activity" ? "#activity" : "#overview";
   for (const link of document.querySelectorAll(".nav-list a")) {
     const selected = link.getAttribute("href") === current;
     link.classList.toggle("active", selected);
@@ -949,6 +1044,102 @@ function activateWorkspaceFromHash() {
 window.addEventListener("hashchange", activateWorkspaceFromHash);
 activateWorkspaceFromHash();
 
+
+// ------------------------------------------------------------------ persistent route registry
+let routeReport = null;
+let lastRouteFetch = 0;
+const airportLabel = value => {
+  if (!value) { return "—"; }
+  return value.code || value.name || (value.id ? "#" + value.id : "—");
+};
+function renderRoutes(report) {
+  routeReport = report;
+  const metrics = $("routeSummary");
+  metrics.textContent = "";
+  for (const [count, label] of [
+    [report.total || 0, tr("Aeronaves registradas")],
+    [report.duplicate_routes || 0, tr("Rotas duplicadas")],
+    [report.affected_aircraft || 0, tr("Aeronaves envolvidas")],
+    [report.allow_duplicates ? tr("Permitidas") : tr("Bloqueadas"), tr("Política de duplicidade")]
+  ]) {
+    const item = document.createElement("span");
+    const strong = document.createElement("b"); strong.textContent = String(count);
+    item.append(strong, " " + label); metrics.appendChild(item);
+  }
+  const query = $("routeSearch").value.toLocaleLowerCase();
+  const tbody = $("routesTable"); tbody.textContent = "";
+  let count = 0;
+  for (const row of report.relations || []) {
+    const origin = airportLabel(row.origin), destination = airportLabel(row.destination);
+    const proposal = row.proposal ? " · " + tr("Alternativa") + ": " + (row.proposal.destination || row.proposal.destination_id || "") +
+      " (~" + money(row.proposal.profit_per_day) + "/" + tr("dia") + ")" : "";
+    const searchText = [row.aircraft_id, row.registration, row.model, origin, destination, row.status, proposal].join(" ").toLocaleLowerCase();
+    if (query && !searchText.includes(query)) { continue; }
+    count++;
+    const trEl = document.createElement("tr");
+    const cols = [
+      (row.registration || row.aircraft_id || "—") + " #" + (row.aircraft_id || "?"),
+      row.model || "—", origin, destination,
+      row.profit_per_day == null ? "—" : money(Math.round(row.profit_per_day)),
+      (row.status || "—").replaceAll("_", " ") + proposal,
+      row.last_seen ? new Date(row.last_seen * 1000).toLocaleString(LANG === "en" ? "en-GB" : "pt-BR") : "—"
+    ];
+    for (let i = 0; i < cols.length; i++) {
+      const td = document.createElement("td");
+      if (i === 5) {
+        const status = document.createElement("span");
+        status.className = "route-pill" + (row.duplicate ? " duplicate" : "");
+        status.textContent = cols[i]; td.appendChild(status);
+      } else { td.textContent = cols[i]; }
+      trEl.appendChild(td);
+    }
+    tbody.appendChild(trEl);
+  }
+  if (!count) {
+    const line = document.createElement("tr"), cell = document.createElement("td");
+    cell.colSpan = 7; cell.textContent = tr("Nenhuma relação encontrada.");
+    line.appendChild(cell); tbody.appendChild(line);
+  }
+  const duplicates = $("routeDuplicates"); duplicates.textContent = "";
+  if (!report.duplicates || !report.duplicates.length) { duplicates.textContent = tr("Nenhuma duplicidade identificada no histórico disponível."); }
+  for (const group of report.duplicates || []) {
+    const line = document.createElement("p");
+    line.textContent = (group.route || "?") + " · " +
+      group.aircraft.map(a => a.registration || a.id).join(" / ");
+    duplicates.appendChild(line);
+  }
+  const history = $("routeHistory"); history.textContent = "";
+  if (!report.history || !report.history.length) { history.textContent = tr("Nenhuma alteração registrada."); }
+  for (const event of (report.history || []).slice(0, 15)) {
+    const line = document.createElement("p");
+    line.textContent = new Date(event.at * 1000).toLocaleString(LANG === "en" ? "en-GB" : "pt-BR") +
+      " · " + (event.registration || event.aircraft_id || "") + " · " +
+      (event.action || "").replaceAll("_", " ") +
+      (event.route ? " · " + event.route : "");
+    history.appendChild(line);
+  }
+}
+async function loadRoutes() {
+  try {
+    const result = await api("/api/routes");
+    lastRouteFetch = Date.now();
+    if (!result || !Array.isArray(result.relations)) { throw new Error("Invalid routes response"); }
+    renderRoutes(result);
+  } catch (_) {
+    $("routeDuplicates").textContent = tr("Não foi possível consultar o controle de rotas.");
+  }
+}
+$("routeSearch").addEventListener("input", () => { if (routeReport) { renderRoutes(routeReport); } });
+$("routeRefresh").addEventListener("click", loadRoutes);
+$("routeManual").addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = Object.fromEntries(new FormData(form).entries());
+  const result = await api("/api/routes", {action: "register", ...data});
+  $("routeManualResult").textContent = result.message || tr("Resposta inválida");
+  if (result.ok) { form.reset(); await loadRoutes(); }
+});
+
 // ------------------------------------------------------------------ controls and polling
 for (const [id, action] of [["btnStart", "start"], ["btnStop", "stop"], ["btnNow", "run_now"]]) {
   $(id).onclick = async () => { $(id).disabled = true; await api("/api/control", {action}); tick(); };
@@ -958,6 +1149,7 @@ async function tick() {
     renderStatus(await api("/api/status"));
     const log = await api("/api/log?since=" + lastId);
     if (log.lines && log.lines.length) { addLines(log.lines); }
+    if (!$("routesView").hidden && Date.now() - lastRouteFetch > 15000) { await loadRoutes(); }
   } catch (e) {
     $("state").textContent = tr("Sem conexão com o bot"); $("pill").className = "pill ERROR";
   }

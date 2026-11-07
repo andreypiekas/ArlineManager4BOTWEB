@@ -521,12 +521,14 @@ class Bot:
             self._guard(lambda: run_maintenance(self), "programar a manutenção")
         if opt("auto_seats") or self.config.get_bool("options", "auto_mods", True):
             self._guard(lambda: optimize_seats(self), "verificar a oficina (assentos e melhorias)")
+        # Reconcile persisted aircraft-route assignments before departing again:
+        # duplicates can be addressed only while an aircraft is at a base.
+        # The registry is also updated when automatic buying and routing are off.
+        self._guard(lambda: manage_fleet(self), "auditar rotas e gerenciar a frota")
         if opt("auto_depart"):
             self._guard(self._depart_all, "decolar aeronaves")
         if opt("autobuy_fuel") or opt("autobuy_co2"):
             self._guard(self._check_market, "verificar o mercado de combustível / CO₂")
-        if opt("auto_route") or opt("autobuy_aircraft"):
-            self._guard(lambda: manage_fleet(self), "gerenciar a frota")
         if opt("auto_checklist"):
             self._guard(lambda: check_checklist(self), "verificar a lista de tarefas")
         self._guard(self._maybe_daily_summary, "enviar o resumo diário")
