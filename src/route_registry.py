@@ -82,32 +82,43 @@ def same_route(first: dict, second: dict) -> bool:
                 (endpoint_matches(a, d) and endpoint_matches(b, c)))
 
 
-def eligible_for_reroute(row: dict, now: Optional[float] = None,
-                         *, verified_hub: bool = False) -> bool:
-    """Fail closed unless the live game freshly confirms route, base and endpoints.
+def reroute_block_reason(row: dict, now: Optional[float] = None,
+                         *, verified_hub: bool = False) -> Optional[str]:
+    """Return the exact reason a duplicate cannot be moved safely.
 
-    Some game route cards expose only airport codes. Accept those *only* when
-    this cycle also independently matched the operational hub's game ID to
-    one of the codes (verified_hub), and the game explicitly confirmed that
-    this exact aircraft is grounded at its base. The actual route change
-    still requires eligible aircraft selection and an unoccupied destination.
+    The maintenance `at_base` flag means 'at a company base' and does not
+    identify WHICH base; verified_hub merely establishes that an airport of
+    the existing route appears in the player's hub selector. Neither is a
+    proven, per-aircraft origin for a new routing action.
     """
     now = time.time() if now is None else now
-    if row.get("source") != "game" or row.get("at_base") is not True:
-        return False
+    if row.get("source") != "game":
+        return "rota_nao_confirmada_no_jogo"
+    if row.get("at_base") is False:
+        return "aeronave_fora_da_base"
+    if row.get("at_base") is not True:
+        return "localizacao_nao_confirmada"
     origin, destination = row.get("origin") or {}, row.get("destination") or {}
     both_ids = bool(origin.get("id") and destination.get("id"))
     verified_code_pair = bool(
         verified_hub and origin.get("code") and destination.get("code")
     )
     if not (both_ids or verified_code_pair):
-        return False
+        return "aeroportos_nao_confirmados"
     for stamp in ("game_verified_at", "grounded_confirmed_at"):
-        elapsed = now - (row.get(stamp) or 0)
+        recorded = row.get(stamp)
+        if not isinstance(recorded, (int, float)):
+            return "comprovacao_desatualizada"
+        elapsed = now - recorded
         if elapsed < 0 or elapsed >= 180:
-            return False
-    return True
+            return "comprovacao_desatualizada"
+    return None
 
+
+def eligible_for_reroute(row: dict, now: Optional[float] = None,
+                         *, verified_hub: bool = False) -> bool:
+    """Compatibility check for read-only planning. Not proof of safe live rerouting."""
+    return reroute_block_reason(row, now, verified_hub=verified_hub) is None
 
 def _state(path: Path) -> dict:
     try:
