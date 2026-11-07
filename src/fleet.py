@@ -31,7 +31,7 @@ from gamemode import EASY, GameMode
 from helpers import clean_response, fmt, to_int
 from notify import esc
 from route_optimizer import rank_candidates
-from route_registry import RouteRegistry, endpoint
+from route_registry import RouteRegistry, eligible_for_reroute, endpoint
 
 if TYPE_CHECKING:
     from bot import Bot
