@@ -36,6 +36,16 @@ def tip(key: str):
 # Origem pt-BR → inglês. Adicionar novos textos de interface diretamente
 # em português e registrar aqui apenas quando houver tradução para inglês.
 EN: dict[str, str] = {
+    "Motorização da aeronave": "Aircraft engine configuration",
+    "Configuração do motor": "Engine configuration",
+    "Critério de motorização": "Engine selection",
+    "Padrão do jogo (não alterar)": "Game default (do not change)",
+    "Mais rápido (dados confirmados)": "Fastest (verified data)",
+    "Menor consumo (dados confirmados)": "Lowest fuel burn (verified data)",
+    "Motor específico (nome)": "Specific engine (by name)",
+    "Nome do motor": "Engine name",
+    "Ex.: Trent 972": "E.g. Trent 972",
+    "Se a motorização não puder ser confirmada, a compra será bloqueada.": "Purchases are blocked when engine choice cannot be verified.",
     "Escolha a progressão automática ou selecione uma aeronave na lista. Para comprar apenas o modelo escolhido, desative compras intermediárias.": "Choose automatic progression or select an aircraft from the list. Disable interim purchases to buy only the selected model.",
     "Mercado": "Market",
     "Frota": "Fleet",

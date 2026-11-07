@@ -433,6 +433,43 @@ class App(ctk.CTk):
         self.goal_bar.grid(row=1, column=0, sticky="ew", padx=12, pady=(2, 6))
         self.goal_detail = ctk.CTkLabel(panel, text="", font=self.font_small, anchor="nw", justify="left", wraplength=300)
         self.goal_detail.grid(row=2, column=0, sticky="nsew", padx=12, pady=(0, 8))
+
+        motor_panel = ctk.CTkFrame(right, border_width=1, border_color=BORDER)
+        motor_panel.grid(row=1, column=0, sticky="ew", pady=(10, 0))
+        motor_panel.grid_columnconfigure(1, weight=1)
+        ctk.CTkLabel(motor_panel, text=t("Configuração do motor"), font=self.font_bold,
+                     anchor="w").grid(row=0, column=0, columnspan=2, padx=12, pady=(10, 6), sticky="w")
+        ctk.CTkLabel(motor_panel, text=t("Critério de motorização"), font=self.font_small,
+                     anchor="w").grid(row=1, column=0, padx=12, pady=4, sticky="w")
+        self.engine_modes = [
+            ("default", t("Padrão do jogo (não alterar)")),
+            ("fastest", t("Mais rápido (dados confirmados)")),
+            ("economical", t("Menor consumo (dados confirmados)")),
+            ("name", t("Motor específico (nome)")),
+        ]
+        current_engine = self.cfg.get("settings", "engine_preference", "default")
+        current_mode = "name" if current_engine.startswith("name:") else current_engine
+        engine_label = next((label for value, label in self.engine_modes if value == current_mode),
+                            self.engine_modes[0][1])
+        self.engine_combo = ctk.CTkComboBox(motor_panel, width=235, height=28,
+                                            values=[label for _, label in self.engine_modes],
+                                            font=self.font_small, state="readonly",
+                                            command=lambda _choice: self._refresh_engine_input())
+        self.engine_combo.set(engine_label)
+        self.engine_combo.grid(row=1, column=1, padx=(8, 12), pady=4, sticky="ew")
+        ctk.CTkLabel(motor_panel, text=t("Nome do motor"), font=self.font_small,
+                     anchor="w").grid(row=2, column=0, padx=12, pady=4, sticky="w")
+        self.entry_engine = ctk.CTkEntry(motor_panel, height=28, width=220,
+                                         font=self.font_small,
+                                         placeholder_text=t("Ex.: Trent 972"))
+        if current_mode == "name":
+            self.entry_engine.insert(0, current_engine[5:])
+        self.entry_engine.grid(row=2, column=1, padx=(8, 12), pady=4, sticky="ew")
+        ctk.CTkLabel(motor_panel,
+                     text=t("Se a motorização não puder ser confirmada, a compra será bloqueada."),
+                     font=self.font_small, text_color=MUTED, anchor="w", wraplength=320
+                     ).grid(row=3, column=0, columnspan=2, padx=12, pady=(4, 11), sticky="w")
+        self._refresh_engine_input()
         panel.bind("<Configure>", lambda e: self.goal_detail.configure(wraplength=max(180, e.width - 26)))
         add_tooltip(self.goal_title, tip("goal"))
         ideas = ctk.CTkFrame(right, fg_color="transparent")
@@ -776,6 +813,20 @@ class App(ctk.CTk):
             self.entry_model.delete(0, "end")
             if model:
                 self.entry_model.insert(0, model)
+        from engine_selection import parse_preference
+        try:
+            mode, motor = parse_preference(self.cfg.get("settings", "engine_preference", "default"))
+        except ValueError:
+            mode, motor = "default", ""
+        label = next((name for key, name in self.engine_modes if key == mode), self.engine_modes[0][1])
+        if self.engine_combo.get() != label and not typing(self.engine_combo):
+            self.engine_combo.set(label)
+        if self.entry_engine.get() != motor and not typing(self.entry_engine):
+            self.entry_engine.configure(state="normal")
+            self.entry_engine.delete(0, "end")
+            if motor:
+                self.entry_engine.insert(0, motor)
+        self._refresh_engine_input()
         self._cfg_seen = self.cfg.version
         self._refresh_goal_panel()
 
@@ -802,6 +853,11 @@ class App(ctk.CTk):
         log.info("Parando após concluir a etapa atual ...")
         self.bot.stop()
 
+    def _refresh_engine_input(self) -> None:
+        mode = next((value for value, label in self.engine_modes
+                     if label == self.engine_combo.get()), "default")
+        self.entry_engine.configure(state="normal" if mode == "name" else "disabled")
+
     def _save_settings(self, silent: bool = False) -> bool:
         values: dict[str, int] = {}
         for key, label in ALL_FIELDS:
@@ -826,6 +882,16 @@ class App(ctk.CTk):
         elif goal and self._market:
             log.warning("Não encontrei «%s» no mercado salvo; o bot fará uma busca pelo nome.", goal)
         self.cfg.set("settings", "goal_model", goal)
+        from engine_selection import EngineSelectionError, validate_preference
+        mode = next((value for value, label in self.engine_modes
+                     if label == self.engine_combo.get()), "default")
+        try:
+            motor = validate_preference("name:" + self.entry_engine.get().strip()
+                                        if mode == "name" else mode)
+        except EngineSelectionError as exc:
+            log.warning("Não foi possível salvar a motorização: %s", exc)
+            return False
+        self.cfg.set("settings", "engine_preference", motor)
         self.cfg.save()
         self._cfg_seen = self.cfg.version
         if not silent:

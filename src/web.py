@@ -206,6 +206,12 @@ class WebDashboard:
             self.cfg.set("options", key, "on" if value else "off")
             if key in ("auto_marketing", "marketing_eco"):
                 self.bot.marketing_next_check = 0.0
+        if "engine_preference" in texts:
+            try:
+                from engine_selection import validate_preference
+                texts["engine_preference"] = validate_preference(str(texts["engine_preference"]))
+            except ValueError as exc:
+                return False, str(exc)
         for key, value in texts.items():
             value = str(value).strip()[:80]
             self.cfg.set("settings", key, "auto" if key == "goal_model" and is_auto_goal(value) else value)
