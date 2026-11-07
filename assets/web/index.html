@@ -497,11 +497,11 @@ footer strong { font-weight: 600; color: var(--aqua); }
       <summary data-t="Corrigir cadastro de uma aeronave">Corrigir cadastro de uma aeronave</summary>
       <p data-t="A correção manual afeta somente o relatório local, nunca altera a rota no jogo.">A correção manual afeta somente o relatório local, nunca altera a rota no jogo.</p>
       <form id="routeManual" class="route-manual">
-        <label data-t="ID da aeronave">ID da aeronave<input name="aircraft_id" required maxlength="64"></label>
-        <label data-t="Matrícula">Matrícula<input name="registration" maxlength="80"></label>
-        <label data-t="Modelo">Modelo<input name="model" maxlength="100"></label>
-        <label data-t="Origem (IATA/ICAO)">Origem (IATA/ICAO)<input name="origin_code" maxlength="4" required></label>
-        <label data-t="Destino (IATA/ICAO)">Destino (IATA/ICAO)<input name="destination_code" maxlength="4" required></label>
+        <label><span data-t="ID da aeronave">ID da aeronave</span><input name="aircraft_id" required maxlength="64"></label>
+        <label><span data-t="Matrícula">Matrícula</span><input name="registration" maxlength="80"></label>
+        <label><span data-t="Modelo">Modelo</span><input name="model" maxlength="100"></label>
+        <label><span data-t="Origem (IATA/ICAO)">Origem (IATA/ICAO)</span><input name="origin_code" maxlength="4" required></label>
+        <label><span data-t="Destino (IATA/ICAO)">Destino (IATA/ICAO)</span><input name="destination_code" maxlength="4" required></label>
         <button class="primary" type="submit" data-t="Salvar no relatório">Salvar no relatório</button>
         <div id="routeManualResult" class="manual-result" role="status"></div>
       </form>
@@ -545,6 +545,11 @@ const EN = {
 
   "Ir para o conteúdo": "Skip to content", "● SISTEMA / ESTADO": "● SYSTEM / STATUS",
   "Visão geral": "Overview", "Registro operacional": "Operations log", "Parâmetros": "Parameters",
+  "Aeronaves registradas": "Registered aircraft", "Rotas duplicadas": "Duplicate routes", "Aeronaves envolvidas": "Affected aircraft",
+  "Política de duplicidade": "Duplicate policy", "Permitidas": "Allowed", "Bloqueadas": "Blocked",
+  "Alternativa": "Alternative", "dia": "day", "Nenhuma relação encontrada.": "No route relations found.",
+  "Nenhuma duplicidade identificada no histórico disponível.": "No duplicates detected in available history.",
+  "Nenhuma alteração registrada.": "No recorded changes.", "Não foi possível consultar o controle de rotas.": "Could not load route registry.",
   "Rotas e aeronaves": "Routes and aircraft", "CADASTRO DA MALHA": "ROUTE REGISTRY", "CONTROLE / HISTÓRICO": "CONTROL / HISTORY",
   "Relações entre aeronaves e aeroportos, histórico de alterações, duplicidades e propostas de redirecionamento.": "Aircraft/airport assignments, change history, duplicates and reroute proposals.",
   "REGISTRO DA FROTA": "FLEET REGISTRY",
