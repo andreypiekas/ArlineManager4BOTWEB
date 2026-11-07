@@ -30,7 +30,7 @@ from gamemode import EASY, GameMode
 from helpers import clean_response, fmt, to_int
 from notify import esc
 from route_optimizer import rank_candidates
-from route_airports import match_hub_options, code_from_candidate
+from route_airports import match_hub_options, code_from_candidate, explain_hub_options
 from route_registry import RouteRegistry, eligible_for_reroute, endpoint
 
 if TYPE_CHECKING:
@@ -216,6 +216,14 @@ return Array.from(document.querySelectorAll("#popContent [id^='routeMainList']")
 def audit_routes(bot: "Bot", registry: RouteRegistry) -> None:
     """Accumulate verified relationships visible on the current page, never guess hidden pages."""
     rows = bot.js(_ROUTE_AUDIT_JS) or []
+    # Maintenance was read earlier in this cycle. Unlike the routes list,
+    # it exposes an explicit, per-aircraft at-base flag. Reuse it as read-only
+    # ground evidence without revisiting paginated aircraft lists.
+    recent = getattr(bot, "recent_fleet", None)
+    fleet = recent(180) if callable(recent) else None
+    grounded = {str(ac.id): ac.at_base for ac in fleet or []
+                if getattr(ac, "id", None) is not None}
+    verified_ground = 0
     detected = 0
     for row in rows:
         identity = str(row.get("aircraft_id") or "")
@@ -226,6 +234,9 @@ def audit_routes(bot: "Bot", registry: RouteRegistry) -> None:
         base = row.get("at_base")
         if row.get("in_flight"):
             base = False
+        elif base is None and identity in grounded:
+            base = grounded[identity]
+            verified_ground += 1
         origin = endpoint(row.get("origin_id"), row.get("origin_code"))
         destination = endpoint(row.get("destination_id"), row.get("destination_code"))
         if registry.record(identity, registration, model, origin, destination, at_base=base):
@@ -243,6 +254,12 @@ def audit_routes(bot: "Bot", registry: RouteRegistry) -> None:
             "Modo simulação não impede a leitura.",
             len(rows), detected, missing,
         )
+        if fleet is not None:
+            log.info(
+                "Controle de rotas: manutenção confirmou localização de %d aeronaves "
+                "da página atual; nenhuma localização foi presumida para as demais.",
+                verified_ground,
+            )
     else:
         log.warning(
             "Controle de rotas: nenhuma aeronave reconhecida na página atual. "
@@ -415,8 +432,9 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             # Route labels are not direction-of-flight proof: for OSL↔DAC
             # either airport may be the actual hub. The unique match in the
             # authenticated game selector decides the planning origin.
+            hub_options = bot.js(_HUB_OPTIONS_JS) or []
             hub_match = match_hub_options(
-                hub_code, current_dest_code, bot.js(_HUB_OPTIONS_JS) or []
+                hub_code, current_dest_code, hub_options
             ) if hub_code and current_dest_code else None
             if hub_match:
                 hub_id = hub_match.airport_id
@@ -428,6 +446,17 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                     row["registration"], hub_code, hub_id, current_dest_code,
                 )
             elif not (hub_id and destination.get("id")):
+                diag = explain_hub_options(hub_code, current_dest_code, hub_options)
+                log.warning(
+                    "Controle de rotas: %s — seletor de bases: %s | opções %d "
+                    "(IDs válidos %d, rótulos com possíveis códigos %d), "
+                    "correspondências %s | exemplos: %s. "
+                    "A rota pode estar entre aeroportos que não são bases próprias; "
+                    "nenhuma base será presumida.",
+                    row["registration"], diag["reason"], diag["total_options"],
+                    diag["valid_ids"], diag["labels_with_possible_codes"],
+                    diag["matched"], " / ".join(diag["samples"]) or "(nenhum)",
+                )
                 pending(aircraft_id, "aguardando_identificacao_da_base")
                 continue
             # The game's hub picker must prove we are searching the same origin
