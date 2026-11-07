@@ -39,6 +39,7 @@ const rows = labels.map((route, i) => {
 const document = {
   querySelectorAll: selector => selector.includes("routeMainList") ? rows : []
 };
+globalThis.document = document;
 """
     code = mock.replace("__LABELS__", json.dumps(labels)) + (
         "\nconsole.log(JSON.stringify((new Function(" +
