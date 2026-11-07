@@ -94,3 +94,47 @@ def test_stale_game_route_is_not_authorized(tmp_path):
     row = next(r for r in snap["relations"] if r["aircraft_id"] == "101")
     decisions = plan_dispatch(["101"], snap, now=row["game_verified_at"] + 181)
     assert decisions[0].reason == "leitura_de_rota_expirada"
+
+
+def test_verified_native_click_is_targeted_and_confirmed(tmp_path):
+    registry = registry_with_duplicate(tmp_path)
+    clicked = []
+
+    class Driver:
+        def find_element(self, by, locator):
+            assert 'flightStatus' not in locator
+            assert 'data-am4-safe-depart="101"' in locator
+
+            class Button:
+                def click(self):
+                    clicked.append("101")
+
+            return Button()
+
+        def execute_script(self, code, aircraft_id):
+            assert aircraft_id == "101"
+            assert "inflightList" in code
+            return bool(clicked)
+
+    class Bot:
+        dry_run = False
+        stopping = False
+        driver = Driver()
+
+        def js(self, code, *args):
+            if "data-am4-safe-depart" in code:
+                return args == ("101", "Ajax('route_depart.php?mode=single&ids=101','runme',this)")
+            return [{
+                "id": "101",
+                "native_actions": [
+                    {"value": "Ajax('route_depart.php?mode=single&ids=101','runme',this)"}
+                ],
+            }, {"id": "102", "native_actions": []}]
+
+        def count(self, key):
+            assert key == "departures"
+
+    summary = selective_dispatch(Bot(), registry, limit=1)
+    assert clicked == ["101"]
+    assert summary["departed"] == 1
+    assert summary["status"] == "decolagens_confirmadas"
