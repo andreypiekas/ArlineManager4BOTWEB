@@ -16,7 +16,7 @@ from route_registry import RouteRegistry
 
 log = logging.getLogger("am4bot.vuelos")
 _ID = re.compile(r"^[0-9]{1,14}$")
-_REQUEST = re.compile(r"route_depart\.php\?([A-Za-z0-9_.=%&,+-]{1,220})", re.I)
+_REQUEST = re.compile(r"""route_depart\.php\?([^'"<>\s();]{1,220})""", re.I)
 
 # The game status tab uses #landedList/#flightStatus<aircraft-id>.
 # Only a *native row-scoped action* is eligible for individual submission.
