@@ -488,7 +488,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             }
             # The stored report identifies a collision, but a *fresh*, explicit
             # game reading must confirm the aircraft at base before changing it.
-            if not eligible_for_reroute(row):
+            if not eligible_for_reroute(row, verified_hub=hub_match is not None):
                 pending(aircraft_id, "aguardando_confirmacao_no_jogo", proposal=proposal)
                 continue
             if bot.dry_run:
