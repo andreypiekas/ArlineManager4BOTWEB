@@ -79,6 +79,8 @@ def snapshot(bot: "Bot", cfg: "AppConfig", state: dict, market: list[dict], rest
         "mode": t(stats.mode) if stats.mode else None,
         "updated_at": stats.updated_at,
         "money": money,
+        "money_read_at": stats.money_read_at,
+        "money_sync_seconds": max(30, min(600, cfg.get_int("settings", "cash_sync_seconds", 60))),
         "income_day": income,
         "points": stats.points,
         "reputation": stats.reputation,

@@ -95,6 +95,7 @@ class BotState(str, Enum):
 @dataclass
 class Stats:
     money: Optional[int] = None
+    money_read_at: Optional[float] = None  # last authoritative read from the game, not a spending estimate
     points: Optional[int] = None
     fuel: Optional[int] = None
     fuel_capacity: Optional[int] = None
@@ -558,6 +559,34 @@ class Bot:
         except Exception:  # noqa: BLE001
             return False
 
+    def _sync_cash_from_game(self) -> bool:
+        """Reload the game's own page and read its authoritative balance.
+
+        Runs exclusively on the bot thread while it is between cycles.
+        Web requests NEVER touch Selenium, so remote changes (e.g. in the
+        mobile app) can be reflected without risking a concurrent click.
+        """
+        if self._stop.is_set() or self.driver is None:
+            return False
+        self.driver.refresh()
+        if self._stop.is_set():
+            return False
+        if not self._is_logged_in(timeout=5):
+            log_money.warning("Não consegui validar a sessão durante a sincronização do caixa; novo ciclo solicitado.")
+            self.run_now()
+            return False
+        balance = self.read_money()
+        if balance is None:
+            log_money.warning("Não consegui ler o caixa após atualizar a página; mantendo o último saldo confirmado.")
+            return False
+        previous = self.stats().money
+        self.update_stats(money=balance, money_read_at=time.time())
+        if previous != balance:
+            log_money.info("Saldo sincronizado com o jogo: $%s (anterior $%s).", fmt(balance), fmt(previous))
+        else:
+            log_money.debug("Saldo sincronizado sem alteração: $%s.", fmt(balance))
+        return True
+
     def _sleep_until_next_cycle(self) -> None:
         low = max(1, self.config.get_int("settings", "cycle_min_minutes", 5))
         high = max(low, self.config.get_int("settings", "cycle_max_minutes", 10))
@@ -568,9 +597,26 @@ class Bot:
             reason = f" (verificação antecipada: {self._next_event[1]})"
         self.next_cycle_at = time.time() + seconds
         log.info("Próxima verificação em %d min %02d s%s.", seconds // 60, seconds % 60, reason)
-        self._wake.wait(seconds)
-        self._wake.clear()
-        self.next_cycle_at = None
+        deadline = time.monotonic() + seconds
+        try:
+            while not self._stop.is_set():
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                interval = max(30, min(600, self.config.get_int("settings", "cash_sync_seconds", 60)))
+                # A user-requested run, or shutdown, must interrupt the wait.
+                if self._wake.wait(min(remaining, interval)):
+                    break
+                if self._stop.is_set() or self._wake.is_set() or deadline - time.monotonic() <= 0:
+                    break
+                try:
+                    self._sync_cash_from_game()
+                except _SOFT_ERRORS as exc:
+                    log_money.warning("Não consegui sincronizar o caixa (%s); tentarei novamente.", exc.__class__.__name__)
+                # Fatal browser disconnections must propagate to _run's restart path.
+        finally:
+            self._wake.clear()
+            self.next_cycle_at = None
 
     def note_event(self, seconds: Optional[int], what: str) -> None:
         """Remember the earliest upcoming event (landing, price change) to shorten the next wait."""
@@ -719,7 +765,8 @@ class Bot:
     def _read_header(self) -> None:
         money = to_int(self._text(self._sel("money"), timeout=5))
         points = to_int(self._text(self._sel("points"), timeout=3))
-        self.update_stats(money=money, points=points)
+        self.update_stats(money=money, points=points,
+                          money_read_at=time.time() if money is not None else None)
         stats = self.stats()
         if money is not None and add_money_sample(self._state, money, fuel=stats.fuel, co2=stats.co2):
             self._save_state()

@@ -245,6 +245,7 @@ A lista de modelos é preenchida após o bot consultar o mercado. Caso esteja va
 
 - **Campanha de reputação (1-4)** — Nível da campanha de reputação entre 1 e 4.
 - **Duração da campanha (h)** — Duração das campanhas: 4, 8, 12, 16, 20 ou 24 horas.
+- **Sincronizar saldo a cada (segundos)** — Intervalo entre 30 e 600 segundos (padrão 60). Enquanto aguarda o próximo ciclo, o bot recarrega a página do jogo para conferir o saldo real; isso reflete gastos e receitas registrados pelo celular sem aguardar o ciclo completo. A sincronização só ocorre com o bot em execução e usa a mesma sessão do navegador, sem abrir outras abas ou interferir nas ações em andamento.
 - **Decolar aeronaves** — Decola as aeronaves disponíveis em cada ciclo.
 - **Comprar combustível** — Compra combustível conforme os critérios da aba Mercado.
 - **Comprar CO₂** — Compra CO₂ conforme os critérios da aba Mercado.
@@ -256,6 +257,12 @@ A lista de modelos é preenchida após o bot consultar o mercado. Caso esteja va
 - **Navegador em segundo plano (headless)** — Executa o navegador oculto; CAPTCHAs ainda exigem intervenção manual.
 - **Reiniciar automaticamente após erro** — Reinicia automaticamente após falhas, com intervalo crescente.
 - **Simulação (sem gastos)** — Simula ações sem executar compras ou mudanças no jogo.
+
+### Saldo em tempo real no painel
+
+O valor de **Dinheiro** é conferido automaticamente na página do jogo enquanto o bot aguarda o próximo ciclo. O painel web consulta o estado local a cada 2 segundos e mostra o horário da última leitura confirmada; se a leitura ficar atrasada, avisa que o saldo está desatualizado.
+
+A atualização é executada **somente pela thread do bot**, sem operações Selenium concorrentes com o painel web. A página do jogo é recarregada para receber valores atualizados do servidor, inclusive quando ocorrer uma compra manual no celular. Se o jogo não permitir atualizar a sessão, o último valor conhecido é mantido e a leitura não é falsamente marcada como recente. O saldo não é consultado quando o bot estiver parado.
 
 ### Aba Telegram — escolha exatamente quais alertas receber
 

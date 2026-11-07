@@ -38,7 +38,7 @@ MARKETING_FIELDS = [
     ("marketing_campaign", "Campanha de reputação (1-4)"),
     ("marketing_hours", "Duração da campanha (h)"),
 ]
-OPTIONS_FIELDS = MARKETING_FIELDS
+OPTIONS_FIELDS = MARKETING_FIELDS + [("cash_sync_seconds", "Sincronizar saldo a cada (segundos)")]
 TELEGRAM_FIELDS = [("summary_hour", "Horário do resumo diário (0-23)")]
 ALL_FIELDS = MARKET_FIELDS + FLEET_FIELDS + AIRCRAFT_FIELDS + OPTIONS_FIELDS + TELEGRAM_FIELDS
 
@@ -115,6 +115,7 @@ OPTION_DEFAULTS = {"auto_restart": True, "auto_hangar": True, "goal_invest": Tru
 
 _LIMITS = {
     "summary_hour": (0, 23),
+    "cash_sync_seconds": (30, 600),
     "marketing_campaign": (1, 4),
     "marketing_hours": (4, 24),
     "cycle_min_minutes": (1, None),
