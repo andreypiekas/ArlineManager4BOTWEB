@@ -1,0 +1,204 @@
+"""Persistent per-profile aircraft/route registry and undirected duplicate detection.
+
+Only confirmed actions, explicit game attributes or deliberate manual corrections
+can change a route assignment. A missing aircraft on a paginated game page does
+not prove removal. The registry is a cache/audit trail, not game authority.
+"""
+from __future__ import annotations
+
+import json
+import re
+import threading
+import time
+import unicodedata
+from copy import deepcopy
+from pathlib import Path
+from typing import Optional
+
+import paths
+
+_LOCK = threading.RLock()
+_MAX_HISTORY = 1500
+_AIRPORT_ID_RE = re.compile(r"^\d{1,12}$")
+_IATA_RE = re.compile(r"^[A-Z]{3,4}$")
+
+
+def registry_file() -> Path:
+    return paths.current().data / "routes_registry.json"
+
+
+def _normalize(raw: object) -> str:
+    text = unicodedata.normalize("NFKD", str(raw or ""))
+    return " ".join("".join(c for c in text if not unicodedata.combining(c)).strip().upper().split())
+
+
+def endpoint(airport_id: object = "", code: object = "", name: object = "") -> dict:
+    """Create a conservative endpoint identity, preferring game's stable airport ID."""
+    ident = str(airport_id or "").strip()
+    code_norm = _normalize(code)
+    if not _AIRPORT_ID_RE.fullmatch(ident):
+        ident = ""
+    if not _IATA_RE.fullmatch(code_norm):
+        code_norm = ""
+    name_norm = _normalize(name)
+    return {"id": ident, "code": code_norm, "name": str(name or "").strip(),
+            "normalized_name": name_norm}
+
+
+def endpoint_matches(a: dict, b: dict) -> bool:
+    """Compare stable IDs or exact normalized codes; names only when both lack stronger IDs."""
+    if a.get("id") and b.get("id"):
+        return a["id"] == b["id"]
+    if a.get("code") and b.get("code"):
+        return a["code"] == b["code"]
+    if (not a.get("id") and not b.get("id") and
+            not a.get("code") and not b.get("code")):
+        an, bn = a.get("normalized_name"), b.get("normalized_name")
+        return bool(an and bn and an == bn)
+    return False
+
+
+def route_key(origin: dict, destination: dict) -> Optional[str]:
+    """Canonical A↔B signature, independent of direction, only if both endpoints exist."""
+    def code(value: dict) -> str:
+        if value.get("id"):
+            return "id:" + value["id"]
+        if value.get("code"):
+            return "code:" + value["code"]
+        if value.get("normalized_name"):
+            return "name:" + value["normalized_name"]
+        return ""
+    first, second = code(origin), code(destination)
+    if not first or not second or first == second:
+        return None
+    return " ↔ ".join(sorted((first, second)))
+
+
+def same_route(first: dict, second: dict) -> bool:
+    a, b = first.get("origin", {}), first.get("destination", {})
+    c, d = second.get("origin", {}), second.get("destination", {})
+    return bool((endpoint_matches(a, c) and endpoint_matches(b, d)) or
+                (endpoint_matches(a, d) and endpoint_matches(b, c)))
+
+
+def _state(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"version": 1, "aircraft": {}, "history": []}
+    if not isinstance(data, dict) or not isinstance(data.get("aircraft", {}), dict):
+        return {"version": 1, "aircraft": {}, "history": []}
+    data.setdefault("history", [])
+    return data
+
+
+class RouteRegistry:
+    def __init__(self, path: Optional[Path] = None):
+        self.path = Path(path) if path else registry_file()
+
+    def _save(self, data: dict) -> None:
+        paths.write_atomic(self.path, json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True))
+
+    def record(self, aircraft_id: str, registration: str, model: str,
+               origin: dict, destination: dict, *, source: str = "game",
+               profit_per_day: Optional[float] = None, at_base: Optional[bool] = None) -> bool:
+        """Record a verified route; never overwrite another aircraft's identity."""
+        aircraft_id = str(aircraft_id or "").strip()
+        if not aircraft_id or route_key(origin, destination) is None:
+            return False
+        with _LOCK:
+            data = _state(self.path)
+            previous = data["aircraft"].get(aircraft_id, {})
+            entry = dict(previous)
+            entry.update({
+                "aircraft_id": aircraft_id,
+                "registration": str(registration or previous.get("registration") or aircraft_id),
+                "model": str(model or previous.get("model") or "?"),
+                "origin": origin,
+                "destination": destination,
+                "route_key": route_key(origin, destination),
+                "source": source,
+                "status": "ativa",
+                "last_seen": int(time.time()),
+            })
+            if profit_per_day is not None:
+                entry["profit_per_day"] = round(float(profit_per_day), 2)
+            if at_base is not None:
+                entry["at_base"] = bool(at_base)
+            if not previous or previous.get("route_key") != entry["route_key"]:
+                entry["assigned_at"] = int(time.time())
+                entry.pop("proposal", None)
+                data["history"].append({
+                    "at": int(time.time()), "aircraft_id": aircraft_id,
+                    "registration": entry["registration"], "action": "rota_registrada" if not previous else "rota_alterada",
+                    "previous": previous.get("route_key"), "route": entry["route_key"], "source": source,
+                })
+                data["history"] = data["history"][-_MAX_HISTORY:]
+            data["aircraft"][aircraft_id] = entry
+            self._save(data)
+            return True
+
+    def note(self, aircraft_id: str, status: str, *, proposal: Optional[dict] = None) -> bool:
+        """Save reroute status/profit proposal without changing the verified route."""
+        with _LOCK:
+            data = _state(self.path)
+            entry = data["aircraft"].get(str(aircraft_id))
+            if not entry:
+                return False
+            changed = entry.get("status") != status or entry.get("proposal") != proposal
+            if not changed:
+                return True
+            entry["status"] = status
+            if proposal is None:
+                entry.pop("proposal", None)
+            else:
+                entry["proposal"] = proposal
+            data["history"].append({
+                "at": int(time.time()), "aircraft_id": str(aircraft_id),
+                "registration": entry.get("registration", ""),
+                "action": status, "proposal": proposal,
+            })
+            data["history"] = data["history"][-_MAX_HISTORY:]
+            self._save(data)
+            return True
+
+    def snapshot(self, *, allow_duplicates: bool = True) -> dict:
+        with _LOCK:
+            data = deepcopy(_state(self.path))
+        rows = list(data["aircraft"].values())
+        rows.sort(key=lambda r: (r.get("registration", ""), r.get("aircraft_id", "")))
+        duplicates: list[list[dict]] = []
+        visited: set[str] = set()
+        for row in rows:
+            identity = row.get("aircraft_id", "")
+            if identity in visited or not route_key(row.get("origin", {}), row.get("destination", {})):
+                continue
+            group = [other for other in rows if same_route(row, other)]
+            if len(group) > 1:
+                duplicates.append(group)
+                visited.update(entry["aircraft_id"] for entry in group)
+        duplicate_ids = {entry["aircraft_id"] for group in duplicates for entry in group}
+        for row in rows:
+            row["duplicate"] = row.get("aircraft_id") in duplicate_ids
+        return {
+            "relations": rows,
+            "duplicates": [{"route": group[0].get("route_key"), "aircraft": [
+                {"id": r.get("aircraft_id"), "registration": r.get("registration")} for r in group
+            ]} for group in duplicates],
+            "history": data["history"][-80:][::-1],
+            "total": len(rows), "duplicate_routes": len(duplicates),
+            "affected_aircraft": len(duplicate_ids),
+            "allow_duplicates": bool(allow_duplicates),
+            "partial": True,  # the game may expose only a page of the fleet at a time
+        }
+
+    def is_occupied(self, origin: dict, destination: dict, except_aircraft: str = "") -> bool:
+        if route_key(origin, destination) is None:
+            return False
+        with _LOCK:
+            records = _state(self.path)["aircraft"].values()
+        return any(
+            str(row.get("aircraft_id")) != str(except_aircraft)
+            and same_route({"origin": origin, "destination": destination}, row)
+            for row in records
+        )
