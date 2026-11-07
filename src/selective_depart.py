@@ -141,6 +141,10 @@ def verified_native_action(aircraft_id: str, actions: list[dict]) -> str:
         return ""
     if "mode" not in query or not query["mode"][0]:
         return ""
+    # Unknown server interpretation of mode=all: never send it, even if ids
+    # contains only one aircraft. The endpoint might ignore ids entirely.
+    if query["mode"][0].lower() == "all":
+        return ""
     # Do not execute a URL copied from logs or stored history; only from a
     # per-aircraft control found in today's live landed row.
     return value
