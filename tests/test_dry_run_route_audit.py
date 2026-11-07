@@ -18,6 +18,12 @@ class FakeButton:
 class FakeDepartBot:
     dry_run = True
 
+    class Config:
+        def get_bool(self, section, name, default=False):
+            return default
+
+    config = Config()
+
     def __init__(self):
         self.opened = False
         self.closed = False
