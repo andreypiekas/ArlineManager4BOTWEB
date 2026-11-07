@@ -165,7 +165,7 @@ return Array.from(document.querySelectorAll("#popContent [id^='routeMainList']")
   };
   const routeEl = row.querySelector("[data-route], .route-name, .route-code, .routeName");
   const routeText = routeEl ? (routeEl.getAttribute("data-route") || routeEl.textContent || "") : "";
-  const codes = routeText.match(/\\b([A-Za-z]{3,4})\\s*(?:→|↔|–|-|\/|to)\\s*([A-Za-z]{3,4})\\b/i);
+  const codes = routeText.match(/\\b([A-Za-z]{3,4})\\s*(?:→|↔|–|-|\\/|to)\\s*([A-Za-z]{3,4})\\b/i);
   // An explicit hook containing BOTH dep and arr IDs is safe route evidence.
   const endpointHook = Array.from(row.querySelectorAll("[onclick], [href]"))
     .map(e => e.getAttribute("onclick") || e.getAttribute("href") || "")
