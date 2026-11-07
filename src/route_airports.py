@@ -9,6 +9,8 @@ import re
 from dataclasses import dataclass
 from typing import Iterable, Mapping, Optional
 
+from airport_catalog import by_id, game_code
+
 _CODE = re.compile(r"^[A-Z]{3,4}$")
 _GAME_ID = re.compile(r"^[0-9]{1,12}$")
 
@@ -50,8 +52,11 @@ def match_hub_options(first_code: str, second_code: str,
         if not _GAME_ID.fullmatch(ident):
             continue
         label = " ".join(str(option.get(k) or "") for k in ("text", "code", "title"))
+        known = by_id(ident)
         for match, opposite in ((first_code, second_code), (second_code, first_code)):
-            if code_in_label(match, label):
+            if code_in_label(match, label) or (
+                known is not None and match in (known.iata, known.icao)
+            ):
                 matches.add((ident, match, opposite))
     if len(matches) != 1:
         return None
@@ -74,7 +79,7 @@ def code_from_candidate(row: Mapping[str, object]) -> str:
     if head:
         return head[1]
     tail = re.search(r"\s+[/|]\s*([A-Z]{3,4})$", label)
-    return tail[1] if tail else ""
+    return tail[1] if tail else game_code(row.get("arr") or row.get("id"))
 
 
 def explain_hub_options(first_code: str, second_code: str,
@@ -98,7 +103,10 @@ def explain_hub_options(first_code: str, second_code: str,
         if not _GAME_ID.fullmatch(airport_id):
             continue
         valid_ids += 1
-        declared = _code(opt.get("code"))
+        known = by_id(airport_id)
+        declared = _code(opt.get("code")) or (
+            known.iata if known is not None else ""
+        )
         text = label.upper().strip()
         # Plain four-letter city names such as "Oslo" are NOT airport codes.
         explicitly_coded = bool(
@@ -110,12 +118,15 @@ def explain_hub_options(first_code: str, second_code: str,
         if declared or explicitly_coded:
             codes_seen += 1
         for code in matched:
-            if code_in_label(code, label):
+            if code_in_label(code, label) or (
+                known is not None and code in (known.iata, known.icao)
+            ):
                 matched[code].append(airport_id)
         if len(details) < 5:
             # Strip control characters and cap label length.
-            safe = "".join(char for char in label if char.isprintable())[:75]
-            details.append(f"{airport_id}: {safe}")
+            safe = "".join(char for char in label if char.isprintable())[:65]
+            suffix = f" [{known.iata}/{known.icao}]" if known is not None else ""
+            details.append(f"{airport_id}: {safe}{suffix}")
     if valid_ids == 0:
         reason = "seletor_sem_ids_validos"
     elif any(len(hits) > 1 for hits in matched.values()) or sum(map(len, matched.values())) > 1:
