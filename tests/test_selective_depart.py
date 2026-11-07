@@ -37,7 +37,7 @@ def test_untrusted_or_global_depart_actions_are_rejected():
     assert verified_native_action(id_, [{"value": "route_depart.php?mode=all&ids=24133209,24133201"}]) == ""
     assert verified_native_action(id_, [{"value": "route_depart.php?mode=do&id=24133201"}]) == ""
     assert verified_native_action(id_, [{"value": accepted}, {"value": accepted}]) == ""
-    assert verified_native_action(id_, [{"value": "route_depart.php?mode=all&ids=24133209"}]) != ""
+    assert verified_native_action(id_, [{"value": "route_depart.php?mode=all&ids=24133209"}]) == ""
 
 
 def test_report_is_read_only_when_game_has_only_bulk_depart_all(tmp_path, caplog):
