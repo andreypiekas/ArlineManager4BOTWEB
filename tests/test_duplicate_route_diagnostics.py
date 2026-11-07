@@ -49,7 +49,7 @@ def test_duplicate_logged_with_aircraft_and_missing_numeric_airport_ids(tmp_path
     log = caplog.text
     assert "duplicidade na rota" in log
     assert "XP-101" in log and "XP-202" in log
-    assert "seletor de bases do jogo não informou um único ID" in log
+    assert "seletor de bases do jogo não confirmou um ID" in log
     assert "code:DUB ↔ code:GRU" in log
     snapshot = registry.snapshot()
     assert snapshot["duplicate_routes"] == 1
