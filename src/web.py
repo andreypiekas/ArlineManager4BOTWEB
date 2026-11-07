@@ -36,6 +36,7 @@ import paths
 from dashboard import snapshot
 from economy import AUTO_GOAL_LABEL, is_auto_goal, load_market, load_state
 from i18n import language, t, tip
+from route_registry import RouteRegistry, endpoint
 from settings_schema import ALL_FIELDS, ALL_SWITCHES, OPTION_DEFAULTS, TABS, TEXT_SETTINGS, clamp_settings, parse_int
 
 if TYPE_CHECKING:
@@ -157,6 +158,31 @@ class WebDashboard:
         lines = self.buffer.since(0)
         data["log_last"] = lines[-1]["id"] if lines else 0
         return data
+
+    def routes(self) -> dict:
+        """Thread-safe report; this endpoint never operates the Selenium driver."""
+        return RouteRegistry().snapshot(
+            allow_duplicates=self.cfg.get_bool("options", "allow_duplicate_routes", False),
+        )
+
+    def update_routes(self, payload: dict) -> tuple[bool, str]:
+        """Manual registry corrections are auditable and never change routes in-game."""
+        if payload.get("action") != "register":
+            return False, "Ação de controle de rotas desconhecida."
+        aircraft_id = str(payload.get("aircraft_id") or "").strip()[:64]
+        registration = str(payload.get("registration") or "").strip()[:80]
+        model = str(payload.get("model") or "").strip()[:100]
+        origin = endpoint(str(payload.get("origin_id") or "")[:20],
+                          str(payload.get("origin_code") or "")[:12],
+                          str(payload.get("origin_name") or "")[:100])
+        destination = endpoint(str(payload.get("destination_id") or "")[:20],
+                               str(payload.get("destination_code") or "")[:12],
+                               str(payload.get("destination_name") or "")[:100])
+        if not aircraft_id or not RouteRegistry().record(
+            aircraft_id, registration, model, origin, destination, source="registro_manual"
+        ):
+            return False, "Informe a identificação da aeronave e ambos os aeroportos."
+        return True, "Relação registrada no controle local. A rota no jogo não foi alterada."
 
     def settings(self) -> dict:
         cfg = self.cfg
@@ -314,6 +340,8 @@ class WebDashboard:
                     return self._json({"lines": dashboard.buffer.since(since)})
                 if url.path == "/api/settings":
                     return self._json(dashboard.settings())
+                if url.path == "/api/routes":
+                    return self._json(dashboard.routes())
                 self._send(HTTPStatus.NOT_FOUND, b"Not found", "text/plain")
 
             def do_POST(self) -> None:  # noqa: N802 - http.server API
@@ -331,6 +359,8 @@ class WebDashboard:
                 path = urlparse(self.path).path
                 if path == "/api/settings":
                     ok, message = dashboard.update_settings(payload)
+                elif path == "/api/routes":
+                    ok, message = dashboard.update_routes(payload)
                 elif path == "/api/control":
                     ok, message = dashboard.control(str(payload.get("action", "")))
                 else:
