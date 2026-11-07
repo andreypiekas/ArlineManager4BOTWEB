@@ -336,12 +336,11 @@ def manage_fleet(bot: "Bot") -> None:
 
 # ---------------------------------------------------------------------- duplicate-route correction
 def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -> int:
-    """Use persisted verified route relationships to propose and correct duplicates.
+    """Review persisted duplicate assignments and propose a more profitable route.
 
-    A live reroute is attempted only if the aircraft is explicitly reported at
-    its origin base, the hub and new destination are confirmed by the page, the
-    aircraft appears in the eligible selector, and the real game's route order
-    succeeds. Unverified records are reported but never used for blind writes.
+    Live reassignment of an already routed aircraft is intentionally disabled:
+    the existing creation form cannot be assumed to replace a route. The game
+    has a separate reroute UI, which must be verified before automation is safe.
     """
     report = registry.snapshot(allow_duplicates=False)
     if not report["duplicate_routes"]:
@@ -562,31 +561,6 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             pending(aircraft_id, "troca_de_rota_ainda_nao_validada", proposal=proposal)
             continue
 
-            details = bot.ajax(
-                f"route_research_route.php?dep={hub_id}&arr={candidate.arr_id}", "rDetails",
-            )
-            capable = details.find_elements(
-                By.XPATH, f".//*[@id='capAc']/option[starts-with(@value, '{aircraft_id};')]",
-            )
-            if not capable:
-                pending(aircraft_id, "aeronave_indisponivel_para_nova_rota", proposal=proposal)
-                continue
-            occupied_in_game = to_int(bot.js(_ON_ROUTE_JS)) or 0
-            if occupied_in_game:
-                pending(aircraft_id, "destino_ocupado_no_jogo", proposal=proposal)
-                continue
-            aircraft = ParkedAircraft(aircraft_id, row.get("model", ""), row["registration"], seats)
-            outcome = create_route(
-                bot, aircraft, candidate, origin_id=hub_id, reroute=True,
-                profit_per_day=economics.profit_per_day,
-            )
-            if outcome == "created":
-                changed += 1
-                log.info("Duplicidade resolvida: %s mudou para %s (~$%s/dia).",
-                         aircraft.reg, candidate.name, fmt(proposal["profit_per_day"]))
-            elif outcome == "stop":
-                pending(aircraft_id, "falha_ao_confirmar_redirecionamento", proposal=proposal)
-                return changed
     return changed
 
 
