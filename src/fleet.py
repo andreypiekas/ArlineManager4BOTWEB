@@ -166,6 +166,12 @@ return Array.from(document.querySelectorAll("#popContent [id^='routeMainList']")
   const routeEl = row.querySelector("[data-route], .route-name, .route-code, .routeName");
   const routeText = routeEl ? (routeEl.getAttribute("data-route") || routeEl.textContent || "") : "";
   const codes = routeText.match(/\\b([A-Za-z]{3,4})\\s*(?:→|↔|–|-|\/|to)\\s*([A-Za-z]{3,4})\\b/i);
+  // An explicit hook containing BOTH dep and arr IDs is safe route evidence.
+  const endpointHook = Array.from(row.querySelectorAll("[onclick], [href]"))
+    .map(e => e.getAttribute("onclick") || e.getAttribute("href") || "")
+    .find(v => /(?:[?&]|\\b)dep=\\d+/.test(v) && /(?:[?&]|\\b)arr=\\d+/.test(v)) || "";
+  const depFromHook = (endpointHook.match(/(?:[?&]|\\b)dep=(\\d+)/) || [])[1] || "";
+  const arrFromHook = (endpointHook.match(/(?:[?&]|\\b)arr=(\\d+)/) || [])[1] || "";
   const status = row.querySelector("[data-at-base], [data-at-hub], [data-grounded]");
   const atBaseRaw = status ? (status.getAttribute("data-at-base") ||
     status.getAttribute("data-at-hub") || status.getAttribute("data-grounded")) : "";
@@ -173,8 +179,8 @@ return Array.from(document.querySelectorAll("#popContent [id^='routeMainList']")
     aircraft_id: aircraftId,
     registration: label.split(" - ")[0] || aircraftId,
     model: label.includes(" - ") ? label.split(" - ").slice(1).join(" - ") : "",
-    origin_id: getAttr("data-dep", "data-origin-id"),
-    destination_id: getAttr("data-arr", "data-destination-id"),
+    origin_id: getAttr("data-dep", "data-origin-id") || depFromHook,
+    destination_id: getAttr("data-arr", "data-destination-id") || arrFromHook,
     origin_code: getAttr("data-origin-code", "data-dep-code") || (codes ? codes[1] : ""),
     destination_code: getAttr("data-destination-code", "data-arr-code") || (codes ? codes[2] : ""),
     at_base: atBaseRaw === "1" || atBaseRaw === "true" ? true :
@@ -501,6 +507,7 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 fuel_price=bot.fuel_cost_basis(), co2_price=bot.co2_cost_basis(),
                 premium=premium,
             )
+            estimates = {c.arr_id: estimate for c, estimate in ranked}
             has_estimates = any(estimate is not None for _, estimate in ranked)
             if has_estimates:
                 tries = [candidate for candidate, _ in ranked[:MAX_ROUTE_TRIES]]
@@ -539,7 +546,11 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 if on_route and not allow_duplicates:
                     log.debug("%s já tem %d aeronaves.", candidate.name, on_route)
                     continue
-                outcome = create_route(bot, aircraft, candidate, origin_id=hub_id)
+                estimated = estimates.get(candidate.arr_id)
+                outcome = create_route(
+                    bot, aircraft, candidate, origin_id=hub_id,
+                    profit_per_day=estimated.profit_per_day if estimated is not None else None,
+                )
                 break
             # An occupied route is not a valid outcome: continue with a shorter
             # search instead of giving up on this parked aircraft prematurely.
@@ -600,7 +611,10 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
     if origin_id:
         RouteRegistry().record(
             aircraft.id, aircraft.reg, aircraft.model,
-            endpoint(origin_id), endpoint(candidate.arr_id, name=candidate.name),
+            endpoint(origin_id, name=bot.js(
+                "var e=document.getElementById('hubSelect');"
+                "return e && e.selectedIndex>=0 ? e.options[e.selectedIndex].text : '';"
+            ) or ""), endpoint(candidate.arr_id, name=candidate.name),
             source="redirecionamento" if reroute else "criacao_confirmada",
             profit_per_day=profit_per_day,
             at_base=True,
