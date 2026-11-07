@@ -32,7 +32,7 @@ from notify import esc
 from route_optimizer import rank_candidates
 from route_airports import match_hub_options, code_from_candidate, explain_hub_options
 from airport_catalog import game_code
-from route_registry import RouteRegistry, eligible_for_reroute, endpoint
+from route_registry import RouteRegistry, reroute_block_reason, endpoint
 
 if TYPE_CHECKING:
     from bot import Bot
@@ -224,7 +224,9 @@ def audit_routes(bot: "Bot", registry: RouteRegistry) -> None:
     fleet = recent(180) if callable(recent) else None
     grounded = {str(ac.id): ac.at_base for ac in fleet or []
                 if getattr(ac, "id", None) is not None}
-    verified_ground = 0
+    maintenance_seen = 0
+    maintenance_at_base = 0
+    maintenance_away = 0
     detected = 0
     for row in rows:
         identity = str(row.get("aircraft_id") or "")
@@ -233,11 +235,16 @@ def audit_routes(bot: "Bot", registry: RouteRegistry) -> None:
         registration = row.get("registration") or identity
         model = row.get("model") or ""
         base = row.get("at_base")
+        if identity in grounded:
+            maintenance_seen += 1
+            if grounded[identity] and not row.get("in_flight"):
+                maintenance_at_base += 1
+            else:
+                maintenance_away += 1
         if row.get("in_flight"):
             base = False
         elif base is None and identity in grounded:
             base = grounded[identity]
-            verified_ground += 1
         origin = endpoint(row.get("origin_id"), row.get("origin_code"))
         destination = endpoint(row.get("destination_id"), row.get("destination_code"))
         if registry.record(identity, registration, model, origin, destination, at_base=base):
@@ -257,9 +264,9 @@ def audit_routes(bot: "Bot", registry: RouteRegistry) -> None:
         )
         if fleet is not None:
             log.info(
-                "Controle de rotas: manutenção confirmou localização de %d aeronaves "
-                "da página atual; nenhuma localização foi presumida para as demais.",
-                verified_ground,
+                "Controle de rotas: manutenção forneceu estado de %d aeronaves da página atual: "
+                "%d na base, %d fora da base/em voo; demais sem comprovação.",
+                maintenance_seen, maintenance_at_base, maintenance_away,
             )
     else:
         log.warning(
@@ -373,8 +380,20 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
 
         elif reason == "sem_destino_com_codigo_validado":
             details = " (pesquisa não exibiu um código IATA/ICAO verificável para a alternativa)"
+        elif reason == "aeronave_fora_da_base":
+            details = " (o jogo indica que esta aeronave NÃO está numa base; a proposta permanece salva)"
+        elif reason == "localizacao_nao_confirmada":
+            details = " (o jogo não disponibilizou posição de base desta aeronave)"
+        elif reason == "rota_nao_confirmada_no_jogo":
+            details = " (rota registrada manualmente ou sem nova leitura do jogo)"
+        elif reason == "aeroportos_nao_confirmados":
+            details = " (IDs ou códigos de aeroportos insuficientes)"
+        elif reason == "comprovacao_desatualizada":
+            details = " (evidência da rota ou localização expirou; necessária nova leitura)"
         elif reason == "aguardando_confirmacao_no_jogo":
             details = " (necessário comprovar localização na base e rota atual)"
+        elif reason == "troca_de_rota_ainda_nao_validada":
+            details = " (formulário de criação de nova rota não comprova substituição da rota já atribuída)"
         if proposal:
             details += (
                 f" | alternativa: {proposal.get('destination') or proposal.get('destination_id')}"
@@ -445,8 +464,8 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 hub_code = hub_match.code
                 current_dest_code = hub_match.opposite_code
                 log.info(
-                    "Controle de rotas: %s — base %s (ID do jogo %s) confirmada no seletor; "
-                    "destino atual %s.",
+                    "Controle de rotas: %s — aeroporto %s (ID do jogo %s) consta das bases da "
+                    "companhia; destino atual %s. Isso NÃO confirma a base desta aeronave.",
                     row["registration"], hub_code, hub_id, current_dest_code,
                 )
             elif not (hub_id and destination.get("id")):
@@ -525,14 +544,24 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             }
             # The stored report identifies a collision, but a *fresh*, explicit
             # game reading must confirm the aircraft at base before changing it.
-            if not eligible_for_reroute(row, verified_hub=hub_match is not None):
-                pending(aircraft_id, "aguardando_confirmacao_no_jogo", proposal=proposal)
+            reason = reroute_block_reason(row, verified_hub=hub_match is not None)
+            if reason:
+                pending(aircraft_id, reason, proposal=proposal)
                 continue
             if bot.dry_run:
                 pending(aircraft_id, "simulacao_redirecionamento", proposal=proposal)
                 log.info("[SIMULAÇÃO] Redirecionaria %s para %s (lucro estimado ~ $%s/dia).",
                          row["registration"], candidate.name, fmt(proposal["profit_per_day"]))
                 continue
+            # Existing routed aircraft are NOT equivalent to parked aircraft
+            # without routes. Our current create_route() uses a new-route form,
+            # not the game's distinct "reroute" control. Until the existing
+            # route replacement workflow is verified in a logged-in session,
+            # only calculate and report proposals; never submit a new-route
+            # purchase as a substitute for modifying an assigned aircraft.
+            pending(aircraft_id, "troca_de_rota_ainda_nao_validada", proposal=proposal)
+            continue
+
             details = bot.ajax(
                 f"route_research_route.php?dep={hub_id}&arr={candidate.arr_id}", "rDetails",
             )
