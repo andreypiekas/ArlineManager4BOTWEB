@@ -125,6 +125,12 @@ class RouteRegistry:
                 entry["profit_per_day"] = round(float(profit_per_day), 2)
             if at_base is not None:
                 entry["at_base"] = bool(at_base)
+                if at_base and source == "game":
+                    entry["grounded_confirmed_at"] = int(time.time())
+                elif not at_base:
+                    entry.pop("grounded_confirmed_at", None)
+            if source == "game":
+                entry["game_verified_at"] = int(time.time())
             if not previous or previous.get("route_key") != entry["route_key"]:
                 entry["assigned_at"] = int(time.time())
                 entry.pop("proposal", None)
@@ -158,7 +164,43 @@ class RouteRegistry:
                 entry["status"] = "rota_nao_identificada"
             if at_base is not None:
                 entry["at_base"] = bool(at_base)
+                if at_base:
+                    entry["grounded_confirmed_at"] = int(time.time())
+                else:
+                    entry.pop("grounded_confirmed_at", None)
             data["aircraft"][aircraft_id] = entry
+            self._save(data)
+            return True
+
+    def unassign(self, aircraft_id: str, registration: str = "", model: str = "") -> bool:
+        """A verified entry in the game's 'without route' list clears stale assignment."""
+        aircraft_id = str(aircraft_id or "").strip()
+        if not aircraft_id:
+            return False
+        with _LOCK:
+            data = _state(self.path)
+            previous = data["aircraft"].get(aircraft_id, {})
+            row = dict(previous)
+            if previous.get("route_key"):
+                data["history"].append({
+                    "at": int(time.time()), "aircraft_id": aircraft_id,
+                    "registration": registration or row.get("registration", ""),
+                    "action": "rota_removida_no_jogo", "previous": row["route_key"],
+                })
+                data["history"] = data["history"][-_MAX_HISTORY:]
+            for field in ("origin", "destination", "route_key", "proposal", "profit_per_day",
+                          "game_verified_at"):
+                row.pop(field, None)
+            row.update({
+                "aircraft_id": aircraft_id,
+                "registration": registration or row.get("registration", aircraft_id),
+                "model": model or row.get("model", "?"),
+                "status": "sem_rota",
+                "at_base": True,
+                "last_seen": int(time.time()),
+                "grounded_confirmed_at": int(time.time()),
+            })
+            data["aircraft"][aircraft_id] = row
             self._save(data)
             return True
 
