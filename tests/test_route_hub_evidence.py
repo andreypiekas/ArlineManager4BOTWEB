@@ -69,5 +69,6 @@ def test_cached_maintenance_grounded_status_is_reused_for_route_audit(tmp_path, 
     assert records["102"]["at_base"] is False
     assert "grounded_confirmed_at" not in records["102"]
     assert "at_base" not in records["103"]
-    assert "manutenção confirmou localização de 1 aeronaves" in caplog.text
+    assert "manutenção forneceu estado de 2 aeronaves" in caplog.text
+    assert "1 na base, 1 fora da base/em voo" in caplog.text
     assert snapshot["last_scan"]["identified"] == 3
