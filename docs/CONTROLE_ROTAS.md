@@ -150,3 +150,33 @@ validar os registros da frota com **Simulação (sem gastos)**.
 A pesquisa do jogo lista bases pelo nome e ID (ex.: `2926: Chapecó, Brazil`) e frequentemente não apresenta IATA/ICAO. O bot usa `assets/airports_am4_codes.csv` para associar IDs a códigos, sem acessar rede durante o ciclo. Referência factual: https://github.com/eaingaran/airline-manager4/blob/master/airports.json; informações técnicas também presentes em https://github.com/abc8747/am4.
 
 O catálogo é auxiliar e pode ficar desatualizado. IDs são confirmados pelo jogo antes de qualquer ação. DAC (3499), OSL (645), LAX (1440) e PBM (3146) podem ser extremos de rotas sem serem bases próprias. Se ambos faltam na lista de bases do jogador, o status correto é `rota_fora_das_bases`. O bot não inventa uma origem operacional nem autoriza troca de rota somente com o catálogo. A manutenção confirma se uma aeronave está numa base, mas não identifica qual é essa base.
+
+## Diagnóstico do despacho em cada ciclo
+
+A auditoria de rotas não é sinônimo de decolagem. Os logs de
+`Controle de rotas` indicam apenas leitura da malha e estados de
+manutenção; não provam que alguma aeronave foi despachada.
+
+O bot registra agora `Diagnóstico de decolagem` em cada ciclo,
+inclusive com `auto_depart` desativado, e informa:
+
+- se a decolagem automática está ativa;
+- se a simulação está ativa;
+- se duplicidades estão permitidas e quantas são conhecidas;
+- se escolheu despacho geral, seletivo ou bloqueio;
+- se o botão geral estava disponível e se foi acionado.
+
+O comando geral enviado é registrado como
+`comando_geral_enviado_sem_confirmacao_individual`: **não** equivale
+a dizer que todos os aviões decolaram. O painel **Rotas e aeronaves**
+exibe o modo, o último horário de avaliação e o estado registrado.
+
+Consulta sugerida:
+
+```bash
+sudo journalctl -u am4bot@principal --since "30 min ago" --no-pager | grep -Ei 'Diagnóstico de decolagem|Despacho individual|Decolagem geral|Erro inesperado ao decolar|Controle de rotas'
+```
+
+Se nenhuma linha de diagnóstico de decolagem aparecer após atualizar
+`main` e reiniciar o serviço, verifique se o processo correto está
+executando a versão nova do código e examine os logs sem filtro.

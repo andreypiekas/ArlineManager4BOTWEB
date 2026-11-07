@@ -529,6 +529,16 @@ class Bot:
         self._guard(lambda: manage_fleet(self), "auditar rotas e gerenciar a frota")
         if opt("auto_depart"):
             self._guard(self._depart_all, "decolar aeronaves")
+        else:
+            log_flights.info(
+                "Diagnóstico de decolagem: automático DESATIVADO nas configurações; "
+                "nenhum comando de decolagem será enviado neste ciclo."
+            )
+            self._guard(lambda: RouteRegistry().record_dispatch_summary({
+                "status": "decolagem_automatica_desativada",
+                "mode": "desativado",
+                "simulation": self.dry_run,
+            }), "registrar status de decolagem")
         if opt("autobuy_fuel") or opt("autobuy_co2"):
             self._guard(self._check_market, "verificar o mercado de combustível / CO₂")
         if opt("auto_checklist"):
@@ -791,39 +801,68 @@ class Bot:
             log_flights.info("%d aeronaves em voo; próximo pouso em %s.", len(texts), fmt_duration(min(remaining)))
 
     def _depart_all(self) -> None:
-        self.open_popup("routes_main.php", "Routes", "nav_routes")
         registry = RouteRegistry()
-        if not self.config.get_bool("options", "allow_duplicate_routes", False):
-            report = registry.snapshot(allow_duplicates=False)
-            if report["duplicate_routes"]:
-                if self.config.get_bool("options", "selective_depart", True):
-                    log_flights.warning(
-                        "Decolagem geral desativada por %d rota(s) duplicada(s). "
-                        "Verificando controles individuais do jogo para liberar "
-                        "apenas as aeronaves aprovadas.",
-                        report["duplicate_routes"],
-                    )
-                    try:
-                        selective_dispatch(self, registry)
-                    finally:
-                        self.close_popup()
-                else:
-                    log_flights.warning(
-                        "Decolagem geral bloqueada pela política de rotas: "
-                        "%d rotas duplicadas (%d aeronaves envolvidas). "
-                        "Ative Despacho individual seguro para tentar decolar "
-                        "apenas os aviões aprovados.",
-                        report["duplicate_routes"], report["affected_aircraft"],
-                    )
+        allow_duplicates = self.config.get_bool("options", "allow_duplicate_routes", False)
+        selective = self.config.get_bool("options", "selective_depart", True)
+        report = registry.snapshot(allow_duplicates=allow_duplicates)
+        duplicates = report["duplicate_routes"]
+        mode = "seletivo" if duplicates and not allow_duplicates and selective else (
+            "bloqueado" if duplicates and not allow_duplicates else "geral"
+        )
+        log_flights.info(
+            "Diagnóstico de decolagem: automático ATIVADO | simulação=%s | "
+            "permitir duplicidades=%s | despacho individual=%s | "
+            "duplicidades conhecidas=%d (%d aeronaves) | modo=%s. "
+            "O histórico de rotas pode estar incompleto.",
+            "SIM" if self.dry_run else "NÃO",
+            "SIM" if allow_duplicates else "NÃO",
+            "SIM" if selective else "NÃO",
+            duplicates, report["affected_aircraft"], mode,
+        )
+        if allow_duplicates and duplicates:
+            log_flights.warning(
+                "Diagnóstico de decolagem: o comando geral está permitido apesar de "
+                "%d rota(s) duplicada(s) no histórico.",
+                duplicates,
+            )
+        self.open_popup("routes_main.php", "Routes", "nav_routes")
+        if not allow_duplicates and duplicates:
+            if selective:
+                log_flights.warning(
+                    "Decolagem geral desativada por %d rota(s) duplicada(s). "
+                    "Verificando controles individuais do jogo para liberar "
+                    "apenas as aeronaves aprovadas.",
+                    duplicates,
+                )
+                try:
+                    selective_dispatch(self, registry)
+                finally:
                     self.close_popup()
-                return
+            else:
+                log_flights.warning(
+                    "Decolagem geral bloqueada pela política de rotas: "
+                    "%d rotas duplicadas (%d aeronaves envolvidas). "
+                    "Ative Despacho individual seguro para tentar decolar "
+                    "apenas os aviões aprovados.",
+                    duplicates, report["affected_aircraft"],
+                )
+                registry.record_dispatch_summary({
+                    "status": "duplicidades_sem_despacho_seletivo",
+                    "mode": "bloqueado",
+                    "duplicates_known": duplicates,
+                    "simulation": self.dry_run,
+                })
+                self.close_popup()
+            return
         button = self._find(self._sel("depart_all"), timeout=5)
+        dispatch_status = "sem_aeronaves_prontas"
         if button is None:
-            log_flights.info("Nenhuma aeronave pronta para decolar.")
+            log_flights.info("Diagnóstico de decolagem: nenhuma aeronave pronta (botão geral ausente).")
         elif not button.is_displayed() or not button.is_enabled() or "not-active" in (button.get_attribute("class") or ""):
-            log_flights.info("Nenhuma decolagem disponível no momento.")
+            log_flights.info("Diagnóstico de decolagem: nenhuma decolagem disponível (botão geral inativo).")
         elif self.dry_run:
-            log_flights.info("[SIMULAÇÃO] Aeronaves prontas para decolar; comando de decolagem NÃO enviado.")
+            dispatch_status = "simulacao_geral"
+            log_flights.info("Diagnóstico de decolagem: [SIMULAÇÃO] botão geral disponível; nenhuma ordem enviada.")
         else:
             self.pause()
             # Re-read the flag immediately before triggering the irreversible action.
@@ -832,11 +871,21 @@ class Bot:
                 self.close_popup()
                 return
             self.click_element(button)
-            log_flights.info("Todas as aeronaves decolaram.")
+            dispatch_status = "comando_geral_enviado_sem_confirmacao_individual"
+            log_flights.info(
+                "Diagnóstico de decolagem: comando geral enviado; "
+                "quantidade e confirmação individual de voos ainda não verificadas."
+            )
             self.count("departures")
             if self.config.get_bool("options", "telegram_departures"):
-                self.notify("✈️ Aeronaves decolaram.", silent=True, category="departures")
+                self.notify("✈️ Comando geral de decolagem enviado. Confirmação individual pendente.", silent=True, category="departures")
             self._stop.wait(2)
+        registry.record_dispatch_summary({
+            "status": dispatch_status,
+            "mode": "geral",
+            "duplicates_known": duplicates,
+            "simulation": self.dry_run,
+        })
         self.close_popup()
 
     def _check_market(self) -> None:

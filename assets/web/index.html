@@ -1080,13 +1080,20 @@ function renderRoutes(report) {
   if (!dispatch) {
     $("routeDispatchStatus").textContent = "Despacho individual: ainda não verificado.";
   } else {
-    const noun = dispatch.status === "simulacao" ? "SIMULAÇÃO" : dispatch.status;
-    const summary = "Despacho individual · " +
+    const noun = dispatch.status === "simulacao" ? "SIMULAÇÃO" :
+      String(dispatch.status || "desconhecido").replaceAll("_", " ");
+    const mode = dispatch.mode || "seletivo";
+    const time = dispatch.at ? new Date(dispatch.at * 1000).toLocaleString("pt-BR") : "—";
+    const prefix = "Última avaliação de despacho · " + time + " · modo " + mode +
+      " · simulação " + (dispatch.simulation ? "ligada" : "desligada") +
+      " · " + (dispatch.duplicates_known || 0) + " duplicidades conhecidas. ";
+    const summary = prefix + (mode === "seletivo" ?
       (dispatch.ready_seen || 0) + " prontas na interface · " +
       (dispatch.approved || 0) + " aprovadas · " +
       (dispatch.blocked || 0) + " retidas · " +
       (dispatch.native_individual || 0) + " com comando individual · " +
-      (dispatch.departed || 0) + " decolagens confirmadas. Estado: " + noun + ".";
+      (dispatch.departed || 0) + " decolagens confirmadas. " :
+      "") + "Estado: " + noun + ".";
     const blocked = (dispatch.blocked_aircraft || []).slice(0, 5)
       .map(row => (row.registration || row.id) + " (" + row.reason.replaceAll("_", " ") + ")")
       .join("; ");
