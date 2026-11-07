@@ -180,3 +180,44 @@ sudo journalctl -u am4bot@principal --since "30 min ago" --no-pager | grep -Ei '
 Se nenhuma linha de diagnóstico de decolagem aparecer após atualizar
 `main` e reiniciar o serviço, verifique se o processo correto está
 executando a versão nova do código e examine os logs sem filtro.
+
+
+## Despacho por IDs (experimental — desativado)
+
+O jogo exibe o comando nativo
+`route_depart.php?mode=all&ids=x`, mas não apresentou botões individuais
+na página de status. Projetos comunitários de AM4 chamam
+`route_depart.php?mode=all&ids=<ids separados por vírgula>`:
+
+- https://github.com/nem-web/am4-bot/blob/main/script.js
+- https://github.com/nem-web/am4-bot/blob/main/testing.js
+
+**A existência desse exemplo não prova que o servidor respeite uma lista
+específica de IDs. O endpoint pode ignorar o filtro e despachar mais aviões.**
+
+A opção **EXPERIMENTAL: decolagem por ID (API não verificada)** é
+**desativada por padrão**. O bot continua operando com o algoritmo
+de despacho individual comprovado pelo DOM enquanto esta opção estiver
+desativada. Se o usuário optar por habilitar o experimento, o bot:
+
+1. Audita a lista real das aeronaves prontas no jogo e o histórico de rotas;
+2. Escolhe somente um avião aprovado, com leitura de rota recente;
+3. Confirma que a página contém o comando nativo e o alvo continua pronto;
+4. Em simulação, registra o ID selecionado e **não envia nenhum pedido**;
+5. Fora de simulação, grava um bloqueio **persistente e de uso único**
+   antes de tentar a chamada com `ids=<ID exato>`;
+6. Verifica se a aeronave mudou de `#landedList` para `#inflightList` e
+   se outra aeronave mudou inesperadamente.
+
+Mesmo que a chamada seja bem-sucedida, **o experimento não se repete em
+ciclos posteriores nem após reiniciar o serviço**. A chave
+`experimental_departure_pilot` fica registrada por perfil em
+`routes_registry.json`, para impedir repetição após resposta incerta ou
+falha de comunicação. Não edite o registro para burlar o bloqueio sem
+investigar o resultado.
+
+Após uma tentativa, examine os registros de `Despacho experimental` e
+compare a lista real de voos do jogo. Somente quando a seleção for
+comprovada no jogo real é adequado avaliar a liberação de execução
+seletiva contínua. A configuração não deve ser usada para contornar
+limitações ou regras do serviço.
