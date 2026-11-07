@@ -313,6 +313,43 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         report["duplicate_routes"], report["affected_aircraft"],
     )
     records = {row["aircraft_id"]: row for row in report["relations"]}
+    for conflict in report["duplicates"]:
+        names = ", ".join(
+            f"{aircraft.get('registration') or aircraft.get('id')} (ID {aircraft.get('id')})"
+            for aircraft in conflict["aircraft"]
+        )
+        log.warning(
+            "Controle de rotas: duplicidade na rota %s | aeronaves: %s.",
+            conflict.get("route") or "não identificada", names,
+        )
+
+    def pending(aircraft_id: str, reason: str, *, proposal: Optional[dict] = None) -> None:
+        """Expose the precise blocker without altering the verified assignment."""
+        registry.note(aircraft_id, reason, proposal=proposal)
+        item = records.get(str(aircraft_id), {})
+        origin = item.get("origin") or {}
+        destination = item.get("destination") or {}
+        details = ""
+        if reason == "aguardando_identificacao_da_rota":
+            details = (
+                f" (IDs dos aeroportos ausentes; códigos disponíveis: "
+                f"{origin.get('code') or '?'} ↔ {destination.get('code') or '?'})"
+            )
+        elif reason == "aguardando_confirmacao_no_jogo":
+            details = " (necessário comprovar localização na base e rota atual)"
+        if proposal:
+            details += (
+                f" | alternativa: {proposal.get('destination') or proposal.get('destination_id')}"
+                f", lucro estimado USD {fmt(proposal.get('profit_per_day', 0))}/dia"
+            )
+        log.info(
+            "Controle de rotas: %s (ID %s), rota %s: %s%s. "
+            "Nenhuma alteração enviada ao jogo.",
+            item.get("registration") or aircraft_id, aircraft_id,
+            item.get("route_key") or "?",
+            reason.replace("_", " "), details,
+        )
+
     changed = 0
     cfg = bot.config
     market = load_market()
@@ -329,24 +366,24 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         for row in members[1:]:
             aircraft_id = row["aircraft_id"]
             if changed >= budget or bot.stopping:
-                registry.note(aircraft_id, "pendente_limite_ciclo")
+                pending(aircraft_id, "pendente_limite_ciclo")
                 continue
             origin = row.get("origin", {})
             destination = row.get("destination", {})
             hub_id = str(origin.get("id") or "")
             if not hub_id or not destination.get("id"):
-                registry.note(aircraft_id, "aguardando_identificacao_da_rota")
+                pending(aircraft_id, "aguardando_identificacao_da_rota")
                 continue
             if not cfg.get_bool("options", "auto_route"):
-                registry.note(aircraft_id, "aguardando_ativacao_de_rotas")
+                pending(aircraft_id, "aguardando_ativacao_de_rotas")
                 continue
             model = find_model(market, row.get("model") or "")
             if not model or not model.get("speed") or not model.get("fuel"):
-                registry.note(aircraft_id, "aguardando_dados_do_modelo")
+                pending(aircraft_id, "aguardando_dados_do_modelo")
                 continue
             seats = int(model.get("capacity") or 0)
             if seats <= 0:
-                registry.note(aircraft_id, "aguardando_dados_do_modelo")
+                pending(aircraft_id, "aguardando_dados_do_modelo")
                 continue
             limit = cfg.get_int("settings", "route_max_distance_big" if seats >= BIG_SEATS else "route_max_distance", 6000)
             if model.get("range"):
@@ -362,7 +399,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 "return e.value===arguments[0];", hub_id,
             )
             if not selected:
-                registry.note(aircraft_id, "aguardando_confirmacao_da_base")
+                pending(aircraft_id, "aguardando_confirmacao_da_base")
                 continue
             destination_options = []
             for distance in (limit, limit // 2, limit // 4):
@@ -380,7 +417,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 if options:
                     break
             if not destination_options:
-                registry.note(aircraft_id, "sem_destino_alternativo")
+                pending(aircraft_id, "sem_destino_alternativo")
                 continue
             ranked = rank_candidates(
                 destination_options, seats=seats, model=model, mode=bot.mode,
@@ -390,7 +427,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             alternative = next(((candidate, economics) for candidate, economics in ranked
                                 if economics is not None and economics.profit_per_day > 0), None)
             if alternative is None:
-                registry.note(aircraft_id, "sem_alternativa_lucrativa")
+                pending(aircraft_id, "sem_alternativa_lucrativa")
                 continue
             candidate, economics = alternative
             proposal = {
@@ -402,10 +439,10 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             # The stored report identifies a collision, but a *fresh*, explicit
             # game reading must confirm the aircraft at base before changing it.
             if not eligible_for_reroute(row):
-                registry.note(aircraft_id, "aguardando_confirmacao_no_jogo", proposal=proposal)
+                pending(aircraft_id, "aguardando_confirmacao_no_jogo", proposal=proposal)
                 continue
             if bot.dry_run:
-                registry.note(aircraft_id, "simulacao_redirecionamento", proposal=proposal)
+                pending(aircraft_id, "simulacao_redirecionamento", proposal=proposal)
                 log.info("[SIMULAÇÃO] Redirecionaria %s para %s (lucro estimado ~ $%s/dia).",
                          row["registration"], candidate.name, fmt(proposal["profit_per_day"]))
                 continue
@@ -416,11 +453,11 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 By.XPATH, f".//*[@id='capAc']/option[starts-with(@value, '{aircraft_id};')]",
             )
             if not capable:
-                registry.note(aircraft_id, "aeronave_indisponivel_para_nova_rota", proposal=proposal)
+                pending(aircraft_id, "aeronave_indisponivel_para_nova_rota", proposal=proposal)
                 continue
             occupied_in_game = to_int(bot.js(_ON_ROUTE_JS)) or 0
             if occupied_in_game:
-                registry.note(aircraft_id, "destino_ocupado_no_jogo", proposal=proposal)
+                pending(aircraft_id, "destino_ocupado_no_jogo", proposal=proposal)
                 continue
             aircraft = ParkedAircraft(aircraft_id, row.get("model", ""), row["registration"], seats)
             outcome = create_route(
@@ -432,7 +469,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 log.info("Duplicidade resolvida: %s mudou para %s (~$%s/dia).",
                          aircraft.reg, candidate.name, fmt(proposal["profit_per_day"]))
             elif outcome == "stop":
-                registry.note(aircraft_id, "falha_ao_confirmar_redirecionamento", proposal=proposal)
+                pending(aircraft_id, "falha_ao_confirmar_redirecionamento", proposal=proposal)
                 return changed
     return changed
 
