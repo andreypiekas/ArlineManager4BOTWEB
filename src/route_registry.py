@@ -283,6 +283,32 @@ class RouteRegistry:
             }
             self._save(data)
 
+    def record_dispatch_summary(self, summary: dict) -> None:
+        """Persist a bounded dispatch decision summary for the read-only panel."""
+        safe = {
+            "at": int(summary.get("at") or time.time()),
+            "ready_seen": max(0, int(summary.get("ready_seen") or 0)),
+            "approved": max(0, int(summary.get("approved") or 0)),
+            "blocked": max(0, int(summary.get("blocked") or 0)),
+            "native_individual": max(0, int(summary.get("native_individual") or 0)),
+            "not_supported": max(0, int(summary.get("not_supported") or 0)),
+            "departed": max(0, int(summary.get("departed") or 0)),
+            "status": str(summary.get("status") or "")[:80],
+            "blocked_aircraft": [
+                {
+                    "id": str(row.get("id") or "")[:20],
+                    "registration": str(row.get("registration") or "")[:60],
+                    "reason": str(row.get("reason") or "")[:90],
+                }
+                for row in (summary.get("blocked_aircraft") or [])[:40]
+                if isinstance(row, dict)
+            ],
+        }
+        with _LOCK:
+            data = _state(self.path)
+            data["last_dispatch"] = safe
+            self._save(data)
+
     def snapshot(self, *, allow_duplicates: bool = True) -> dict:
         with _LOCK:
             data = deepcopy(_state(self.path))
@@ -311,6 +337,7 @@ class RouteRegistry:
             "affected_aircraft": len(duplicate_ids),
             "allow_duplicates": bool(allow_duplicates),
             "last_scan": data.get("last_scan"),
+            "last_dispatch": data.get("last_dispatch"),
             "partial": True,  # the game may expose only a page of the fleet at a time
         }
 

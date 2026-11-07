@@ -44,6 +44,7 @@ from marketing import run_marketing
 from notify import Telegram, esc
 from paths import write_atomic
 from route_registry import RouteRegistry
+from selective_depart import selective_dispatch
 from seats import optimize_seats
 
 # One logger per topic: the GUI colours and tags the log lines by the logger suffix (see helpers.LOG_TAGS).
@@ -791,6 +792,31 @@ class Bot:
 
     def _depart_all(self) -> None:
         self.open_popup("routes_main.php", "Routes", "nav_routes")
+        registry = RouteRegistry()
+        if not self.config.get_bool("options", "allow_duplicate_routes", False):
+            report = registry.snapshot(allow_duplicates=False)
+            if report["duplicate_routes"]:
+                if self.config.get_bool("options", "selective_depart", True):
+                    log_flights.warning(
+                        "Decolagem geral desativada por %d rota(s) duplicada(s). "
+                        "Verificando controles individuais do jogo para liberar "
+                        "apenas as aeronaves aprovadas.",
+                        report["duplicate_routes"],
+                    )
+                    try:
+                        selective_dispatch(self, registry)
+                    finally:
+                        self.close_popup()
+                else:
+                    log_flights.warning(
+                        "Decolagem geral bloqueada pela política de rotas: "
+                        "%d rotas duplicadas (%d aeronaves envolvidas). "
+                        "Ative Despacho individual seguro para tentar decolar "
+                        "apenas os aviões aprovados.",
+                        report["duplicate_routes"], report["affected_aircraft"],
+                    )
+                    self.close_popup()
+                return
         button = self._find(self._sel("depart_all"), timeout=5)
         if button is None:
             log_flights.info("Nenhuma aeronave pronta para decolar.")
@@ -799,23 +825,6 @@ class Bot:
         elif self.dry_run:
             log_flights.info("[SIMULAÇÃO] Aeronaves prontas para decolar; comando de decolagem NÃO enviado.")
         else:
-            # The game exposes a single Depart All control. When duplications
-            # are forbidden, it is unsafe to use this bulk command while any
-            # unresolved duplicate route remains in the accumulated registry.
-            # We do not claim the accumulated report is complete: it may miss
-            # aircraft outside the current game page.
-            if not self.config.get_bool("options", "allow_duplicate_routes", False):
-                snapshot = RouteRegistry().snapshot(allow_duplicates=False)
-                if snapshot["duplicate_routes"]:
-                    log_flights.warning(
-                        "Decolagem geral bloqueada pela política de rotas: "
-                        "%d rotas duplicadas (%d aeronaves envolvidas). "
-                        "O jogo oferece 'Decolar todas'; não é seguro liberar "
-                        "essas aeronaves sem uma seleção individual confirmada.",
-                        snapshot["duplicate_routes"], snapshot["affected_aircraft"],
-                    )
-                    self.close_popup()
-                    return
             self.pause()
             # Re-read the flag immediately before triggering the irreversible action.
             if self.dry_run:

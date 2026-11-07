@@ -67,11 +67,21 @@ O bot continuará calculando, simulando e registrando propostas, inclusive
 fora do modo simulação, mas marcará `troca_de_rota_ainda_nao_validada`
 em vez de enviar ordens de compra de nova rota.
 
-A opção **Permitir aeronaves na mesma rota (ida/volta)** desligada também
-protege as decolagens: como o jogo oferece o botão em lote
-**Decolar todas**, o bot não pode garantir que liberará apenas as aeronaves
-não duplicadas. Enquanto houver duplicidades identificadas no registro
-histórico, o comando geral será **bloqueado** e o motivo será registrado.
+A opção **Permitir aeronaves na mesma rota (ida/volta)** desligada
+protege as decolagens por meio do novo **Despacho individual seguro**. O
+bot planeja quais aviões podem sair (no máximo um por rota duplicada),
+consulta a lista de aeronaves prontas da interface e só tenta clicar em
+**um comando nativo do jogo explicitamente associado ao ID daquele avião**.
+O endpoint geral `route_depart.php?mode=all` é sempre rejeitado para despacho
+individual, mesmo que venha acompanhado de IDs. Cada clique precisa ser
+confirmado pela mudança da aeronave para a lista de voos em andamento.
+
+Se o jogo não expuser um comando individual comprovável, **não dispara
+`Decolar todas` nem inventa uma chamada alternativa**. Registra a falta
+de capacidade no log e no painel, que mostra aprovadas, retidas,
+comando individual disponível e decolagens efetivamente confirmadas.
+A configuração **Despacho individual seguro quando houver rotas duplicadas**
+controla esse comportamento (ligada por padrão).
 O relatório é parcial e acumula aeronaves de páginas anteriores; a ausência
 de novas duplicidades não comprova que toda a frota foi auditada.
 
@@ -86,6 +96,24 @@ custo e validação do formulário de criação.
 
 O modo **Simulação (sem gastos)** calcula e registra propostas, sem enviar
 pedidos de compra ou decolagem.
+
+
+### Pré-validação de troca de rota
+
+O módulo `src/reroute_preflight.py` consulta, somente para leitura,
+`fleet_details.php?id=<ID da aeronave>`. Ele recupera o identificador
+da rota a partir do controle nativo `fleet_ground.php?id=<ID da rota>`
+e compara os aeroportos exibidos nos detalhes com a relação acumulada
+no histórico (inclusive no sentido oposto).
+
+O resultado fica junto à proposta de redirecionamento:
+`preflight.route_id`, `preflight.status` e `preflight.endpoints`.
+IDs ausentes, múltiplos IDs, aeronave em voo e aeroportos divergentes
+**bloqueiam** a pré-validação. Esta consulta nunca envia uma ação de
+aterramento, criação ou modificação de rota.
+
+A substituição real permanece desativada enquanto o fluxo completo de
+aterramento, criação e rollback não for testado no jogo autenticado.
 
 ## Limites conhecidos
 

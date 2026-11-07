@@ -65,6 +65,8 @@ class FakeDepartBot:
             def get_bool(_, section, name, default=False):
                 if name == "allow_duplicate_routes":
                     return allow
+                if name == "selective_depart":
+                    return False  # regression covers the explicit disabled setting
                 if name == "telegram_departures":
                     return False
                 return default
@@ -122,4 +124,34 @@ def test_duplicate_policy_explicitly_allowed_keeps_departure_behavior(tmp_path, 
     fake = FakeDepartBot(allow=True)
     Bot._depart_all(fake)
     assert fake.clicked == 1
+    assert fake.closed == 1
+
+
+def test_bot_uses_selective_flow_instead_of_global_depart_when_duplicates_exist(
+    tmp_path, monkeypatch
+):
+    import bot as bot_module
+
+    registry = RouteRegistry(tmp_path / "routes.json")
+    a, b = endpoint(code="DAC"), endpoint(code="OSL")
+    registry.record("1", "PP1", "A320", a, b, source="game")
+    registry.record("2", "PP2", "A320", b, a, source="game")
+    monkeypatch.setattr(bot_module, "RouteRegistry", lambda: registry)
+    dispatched = []
+
+    def fake_selective(bot, observed):
+        assert observed is registry
+        dispatched.append(True)
+
+    monkeypatch.setattr(bot_module, "selective_dispatch", fake_selective)
+
+    class Config:
+        def get_bool(self, section, name, default=False):
+            return name == "selective_depart"
+
+    fake = FakeDepartBot(allow=False)
+    fake.config = Config()
+    Bot._depart_all(fake)
+    assert dispatched == [True]
+    assert fake.clicked == 0
     assert fake.closed == 1

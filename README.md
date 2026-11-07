@@ -337,3 +337,26 @@ As seções de configuração são **[settings]** (valores numéricos), **[optio
 - As estimativas de lucro não garantem resultados.
 - A automação pode ser restrita pelos termos do jogo; confira as regras antes de utilizá-la.
 - O projeto usa a licença MIT. O aviso de copyright obrigatório está preservado no arquivo [LICENSE](LICENSE).
+
+
+### Despacho seletivo e segurança contra rotas duplicadas
+
+Com **Permitir aeronaves na mesma rota (ida/volta) = desativado**, o bot
+identifica os conflitos pelo histórico e tenta despachar individualmente
+as aeronaves aprovadas. A nova configuração **Despacho individual seguro
+quando houver rotas duplicadas** fica habilitada por padrão.
+
+**Ação real só ocorre se a interface do jogo disponibilizar um comando
+individual da própria aeronave**, com ID explícito e conferido antes do
+clique. O comando `route_depart.php?mode=all` nunca é usado como despacho
+individual. Se não existir botão ou ação equivalente por aeronave, o bot
+**não usa Decolar todas e não tenta uma URL suposta**. Isso pode manter
+aeronaves aguardando, mas evita decolagens indevidas. A aba **Rotas e
+aeronaves** mostra as aprovadas, retidas, comandos individuais detectados
+e decolagens confirmadas.
+
+O otimizador continua calculando alternativas de rotas duplicadas. A nova
+pré-validação consulta os detalhes da aeronave para identificar o
+**ID da rota existente** e conferir seus aeroportos; não envia comandos de
+grounding ou alteração. O redirecionamento automático real continua
+desligado até validação da sequência completa e do rollback no jogo.
