@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - docs/refresh-am04-screenshots
+      - docs/telegram-screenshots
   workflow_dispatch:
 
 permissions:

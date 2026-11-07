@@ -47,6 +47,10 @@ Painel compacto com indicadores da companhia, eventos do bot e confirmação da 
 | Aeronaves | Opções |
 | ![Parâmetros das Aeronaves na interface web](screenshots/web-config-aeronaves.png) | ![Parâmetros de Opções na interface web](screenshots/web-config-opcoes.png) |
 
+**Preferências individuais do Telegram:**
+
+![Preferências do Telegram no painel web](screenshots/web-config-telegram.png)
+
 Os interruptores são salvos automaticamente e exibem confirmação; números e modelos precisam do botão **Salvar alterações**. Campos não salvos permanecem disponíveis ao trocar de categoria na sessão atual.
 
 ### Acesso pelo celular
@@ -63,6 +67,8 @@ Os interruptores são salvos automaticamente e exibem confirmação; números e 
 | ![Mercado no aplicativo desktop](screenshots/desktop-mercado.png) | ![Frota no aplicativo desktop](screenshots/desktop-frota.png) |
 | Aeronaves | Opções |
 | ![Aeronaves no aplicativo desktop](screenshots/desktop-aeronaves.png) | ![Opções no aplicativo desktop](screenshots/desktop-opcoes.png) |
+
+![Telegram no aplicativo desktop](screenshots/desktop-telegram.png)
 
 ![Aplicativo desktop com aparência clara](screenshots/desktop-mercado-light.png)
 

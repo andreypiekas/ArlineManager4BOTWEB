@@ -28,7 +28,7 @@ def generated_names() -> tuple[str, ...]:
 def test_capturas_atuais_documentadas_no_readme():
     names = generated_names()
     docs = README.read_text(encoding="utf-8")
-    assert len(names) == 12
+    assert len(names) == 14
     assert len(names) == len(set(names))
     assert all(name.endswith(".png") for name in names)
     assert "web-visao-geral.png" in names
@@ -74,6 +74,6 @@ def test_logs_de_demonstração_são_portugueses():
 def test_readme_utiliza_imagens_locais():
     docs = README.read_text(encoding="utf-8")
     refs = re.findall(r"screenshots/([a-z0-9-]+\.png)", docs)
-    assert len(refs) >= 12
+    assert len(refs) >= 14
     assert all(name in generated_names() for name in refs)
     assert "github.com/andreypiekas/ArlineManager4BOTWEB" in docs

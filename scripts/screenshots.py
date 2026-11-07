@@ -149,6 +149,7 @@ def desktop_shots() -> None:
         ("Frota", "frota"),
         ("Aeronaves", "aeronaves"),
         ("Opções", "opcoes"),
+        ("Telegram", "telegram"),
     )
     for mode, tabs in (
         ("Dark", mapping),
@@ -217,7 +218,7 @@ def web_shots() -> None:
             if tab is not None:
                 driver.execute_script("window.location.hash = '#parameters'")
                 wait.until(lambda d: d.find_element(By.ID, "settingsView").is_displayed())
-                wait.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, "#tabs button")) >= 4)
+                wait.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, "#tabs button")) >= 5)
                 driver.find_elements(By.CSS_SELECTOR, "#tabs button")[tab].click()
             driver.execute_script("window.scrollTo(0, 0)")
             time.sleep(0.6)
@@ -230,7 +231,7 @@ def web_shots() -> None:
             print(f"Capturada: {dest.relative_to(ROOT)}", flush=True)
 
         shot("web-visao-geral.png")
-        for index, tab in enumerate(("mercado", "frota", "aeronaves", "opcoes")):
+        for index, tab in enumerate(("mercado", "frota", "aeronaves", "opcoes", "telegram")):
             shot(f"web-config-{tab}.png", tab=index)
         shot("web-mobile.png", mobile=True)
         shot("web-mobile-config.png", mobile=True, tab=0)
@@ -242,9 +243,9 @@ def web_shots() -> None:
 
 GENERATED = (
     "desktop-mercado.png", "desktop-frota.png", "desktop-aeronaves.png",
-    "desktop-opcoes.png", "desktop-mercado-light.png",
+    "desktop-opcoes.png", "desktop-telegram.png", "desktop-mercado-light.png",
     "web-visao-geral.png", "web-config-mercado.png", "web-config-frota.png",
-    "web-config-aeronaves.png", "web-config-opcoes.png",
+    "web-config-aeronaves.png", "web-config-opcoes.png", "web-config-telegram.png",
     "web-mobile.png", "web-mobile-config.png",
 )
 
