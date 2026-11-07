@@ -88,7 +88,9 @@ def test_auto_depart_disabled_explains_missing_dispatch_logs(tmp_path, monkeypat
             pass
 
         def _guard(self, func, what):
-            # The cycle is intentionally not executing other game calls.
+            # Execute only the diagnostic write, not any game operations.
+            if what == "registrar status de decolagem":
+                func()
             if what == "decolar aeronaves":
                 raise AssertionError("Disabled departure should never be called")
 
