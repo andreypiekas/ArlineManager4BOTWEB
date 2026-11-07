@@ -471,7 +471,7 @@ footer strong { font-weight: 600; color: var(--aqua); }
     <div class="route-summary" id="routeSummary" aria-live="polite"></div>
     <section class="card" aria-label="Relações entre aeronaves e rotas">
       <div class="routes-header">
-        <div><strong data-t="REGISTRO DA FROTA">REGISTRO DA FROTA</strong><p data-t="Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.">Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.</p></div>
+        <div><strong data-t="REGISTRO DA FROTA">REGISTRO DA FROTA</strong><p data-t="Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.">Relatório acumulado por perfil. Dados não identificados ou páginas não consultadas não são presumidos.</p><p id="routeAuditStatus" role="status" aria-live="polite"></p></div>
         <div class="routes-controls">
           <input id="routeSearch" type="search" aria-label="Buscar aeronave ou aeroporto" placeholder="Buscar aeronave ou aeroporto">
           <button id="routeRefresh" type="button" data-t="Atualizar relatório">Atualizar relatório</button>
@@ -550,6 +550,12 @@ const EN = {
   "Alternativa": "Alternative", "dia": "day", "Nenhuma relação encontrada.": "No route relations found.",
   "Nenhuma duplicidade identificada no histórico disponível.": "No duplicates detected in available history.",
   "Nenhuma alteração registrada.": "No recorded changes.", "Não foi possível consultar o controle de rotas.": "Could not load route registry.",
+  "Aguardando a primeira auditoria do jogo. A simulação pode permanecer ligada.": "Waiting for the first game audit. Simulation can stay enabled.",
+  "Última leitura: {x} aeronaves visíveis.": "Last scan: {x} aircraft visible.",
+  "Rotas identificadas: {x}.": "Routes identified: {x}.",
+  "Sem identificação de origem/destino: {x}.": "Missing origin/destination: {x}.",
+  "O HTML do jogo não forneceu ambos os aeroportos; desativar a simulação não resolve esta leitura.": "The game HTML did not provide both airports; disabling simulation will not fix the reader.",
+  "Nenhuma aeronave encontrada na página atual; confira o carregamento do jogo.": "No aircraft found on the current page; check game loading.",
   "Rotas e aeronaves": "Routes and aircraft", "CADASTRO DA MALHA": "ROUTE REGISTRY", "CONTROLE / HISTÓRICO": "CONTROL / HISTORY",
   "Relações entre aeronaves e aeroportos, histórico de alterações, duplicidades e propostas de redirecionamento.": "Aircraft/airport assignments, change history, duplicates and reroute proposals.",
   "REGISTRO DA FROTA": "FLEET REGISTRY",
@@ -1054,6 +1060,22 @@ const airportLabel = value => {
 };
 function renderRoutes(report) {
   routeReport = report;
+  const scan = report.last_scan;
+  if (!scan) {
+    $("routeAuditStatus").textContent = tr("Aguardando a primeira auditoria do jogo. A simulação pode permanecer ligada.");
+  } else {
+    const inspected = scan.visible || 0, found = scan.identified || 0, missing = scan.missing_airports || 0;
+    let explanation = tr("Última leitura: {x} aeronaves visíveis.", inspected) + " " +
+      tr("Rotas identificadas: {x}.", found);
+    if (missing) {
+      explanation += " " + tr("Sem identificação de origem/destino: {x}.", missing) + " " +
+        tr("O HTML do jogo não forneceu ambos os aeroportos; desativar a simulação não resolve esta leitura.");
+    }
+    if (inspected === 0) {
+      explanation += " " + tr("Nenhuma aeronave encontrada na página atual; confira o carregamento do jogo.");
+    }
+    $("routeAuditStatus").textContent = explanation;
+  }
   const metrics = $("routeSummary");
   metrics.textContent = "";
   for (const [count, label] of [

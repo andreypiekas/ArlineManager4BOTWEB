@@ -795,8 +795,15 @@ class Bot:
             log_flights.info("Nenhuma aeronave pronta para decolar.")
         elif not button.is_displayed() or not button.is_enabled() or "not-active" in (button.get_attribute("class") or ""):
             log_flights.info("Nenhuma decolagem disponível no momento.")
+        elif self.dry_run:
+            log_flights.info("[SIMULAÇÃO] Aeronaves prontas para decolar; comando de decolagem NÃO enviado.")
         else:
             self.pause()
+            # Re-read the flag immediately before triggering the irreversible action.
+            if self.dry_run:
+                log_flights.info("[SIMULAÇÃO] Decolagem cancelada; o modo simulação está ativo.")
+                self.close_popup()
+                return
             self.click_element(button)
             log_flights.info("Todas as aeronaves decolaram.")
             self.count("departures")
