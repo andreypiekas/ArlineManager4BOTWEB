@@ -201,7 +201,6 @@ def selective_dispatch(bot, registry: RouteRegistry, *, limit: int = 20) -> dict
         summary["status"] = "controle_individual_nao_disponivel"
         registry.record_dispatch_summary(summary)
         return summary
-    by_id = {d.aircraft_id: d for d in exposed}
     for decision in exposed[:max(0, int(limit))]:
         if bot.stopping or bot.dry_run:
             break
