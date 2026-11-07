@@ -171,11 +171,16 @@ class WebDashboard:
                              for k, label in switches],
             })
         goal = cfg.get("settings", "goal_model")
-        models = sorted((m for m in load_market() if m.get("capacity", 0) >= 100), key=lambda m: -m.get("price", 0))
+        # Expor todos os modelos encontrados no mercado, inclusive aeronaves
+        # pequenas: a seleção de compra não pode ficar limitada a 100 assentos.
+        model_names = sorted({m["name"].strip() for m in load_market()
+                              if isinstance(m.get("name"), str) and m["name"].strip()},
+                             key=str.casefold)
         text = [{"key": k, "label": t(label), "help": tip(k) or "",
                  "value": t(AUTO_GOAL_LABEL) if k == "goal_model" and is_auto_goal(goal) else cfg.get("settings", k)}
                 for k, label in TEXT_SETTINGS]
-        return {"tabs": tabs, "text": text, "goal_options": [t(AUTO_GOAL_LABEL)] + [m["name"] for m in models],
+        return {"tabs": tabs, "text": text, "goal_options": [t(AUTO_GOAL_LABEL)] + model_names,
+                "aircraft_options": model_names, "auto_goal_label": t(AUTO_GOAL_LABEL),
                 "lang": language()}
 
     def update_settings(self, payload: dict) -> tuple[bool, str]:

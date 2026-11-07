@@ -58,7 +58,7 @@ FLEET_SWITCHES = [
 AIRCRAFT_SWITCHES = [
     ("autobuy_aircraft", "Comprar aeronaves"),
     ("save_for_goal", "Economizar para uma aeronave desejada"),
-    ("goal_invest", "Investir em aeronaves menores se anteciparem a meta"),
+    ("goal_invest", "Permitir compras intermediárias antes da meta"),
 ]
 OPTION_SWITCHES = [
     ("auto_depart", "Decolar aeronaves"),
@@ -77,10 +77,10 @@ OPTION_SWITCHES = [
 ]
 ALL_SWITCHES = MARKET_SWITCHES + FLEET_SWITCHES + AIRCRAFT_SWITCHES + OPTION_SWITCHES
 
-# Free-text settings (Aviones tab)
+# Configurações de modelos e metas (aba Aeronaves)
 TEXT_SETTINGS = [
-    ("goal_model", "Aeronave desejada"),
-    ("aircraft_model", "Modelo fixo sem meta"),
+    ("goal_model", "Modelo da compra automática"),
+    ("aircraft_model", "Modelo fixo (sem meta ativa)"),
 ]
 
 # Tabs in display order: (name, icon, fields, switches)

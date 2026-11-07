@@ -325,6 +325,10 @@ footer strong { font-weight: 600; color: var(--aqua); }
   .tile:first-child .value { font-size: 30px; }
   .settings-group { padding: 13px; }
 }
+.model-selector { width: 100%; max-width: 310px; }
+.model-hint { color: var(--muted); font: 11px/1.6 "Cascadia Mono", Consolas, monospace;
+  border-left: 2px solid var(--aqua); padding: 9px 12px; margin: 8px 0 14px; }
+.row input[list] { width: 220px; max-width: 100%; }
 </style>
 </head>
 <body>
@@ -474,6 +478,18 @@ const EN = {
   "{x} em voo": "{x} flying", "{x} estacionadas": "{x} parked", "{x} pendentes": "{x} pending",
   "hangar {x} vagas": "hangar {x} free", "previsão {x}": "arrives {x}", "Atualizado {x}": "Updated {x}",
   "Meta": "Goal", "Valores": "Values", "Salvar": "Save", "vazio = mais rentável": "empty = most profitable",
+  "Compra de aeronaves": "Aircraft purchases",
+  "Estratégia de compra": "Purchase strategy",
+  "Progressão automática (bot escolhe)": "Automatic progression (bot chooses)",
+  "Modelo específico (você escolhe)": "Specific aircraft (you choose)",
+  "Selecione uma aeronave da lista": "Select an aircraft from the list",
+  "Digite o modelo (mercado ainda não consultado)": "Enter model (market not loaded yet)",
+  "Vazio = mais rentável": "Empty = most profitable",
+  "Meta desativada: ative «Economizar para uma aeronave desejada» para usar esta estratégia.": "Savings goal is disabled. Enable 'Save for a goal aircraft' to use this strategy.",
+  "O bot comprará o modelo escolhido quando houver saldo e vaga. Compras intermediárias estão permitidas; desative essa opção para comprar somente o modelo definido.": "The bot will buy your selected aircraft when it has enough funds and hangar space. Interim purchases are enabled; turn them off to buy only that model.",
+  "O bot economizará e comprará somente o modelo escolhido quando houver saldo e vaga no hangar.": "The bot will save and buy only your selected aircraft when funds and hangar space are available.",
+  "Progressão automática: o bot seleciona o próximo modelo conforme retorno estimado e orçamento.": "Automatic progression: the bot chooses the next model based on expected returns and budget.",
+  "Selecione uma aeronave específica antes de salvar.": "Choose an aircraft model before saving.",
   "Sem conexão com o bot": "No connection with the bot", "Resposta inválida": "Invalid answer",
 };
 let LANG = "pt_BR";
@@ -657,23 +673,93 @@ function renderSettings() {
   const values = document.createElement("section"); values.className = "settings-group";
   if (tab.key === "Aeronaves" || tab.key === "Aviones") {
     const heading = document.createElement("div"); heading.className = "section-title";
-    heading.textContent = tr("Meta"); values.appendChild(heading);
-    const list = document.createElement("datalist"); list.id = "goalList";
-    for (const name of settings.goal_options) {
+    heading.textContent = tr("Compra de aeronaves"); values.appendChild(heading);
+
+    const modelNames = Array.isArray(settings.aircraft_options) ? settings.aircraft_options : [];
+    const list = document.createElement("datalist"); list.id = "modelOptions";
+    for (const name of modelNames) {
       const option = document.createElement("option"); option.value = name; list.appendChild(option);
     }
     values.appendChild(list);
-    for (const s of settings.text) {
-      const input = document.createElement("input"); input.type = "text";
-      input.value = pendingDrafts.get(draftKey("text", s.key)) ?? (s.value || "");
-      if (s.key === "goal_model") { input.setAttribute("list", "goalList"); }
-      else { input.placeholder = tr("vazio = mais rentável"); }
-      input.oninput = () => {
-        pendingDrafts.set(draftKey("text", s.key), input.value);
-        showMsg({pending: true, message: tr("Alteração pendente: {x}", s.label) + " " + tr("Clique em Salvar.")});
+
+    // O modo "modelo específico" é persistido na chave já existente goal_model.
+    // Assim a estratégia não interfere nas credenciais nem nos seletores do jogo.
+    const goalSetting = settings.text.find(s => s.key === "goal_model");
+    const fixedSetting = settings.text.find(s => s.key === "aircraft_model");
+    const autoLabel = settings.auto_goal_label || tr("Automático (progressão)");
+    if (goalSetting) {
+      const persisted = pendingDrafts.get(draftKey("text", "goal_model")) ??
+        (goalSetting.value || autoLabel);
+      const autoNames = [autoLabel, "auto", "automático (progressão)", "automático",
+        "automatic (ladder)", "automatic"].map(v => v.toLocaleLowerCase());
+      const isAutomatic = autoNames.includes(persisted.trim().toLocaleLowerCase());
+
+      const strategy = document.createElement("select");
+      strategy.id = "f_purchase_strategy"; strategy.className = "model-selector";
+      for (const [value, label] of [
+        ["auto", tr("Progressão automática (bot escolhe)")],
+        ["specific", tr("Modelo específico (você escolhe)")]
+      ]) {
+        const option = document.createElement("option");
+        option.value = value; option.textContent = label; strategy.appendChild(option);
+      }
+      strategy.value = isAutomatic ? "auto" : "specific";
+      values.appendChild(field("purchase_strategy", tr("Estratégia de compra"), goalSetting.help, strategy));
+      // O field() atribui seu ID de forma consistente aos controles.
+      const goalInput = document.createElement("input");
+      goalInput.type = "text";
+      goalInput.setAttribute("list", "modelOptions");
+      goalInput.placeholder = modelNames.length ? tr("Selecione uma aeronave da lista") :
+        tr("Digite o modelo (mercado ainda não consultado)");
+      goalInput.value = isAutomatic ? "" : persisted;
+      goalInput.disabled = isAutomatic;
+      goalInput.required = !isAutomatic;
+      values.appendChild(field("goal_model", goalSetting.label, goalSetting.help, goalInput));
+
+      const description = document.createElement("p");
+      description.className = "model-hint"; description.id = "aircraftPurchaseHint";
+      const updateDescription = () => {
+        const goalEnabled = tab.switches.find(s => s.key === "save_for_goal");
+        const intermediate = tab.switches.find(s => s.key === "goal_invest");
+        if (goalEnabled && !goalEnabled.value) {
+          description.textContent = tr("Meta desativada: ative «Economizar para uma aeronave desejada» para usar esta estratégia.");
+        } else if (strategy.value === "specific") {
+          description.textContent = intermediate && intermediate.value ?
+            tr("O bot comprará o modelo escolhido quando houver saldo e vaga. Compras intermediárias estão permitidas; desative essa opção para comprar somente o modelo definido.") :
+            tr("O bot economizará e comprará somente o modelo escolhido quando houver saldo e vaga no hangar.");
+        } else {
+          description.textContent = tr("Progressão automática: o bot seleciona o próximo modelo conforme retorno estimado e orçamento.");
+        }
       };
-      inputs.push(["text", s.key, input]);
-      values.appendChild(field(s.key, s.label, s.help, input));
+      updateDescription();
+      values.appendChild(description);
+
+      const rememberChoice = () => {
+        goalInput.disabled = strategy.value === "auto";
+        goalInput.required = strategy.value === "specific";
+        const chosen = strategy.value === "auto" ? autoLabel : goalInput.value.trim();
+        pendingDrafts.set(draftKey("text", "goal_model"), chosen);
+        updateDescription();
+        showMsg({pending: true, message: tr("Alteração pendente: {x}", goalSetting.label) + " " + tr("Clique em Salvar.")});
+      };
+      strategy.onchange = rememberChoice;
+      goalInput.oninput = rememberChoice;
+      inputs.push(["text", "goal_model", {
+        get value() { return strategy.value === "auto" ? autoLabel : goalInput.value.trim(); }
+      }]);
+    }
+
+    if (fixedSetting) {
+      const input = document.createElement("input"); input.type = "text";
+      input.setAttribute("list", "modelOptions");
+      input.placeholder = tr("Vazio = mais rentável");
+      input.value = pendingDrafts.get(draftKey("text", fixedSetting.key)) ?? (fixedSetting.value || "");
+      input.oninput = () => {
+        pendingDrafts.set(draftKey("text", fixedSetting.key), input.value);
+        showMsg({pending: true, message: tr("Alteração pendente: {x}", fixedSetting.label) + " " + tr("Clique em Salvar.")});
+      };
+      inputs.push(["text", fixedSetting.key, input]);
+      values.appendChild(field(fixedSetting.key, fixedSetting.label, fixedSetting.help, input));
     }
   }
 
@@ -696,6 +782,10 @@ function renderSettings() {
     const actions = document.createElement("div"); actions.className = "actions";
     const save = document.createElement("button"); save.className = "accent"; save.textContent = tr("Salvar alterações");
     save.onclick = async () => {
+      if (inputs.some(([kind, key, input]) => kind === "text" && key === "goal_model" && !input.value.trim())) {
+        showMsg({ok: false, message: tr("Selecione uma aeronave específica antes de salvar.")});
+        return;
+      }
       const body = {settings: {}, text: {}};
       for (const [kind, key, input] of inputs) { body[kind][key] = input.value; }
       save.disabled = true;

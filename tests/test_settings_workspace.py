@@ -89,7 +89,8 @@ def test_salvamento_automatico_e_manual_preservados():
     assert 'const result = await api("/api/settings", body);' in html
     assert 'const pendingDrafts = new Map();' in html
     assert 'pendingDrafts.get(draftKey("settings", s.key)) ?? s.value' in html
-    assert 'pendingDrafts.get(draftKey("text", s.key)) ?? (s.value || "")' in html
+    assert 'pendingDrafts.get(draftKey("text", fixedSetting.key)) ?? (fixedSetting.value || "")' in html
+    assert 'pendingDrafts.get(draftKey("text", "goal_model"))' in html
     assert 'pendingDrafts.delete(draftKey(kind, key))' in html
     assert 'save.disabled = true' in html
     assert 'input.disabled = true' in html

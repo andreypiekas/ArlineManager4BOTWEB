@@ -475,7 +475,7 @@ def save_for_goal(bot: "Bot", models: list[AircraftModel], goal_name: str, budge
         log_market.info("Meta %s: sem preço ou saldo disponível; nenhuma compra neste ciclo.", goal.name)
         return
     status = (f"Objetivo {goal.name}: {fmt_money(progress['have'])} de {fmt_money(goal.price)} ({progress['pct']:.0f}%), "
-              f"faltan {fmt_money(progress['missing'])}, llegada {fmt_days(progress['eta_days'])}")
+              f"faltam {fmt_money(progress['missing'])}, previsão {fmt_days(progress['eta_days'])}")
 
     if progress["reached"]:
         if hangar_free is not None and hangar_free < 1:
