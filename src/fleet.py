@@ -31,6 +31,7 @@ from helpers import clean_response, fmt, to_int
 from notify import esc
 from route_optimizer import rank_candidates
 from route_airports import match_hub_options, code_from_candidate, explain_hub_options
+from airport_catalog import game_code
 from route_registry import RouteRegistry, eligible_for_reroute, endpoint
 
 if TYPE_CHECKING:
@@ -366,7 +367,10 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 f"{origin.get('code') or '?'} ↔ {destination.get('code') or '?'})"
             )
         elif reason == "aguardando_identificacao_da_base":
-            details = " (o seletor de bases do jogo não informou um único ID para os códigos da rota)"
+            details = " (o seletor de bases do jogo não confirmou um ID da rota)"
+        elif reason == "rota_fora_das_bases":
+            details = " (nenhuma ponta da rota é uma base selecionável; é necessário identificar a localização atual do avião e o controle de troca de rota)"
+
         elif reason == "sem_destino_com_codigo_validado":
             details = " (pesquisa não exibiu um código IATA/ICAO verificável para a alternativa)"
         elif reason == "aguardando_confirmacao_no_jogo":
@@ -457,7 +461,11 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                     diag["valid_ids"], diag["labels_with_possible_codes"],
                     diag["matched"], " / ".join(diag["samples"]) or "(nenhum)",
                 )
-                pending(aircraft_id, "aguardando_identificacao_da_base")
+                pending(
+                    aircraft_id,
+                    "rota_fora_das_bases" if diag["reason"] == "nenhuma_ponta_da_rota_nas_bases"
+                    else "aguardando_identificacao_da_base",
+                )
                 continue
             # The game's hub picker must prove we are searching the same origin
             # as the existing assignment. Never optimize from an unrelated hub.
@@ -752,10 +760,13 @@ def create_route(bot: "Bot", aircraft: ParkedAircraft, candidate: RouteCandidate
     if origin_id:
         RouteRegistry().record(
             aircraft.id, aircraft.reg, aircraft.model,
-            endpoint(origin_id, name=bot.js(
+            endpoint(origin_id, code=game_code(origin_id), name=bot.js(
                 "var e=document.getElementById('hubSelect');"
                 "return e && e.selectedIndex>=0 ? e.options[e.selectedIndex].text : '';"
-            ) or ""), endpoint(candidate.arr_id, name=candidate.name),
+            ) or ""), endpoint(
+                candidate.arr_id, code=game_code(candidate.arr_id, candidate.code),
+                name=candidate.name,
+            ),
             source="redirecionamento" if reroute else "criacao_confirmada",
             profit_per_day=profit_per_day,
             at_base=True,
