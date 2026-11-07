@@ -62,6 +62,7 @@ AIRCRAFT_SWITCHES = [
 ]
 OPTION_SWITCHES = [
     ("auto_depart", "Decolar aeronaves"),
+    ("selective_depart", "Despacho individual seguro quando houver rotas duplicadas"),
     ("autobuy_fuel", "Comprar combustível"),
     ("autobuy_co2", "Comprar CO₂"),
     ("auto_marketing", "Campanhas de reputação"),
