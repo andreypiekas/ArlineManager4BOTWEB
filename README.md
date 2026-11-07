@@ -339,6 +339,19 @@ As seções de configuração são **[settings]** (valores numéricos), **[optio
 - O projeto usa a licença MIT. O aviso de copyright obrigatório está preservado no arquivo [LICENSE](LICENSE).
 
 
+### Política independente de decolagens
+
+**Desativar "Criar rotas para aeronaves estacionadas" não desativa decolagens.**
+A opção `auto_route` controla apenas a criação de novas rotas;
+`allow_duplicate_routes` controla a autorização de novas rotas repetidas.
+O despacho continua sendo controlado por `auto_depart` e pela opção
+independente `block_duplicate_departures = off` (**padrão**).
+Assim aeronaves com rotas existentes continuam podendo decolar pelo comando
+geral mesmo que haja rotas repetidas. Para impedir decolagens dessas rotas,
+ative explicitamente "Bloquear decolagens com rotas duplicadas" em Opções;
+nesse caso o bot só tentará controles individuais comprovados no jogo e
+não enviará "Decolar todas" com duplicidades conhecidas.
+
 ### Despacho seletivo e segurança contra rotas duplicadas
 
 Com **Permitir aeronaves na mesma rota (ida/volta) = desativado**, o bot
