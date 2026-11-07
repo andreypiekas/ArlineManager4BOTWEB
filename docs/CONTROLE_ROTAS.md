@@ -45,21 +45,47 @@ e propõe novas rotas para os demais.
 
 ## Execução protegida
 
-A correção automática só altera o jogo quando, na mesma verificação:
+O controle acumula um relatório histórico de aeronaves e rotas, busca
+alternativas com lucro estimado e registra propostas sem alterar o jogo.
+Uma aeronave com dados insuficientes apresenta a causa específica:
+`aeronave_fora_da_base`, `localizacao_nao_confirmada`,
+`rota_nao_confirmada_no_jogo`, `aeroportos_nao_confirmados`
+ou `comprovacao_desatualizada`.
 
-1. A origem e o destino atuais foram verificados por identificadores do jogo.
-2. O jogo confirma **explicitamente** que a aeronave está em sua base.
-3. O modelo tem dados técnicos suficientes para estimar lucro positivo.
-4. A nova rota está livre nos dois sentidos segundo o histórico e o jogo.
-5. O jogo indica a aeronave como elegível para a rota proposta.
-6. A taxa não compromete a reserva de caixa; o formulário e a ordem são
-   confirmados pelo fluxo de criação do jogo.
+A mensagem da manutenção distingue agora aeronaves **na base** e
+**fora da base/em voo**. Ter lido a localização de uma aeronave não
+significa que ela esteja numa base. Encontrar DAC/OSL no seletor de
+bases da companhia também não comprova a base específica daquele avião.
 
-Se faltar qualquer evidência, a tela mostra um motivo de pendência e, quando
-possível, a alternativa calculada. O bot **não altera rotas por dedução**.
+### Alterações de rotas existentes
+
+**O redirecionamento real de uma aeronave que já possui rota está
+temporariamente desabilitado.** O formulário `new_route_info.php` é
+o fluxo de **criação de uma nova rota**, e ainda não foi comprovado
+que ele substitui com segurança a rota de uma aeronave já atribuída.
+O bot continuará calculando, simulando e registrando propostas, inclusive
+fora do modo simulação, mas marcará `troca_de_rota_ainda_nao_validada`
+em vez de enviar ordens de compra de nova rota.
+
+A opção **Permitir aeronaves na mesma rota (ida/volta)** desligada também
+protege as decolagens: como o jogo oferece o botão em lote
+**Decolar todas**, o bot não pode garantir que liberará apenas as aeronaves
+não duplicadas. Enquanto houver duplicidades identificadas no registro
+histórico, o comando geral será **bloqueado** e o motivo será registrado.
+O relatório é parcial e acumula aeronaves de páginas anteriores; a ausência
+de novas duplicidades não comprova que toda a frota foi auditada.
+
+Para liberar decolagens com duplicidades conscientemente aceitas,
+a opção **Permitir aeronaves na mesma rota** pode ser ativada manualmente.
+Isso desliga a restrição, mas também permite novas duplicidades; faça-o
+somente se essa for a política desejada.
+
+A funcionalidade de criar rotas para aeronaves **sem rota** continua
+independente e exige confirmações do próprio jogo, incluindo simulação,
+custo e validação do formulário de criação.
 
 O modo **Simulação (sem gastos)** calcula e registra propostas, sem enviar
-pedidos de nova rota.
+pedidos de compra ou decolagem.
 
 ## Limites conhecidos
 
