@@ -19,7 +19,6 @@ Screen facts (verified 2026-09-30):
 from __future__ import annotations
 
 import logging
-import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
@@ -380,13 +379,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             }
             # The stored report identifies a collision, but a *fresh*, explicit
             # game reading must confirm the aircraft at base before changing it.
-            fresh_grounding = (row.get("at_base") is True
-                               and time.time() - row.get("grounded_confirmed_at", 0) < 180)
-            verified_assignment = (
-                row.get("source") in ("game", "criacao_confirmada", "redirecionamento")
-                and time.time() - row.get("game_verified_at", 0) < 180
-            )
-            if not fresh_grounding or not verified_assignment:
+            if not eligible_for_reroute(row):
                 registry.note(aircraft_id, "aguardando_confirmacao_no_jogo", proposal=proposal)
                 continue
             if bot.dry_run:
