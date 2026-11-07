@@ -33,6 +33,7 @@ from route_optimizer import rank_candidates
 from route_airports import match_hub_options, code_from_candidate, explain_hub_options
 from airport_catalog import game_code
 from route_registry import RouteRegistry, reroute_block_reason, endpoint
+from reroute_preflight import check_existing_route
 
 if TYPE_CHECKING:
     from bot import Bot
@@ -541,11 +542,36 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 "profit_per_day": round(economics.profit_per_day),
                 "current_route": row.get("route_key", ""),
             }
+            # Confirm the existing route's own live ID and endpoints from the
+            # aircraft details before considering grounding/replacing it.
+            # This is a read-only probe and never submits fleet_ground.php.
+            preflight = check_existing_route(bot, aircraft_id, row)
+            proposal["preflight"] = {
+                "status": preflight.reason,
+                "route_id": preflight.route_id,
+                "endpoints": list(preflight.game_endpoints),
+            }
+            if preflight.route_confirmed:
+                log.info(
+                    "Controle de rotas: pré-validação de %s confirmou "
+                    "rota interna ID %s e aeroportos %s.",
+                    row["registration"], preflight.route_id,
+                    " ↔ ".join(preflight.game_endpoints),
+                )
+            else:
+                log.warning(
+                    "Controle de rotas: pré-validação de %s pendente: %s. "
+                    "Nenhuma rota será alterada.",
+                    row["registration"], preflight.reason,
+                )
             # The stored report identifies a collision, but a *fresh*, explicit
             # game reading must confirm the aircraft at base before changing it.
             reason = reroute_block_reason(row, verified_hub=hub_match is not None)
             if reason:
                 pending(aircraft_id, reason, proposal=proposal)
+                continue
+            if not preflight.route_confirmed:
+                pending(aircraft_id, "prevalidacao_de_rota_pendente", proposal=proposal)
                 continue
             if bot.dry_run:
                 pending(aircraft_id, "simulacao_redirecionamento", proposal=proposal)
