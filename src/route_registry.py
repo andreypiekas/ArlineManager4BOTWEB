@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 import paths
+from airport_catalog import same_airport_identity
 
 _LOCK = threading.RLock()
 _MAX_HISTORY = 1500
@@ -46,11 +47,11 @@ def endpoint(airport_id: object = "", code: object = "", name: object = "") -> d
 
 
 def endpoint_matches(a: dict, b: dict) -> bool:
-    """Compare stable IDs or exact normalized codes; names only when both lack stronger IDs."""
+    """Compare game IDs and verified IATA/ICAO aliases, never names when IDs conflict."""
     if a.get("id") and b.get("id"):
         return a["id"] == b["id"]
-    if a.get("code") and b.get("code"):
-        return a["code"] == b["code"]
+    if same_airport_identity(a, b):
+        return True
     if (not a.get("id") and not b.get("id") and
             not a.get("code") and not b.get("code")):
         an, bn = a.get("normalized_name"), b.get("normalized_name")
