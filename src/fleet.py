@@ -19,6 +19,7 @@ Screen facts (verified 2026-09-30):
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
@@ -30,9 +31,10 @@ from gamemode import EASY, GameMode
 from helpers import clean_response, fmt, to_int
 from notify import esc
 from route_optimizer import rank_candidates
+from route_strategy import best_reroute, profitable_candidates
 from route_airports import match_hub_options, code_from_candidate, explain_hub_options
 from airport_catalog import game_code
-from route_registry import RouteRegistry, reroute_block_reason, endpoint
+from route_registry import RouteRegistry, reroute_block_reason, endpoint, route_key
 from reroute_preflight import check_existing_route
 
 if TYPE_CHECKING:
@@ -363,8 +365,14 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
 
     def pending(aircraft_id: str, reason: str, *, proposal: Optional[dict] = None) -> None:
         """Expose the precise blocker without altering the verified assignment."""
-        registry.note(aircraft_id, reason, proposal=proposal)
         item = records.get(str(aircraft_id), {})
+        # When the analysis is paused or limited, retain the last profitable
+        # proposal instead of erasing useful comparisons from the dashboard.
+        if proposal is None and reason in (
+            "pendente_limite_ciclo", "aguardando_ativacao_de_analise"
+        ):
+            proposal = item.get("proposal")
+        registry.note(aircraft_id, reason, proposal=proposal)
         origin = item.get("origin") or {}
         destination = item.get("destination") or {}
         details = ""
@@ -394,6 +402,10 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             details = " (necessário comprovar localização na base e rota atual)"
         elif reason == "troca_de_rota_ainda_nao_validada":
             details = " (formulário de criação de nova rota não comprova substituição da rota já atribuída)"
+        elif reason == "sem_alternativa_melhor_que_atual":
+            details = " (nenhuma alternativa lucrativa supera a estimativa da rota atual com a margem mínima)"
+        elif reason == "aguardando_ativacao_de_analise":
+            details = " (análise de rotas repetidas desligada; nenhuma pesquisa enviada ao jogo)"
         if proposal:
             details += (
                 f" | alternativa: {proposal.get('destination') or proposal.get('destination_id')}"
@@ -407,187 +419,221 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             reason.replace("_", " "), details,
         )
 
-    changed = 0
+    # The planner does not change live routes; its own per-cycle budget must
+    # be separate from the budget for creating/ordering aircraft.
     cfg = bot.config
     market = load_market()
+    targets = []
     for duplicate in report["duplicates"]:
         members = [records[a["id"]] for a in duplicate["aircraft"] if a["id"] in records]
         if len(members) < 2:
             continue
-        # Prefer keeping the aircraft whose last estimated operating profit was
-        # higher. Ties keep the longest-established route to minimize churn.
         members.sort(key=lambda row: (
             -(row["profit_per_day"] if isinstance(row.get("profit_per_day"), (int, float)) else -1),
             row.get("assigned_at", 0), row["aircraft_id"],
         ))
-        for row in members[1:]:
-            aircraft_id = row["aircraft_id"]
-            if changed >= budget or bot.stopping:
-                pending(aircraft_id, "pendente_limite_ciclo")
-                continue
-            origin = row.get("origin", {})
-            destination = row.get("destination", {})
-            hub_id = str(origin.get("id") or "")
-            hub_code = origin.get("code") or ""
-            current_dest_code = destination.get("code") or ""
-            # The route list often exposes only IATA/ICAO codes, not numeric
-            # airport IDs. Those codes are sufficient for a read-only lookup
-            # against the game's real hub selection, not for guessing an ID.
-            if not (hub_id and destination.get("id")) and not (hub_code and current_dest_code):
-                pending(aircraft_id, "aguardando_identificacao_da_rota")
-                continue
-            if not cfg.get_bool("options", "auto_route"):
-                pending(aircraft_id, "aguardando_ativacao_de_rotas")
-                continue
-            model = find_model(market, row.get("model") or "")
-            if not model or not model.get("speed") or not model.get("fuel"):
-                pending(aircraft_id, "aguardando_dados_do_modelo")
-                continue
-            seats = int(model.get("capacity") or 0)
-            if seats <= 0:
-                pending(aircraft_id, "aguardando_dados_do_modelo")
-                continue
-            limit = cfg.get_int("settings", "route_max_distance_big" if seats >= BIG_SEATS else "route_max_distance", 6000)
-            if model.get("range"):
-                limit = min(limit, int(model["range"]))
-            bot.open_popup("routes_main.php", "Routes", "nav_routes")
-            bot.ajax("research_main.php", "routeAction")
-            # Route labels are not direction-of-flight proof: for OSL↔DAC
-            # either airport may be the actual hub. The unique match in the
-            # authenticated game selector decides the planning origin.
-            hub_options = bot.js(_HUB_OPTIONS_JS) or []
-            hub_match = match_hub_options(
-                hub_code, current_dest_code, hub_options
-            ) if hub_code and current_dest_code else None
-            if hub_match:
-                hub_id = hub_match.airport_id
-                hub_code = hub_match.code
-                current_dest_code = hub_match.opposite_code
-                log.info(
-                    "Controle de rotas: %s — aeroporto %s (ID do jogo %s) consta das bases da "
-                    "companhia; destino atual %s. Isso NÃO confirma a base desta aeronave.",
-                    row["registration"], hub_code, hub_id, current_dest_code,
-                )
-            elif not (hub_id and destination.get("id")):
-                diag = explain_hub_options(hub_code, current_dest_code, hub_options)
-                log.warning(
-                    "Controle de rotas: %s — seletor de bases: %s | opções %d "
-                    "(IDs válidos %d, rótulos com possíveis códigos %d), "
-                    "correspondências %s | exemplos: %s. "
-                    "A rota pode estar entre aeroportos que não são bases próprias; "
-                    "nenhuma base será presumida.",
-                    row["registration"], diag["reason"], diag["total_options"],
-                    diag["valid_ids"], diag["labels_with_possible_codes"],
-                    diag["matched"], " / ".join(diag["samples"]) or "(nenhum)",
-                )
-                pending(
-                    aircraft_id,
-                    "rota_fora_das_bases" if diag["reason"] == "nenhuma_ponta_da_rota_nas_bases"
-                    else "aguardando_identificacao_da_base",
-                )
-                continue
-            # The game's hub picker must prove we are searching the same origin
-            # as the existing assignment. Never optimize from an unrelated hub.
-            selected = bot.js(
-                "var e=document.getElementById('hubSelect');"
-                "if(!e || !Array.from(e.options).some(x=>x.value===arguments[0]))return false;"
-                "e.value=arguments[0];e.dispatchEvent(new Event('change',{bubbles:true}));"
-                "return e.value===arguments[0];", hub_id,
-            )
-            if not selected:
-                pending(aircraft_id, "aguardando_confirmacao_da_base")
-                continue
-            destination_options = []
-            for distance in (limit, limit // 2, limit // 4):
-                if distance < 500 or bot.stopping:
-                    break
-                options = []
-                for candidate in search_routes(
-                    bot, hub_id, distance, cfg.get_int("settings", "route_min_runway", 5000)
-                ):
-                    # Only a game-verifiable airport code allows comparison with
-                    # the historical code-only records, in both directions.
-                    if not candidate.code:
-                        continue
-                    if current_dest_code and candidate.code == current_dest_code:
-                        continue
-                    if destination.get("id") and destination["id"] == candidate.arr_id:
-                        continue
-                    if registry.is_occupied(
-                        endpoint(code=hub_code), endpoint(code=candidate.code), aircraft_id
-                    ):
-                        continue
-                    options.append(candidate)
-                destination_options.extend(options)
-                if options:
-                    break
-            if not destination_options:
-                pending(aircraft_id, "sem_destino_com_codigo_validado")
-                continue
-            ranked = rank_candidates(
-                destination_options, seats=seats, model=model, mode=bot.mode,
-                load_factor=bot.load_factor(), fuel_price=bot.fuel_cost_basis(),
-                co2_price=bot.co2_cost_basis(), premium=cfg.get_bool("options", "auto_seats"),
-            )
-            alternative = next(((candidate, economics) for candidate, economics in ranked
-                                if economics is not None and economics.profit_per_day > 0), None)
-            if alternative is None:
-                pending(aircraft_id, "sem_alternativa_lucrativa")
-                continue
-            candidate, economics = alternative
-            proposal = {
-                "origin_id": hub_id, "origin_code": hub_code,
-                "destination_id": candidate.arr_id, "destination_code": candidate.code,
-                "destination": candidate.name, "distance_km": round(candidate.distance),
-                "profit_per_day": round(economics.profit_per_day),
-                "current_route": row.get("route_key", ""),
-            }
-            # Confirm the existing route's own live ID and endpoints from the
-            # aircraft details before considering grounding/replacing it.
-            # This is a read-only probe and never submits fleet_ground.php.
-            preflight = check_existing_route(bot, aircraft_id, row)
-            proposal["preflight"] = {
-                "status": preflight.reason,
-                "route_id": preflight.route_id,
-                "endpoints": list(preflight.game_endpoints),
-            }
-            if preflight.route_confirmed:
-                log.info(
-                    "Controle de rotas: pré-validação de %s confirmou "
-                    "rota interna ID %s e aeroportos %s.",
-                    row["registration"], preflight.route_id,
-                    " ↔ ".join(preflight.game_endpoints),
-                )
-            else:
-                log.warning(
-                    "Controle de rotas: pré-validação de %s pendente: %s. "
-                    "Nenhuma rota será alterada.",
-                    row["registration"], preflight.reason,
-                )
-            # The stored report identifies a collision, but a *fresh*, explicit
-            # game reading must confirm the aircraft at base before changing it.
-            reason = reroute_block_reason(row, verified_hub=hub_match is not None)
-            if reason:
-                pending(aircraft_id, reason, proposal=proposal)
-                continue
-            if not preflight.route_confirmed:
-                pending(aircraft_id, "prevalidacao_de_rota_pendente", proposal=proposal)
-                continue
-            if bot.dry_run:
-                pending(aircraft_id, "simulacao_redirecionamento", proposal=proposal)
-                log.info("[SIMULAÇÃO] Redirecionaria %s para %s (lucro estimado ~ $%s/dia).",
-                         row["registration"], candidate.name, fmt(proposal["profit_per_day"]))
-                continue
-            # Existing routed aircraft are NOT equivalent to parked aircraft
-            # without routes. Our current create_route() uses a new-route form,
-            # not the game's distinct "reroute" control. Until the existing
-            # route replacement workflow is verified in a logged-in session,
-            # only calculate and report proposals; never submit a new-route
-            # purchase as a substitute for modifying an assigned aircraft.
-            pending(aircraft_id, "troca_de_rota_ainda_nao_validada", proposal=proposal)
+        targets.extend(members[1:])
+    # Fairness: unattempted targets first, then oldest last attempt.
+    # Without this, the first N repeated routes were researched forever.
+    targets.sort(key=lambda row: (
+        row.get("last_planned_at") or 0,
+        row["aircraft_id"],
+    ))
+    processed = 0
+    if not cfg.get_bool("options", "analyze_duplicate_routes"):
+        for row in targets:
+            pending(row["aircraft_id"], "aguardando_ativacao_de_analise")
+        return 0
+    for row in targets:
+        aircraft_id = row["aircraft_id"]
+        if processed >= budget or bot.stopping:
+            pending(aircraft_id, "pendente_limite_ciclo")
             continue
+        processed += 1
+        registry.mark_plan_attempt(aircraft_id)
+        origin = row.get("origin", {})
+        destination = row.get("destination", {})
+        hub_id = str(origin.get("id") or "")
+        hub_code = origin.get("code") or ""
+        current_dest_code = destination.get("code") or ""
+        # The route list often exposes only IATA/ICAO codes, not numeric
+        # airport IDs. Those codes are sufficient for a read-only lookup
+        # against the game's real hub selection, not for guessing an ID.
+        if not (hub_id and destination.get("id")) and not (hub_code and current_dest_code):
+            pending(aircraft_id, "aguardando_identificacao_da_rota")
+            continue
+        model = find_model(market, row.get("model") or "")
+        if not model or not model.get("speed") or not model.get("fuel"):
+            pending(aircraft_id, "aguardando_dados_do_modelo")
+            continue
+        seats = int(model.get("capacity") or 0)
+        if seats <= 0:
+            pending(aircraft_id, "aguardando_dados_do_modelo")
+            continue
+        limit = cfg.get_int("settings", "route_max_distance_big" if seats >= BIG_SEATS else "route_max_distance", 6000)
+        if model.get("range"):
+            limit = min(limit, int(model["range"]))
+        bot.open_popup("routes_main.php", "Routes", "nav_routes")
+        bot.ajax("research_main.php", "routeAction")
+        # Route labels are not direction-of-flight proof: for OSL↔DAC
+        # either airport may be the actual hub. The unique match in the
+        # authenticated game selector decides the planning origin.
+        hub_options = bot.js(_HUB_OPTIONS_JS) or []
+        hub_match = match_hub_options(
+            hub_code, current_dest_code, hub_options
+        ) if hub_code and current_dest_code else None
+        if hub_match:
+            hub_id = hub_match.airport_id
+            hub_code = hub_match.code
+            current_dest_code = hub_match.opposite_code
+            log.info(
+                "Controle de rotas: %s — aeroporto %s (ID do jogo %s) consta das bases da "
+                "companhia; destino atual %s. Isso NÃO confirma a base desta aeronave.",
+                row["registration"], hub_code, hub_id, current_dest_code,
+            )
+        elif not (hub_id and destination.get("id")):
+            diag = explain_hub_options(hub_code, current_dest_code, hub_options)
+            log.warning(
+                "Controle de rotas: %s — seletor de bases: %s | opções %d "
+                "(IDs válidos %d, rótulos com possíveis códigos %d), "
+                "correspondências %s | exemplos: %s. "
+                "A rota pode estar entre aeroportos que não são bases próprias; "
+                "nenhuma base será presumida.",
+                row["registration"], diag["reason"], diag["total_options"],
+                diag["valid_ids"], diag["labels_with_possible_codes"],
+                diag["matched"], " / ".join(diag["samples"]) or "(nenhum)",
+            )
+            pending(
+                aircraft_id,
+                "rota_fora_das_bases" if diag["reason"] == "nenhuma_ponta_da_rota_nas_bases"
+                else "aguardando_identificacao_da_base",
+            )
+            continue
+        # The game's hub picker must prove we are searching the same origin
+        # as the existing assignment. Never optimize from an unrelated hub.
+        selected = bot.js(
+            "var e=document.getElementById('hubSelect');"
+            "if(!e || !Array.from(e.options).some(x=>x.value===arguments[0]))return false;"
+            "e.value=arguments[0];e.dispatchEvent(new Event('change',{bubbles:true}));"
+            "return e.value===arguments[0];", hub_id,
+        )
+        if not selected:
+            pending(aircraft_id, "aguardando_confirmacao_da_base")
+            continue
+        destination_options = []
+        for distance in (limit, limit // 2, limit // 4):
+            if distance < 500 or bot.stopping:
+                break
+            options = []
+            for candidate in search_routes(
+                bot, hub_id, distance, cfg.get_int("settings", "route_min_runway", 5000)
+            ):
+                # Only a game-verifiable airport code allows comparison with
+                # the historical code-only records, in both directions.
+                if not candidate.code:
+                    continue
+                if current_dest_code and candidate.code == current_dest_code:
+                    continue
+                if destination.get("id") and destination["id"] == candidate.arr_id:
+                    continue
+                if registry.is_occupied(
+                    endpoint(code=hub_code), endpoint(code=candidate.code), aircraft_id
+                ):
+                    continue
+                options.append(candidate)
+            destination_options.extend(options)
+            if options:
+                break
+        if not destination_options:
+            pending(aircraft_id, "sem_destino_com_codigo_validado")
+            continue
+        ranked = rank_candidates(
+            destination_options, seats=seats, model=model, mode=bot.mode,
+            load_factor=bot.load_factor(), fuel_price=bot.fuel_cost_basis(),
+            co2_price=bot.co2_cost_basis(), premium=cfg.get_bool("options", "auto_seats"),
+        )
+        alternative, required_profit = best_reroute(
+            ranked, current_profit=row.get("profit_per_day"),
+            minimum_gain_percent=cfg.get_int("settings", "route_min_profit_gain_pct", 5),
+        )
+        if alternative is None:
+            pending(
+                aircraft_id,
+                "sem_alternativa_melhor_que_atual" if required_profit is not None
+                else "sem_alternativa_lucrativa",
+            )
+            continue
+        candidate, economics = alternative
+        proposal = {
+            "calculated_at": int(time.time()),
+            "baseline_profit_per_day": (
+                round(float(row["profit_per_day"]))
+                if required_profit is not None else None
+            ),
+            "minimum_acceptable_profit_per_day": (
+                round(required_profit) if required_profit is not None else None
+            ),
+            "estimated_gain_per_day": (
+                round(economics.profit_per_day - float(row["profit_per_day"]))
+                if required_profit is not None else None
+            ),
+            "origin_id": hub_id, "origin_code": hub_code,
+            "destination_id": candidate.arr_id, "destination_code": candidate.code,
+            "destination": candidate.name, "distance_km": round(candidate.distance),
+            "profit_per_day": round(economics.profit_per_day),
+            "current_route": row.get("route_key", ""),
+        }
+        # Confirm the existing route's own live ID and endpoints from the
+        # aircraft details before considering grounding/replacing it.
+        # This is a read-only probe and never submits fleet_ground.php.
+        preflight = check_existing_route(bot, aircraft_id, row)
+        proposal["preflight"] = {
+            "status": preflight.reason,
+            "route_id": preflight.route_id,
+            "endpoints": list(preflight.game_endpoints),
+        }
+        if preflight.route_confirmed:
+            log.info(
+                "Controle de rotas: pré-validação de %s confirmou "
+                "rota interna ID %s e aeroportos %s.",
+                row["registration"], preflight.route_id,
+                " ↔ ".join(preflight.game_endpoints),
+            )
+        else:
+            log.warning(
+                "Controle de rotas: pré-validação de %s pendente: %s. "
+                "Nenhuma rota será alterada.",
+                row["registration"], preflight.reason,
+            )
+        # The stored report identifies a collision, but a *fresh*, explicit
+        # game reading must confirm the aircraft at base before changing it.
+        reason = reroute_block_reason(row, verified_hub=hub_match is not None)
+        if reason:
+            pending(aircraft_id, reason, proposal=proposal)
+            continue
+        if not preflight.route_confirmed:
+            pending(aircraft_id, "prevalidacao_de_rota_pendente", proposal=proposal)
+            continue
+        if bot.dry_run:
+            pending(aircraft_id, "simulacao_redirecionamento", proposal=proposal)
+            log.info("[SIMULAÇÃO] Redirecionaria %s para %s (lucro estimado ~ $%s/dia).",
+                     row["registration"], candidate.name, fmt(proposal["profit_per_day"]))
+            continue
+        # Existing routed aircraft are NOT equivalent to parked aircraft
+        # without routes. Our current create_route() uses a new-route form,
+        # not the game's distinct "reroute" control. Until the existing
+        # route replacement workflow is verified in a logged-in session,
+        # only calculate and report proposals; never submit a new-route
+        # purchase as a substitute for modifying an assigned aircraft.
+        pending(aircraft_id, "troca_de_rota_ainda_nao_validada", proposal=proposal)
+        continue
 
-    return changed
+    log.info(
+        "Controle de rotas: análise de %d/%d aeronaves com duplicidade neste ciclo; "
+        "próximas serão priorizadas por proposta mais antiga.",
+        processed, len(targets),
+    )
+    return 0  # Planning must never consume the live route-creation budget.
 
 
 # ---------------------------------------------------------------------- routes
@@ -648,7 +694,7 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
     market = load_market()
     premium = cfg.get_bool("options", "auto_seats")
     created = 0
-    used: set[str] = set()
+    used_pairs: set[str] = set()
     registry = RouteRegistry()
     allow_duplicates = cfg.get_bool("options", "allow_duplicate_routes", True)
 
@@ -672,10 +718,16 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
         for distance in (limit, limit // 2, limit // 4):
             if distance < 500 or bot.stopping:
                 break
-            candidates = [c for c in search_routes(bot, hub_id, distance, min_runway)
-                          if c.arr_id not in used and
-                          (allow_duplicates or not registry.is_occupied(
-                              endpoint(hub_id), endpoint(c.arr_id), aircraft.id))]
+            candidates = [
+                c for c in search_routes(bot, hub_id, distance, min_runway)
+                if c.arr_id != str(hub_id) and
+                (allow_duplicates or (
+                    route_key(endpoint(hub_id), endpoint(c.arr_id)) not in used_pairs
+                    and not registry.is_occupied(
+                        endpoint(hub_id), endpoint(c.arr_id), aircraft.id
+                    )
+                ))
+            ]
             # Use the game's known demand and the latest cached aircraft model to
             # estimate daily revenue minus fuel/CO2; missing model data keeps the
             # original demand-based ordering (no fabricated fuel/speed values).
@@ -686,9 +738,17 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 premium=premium,
             )
             estimates = {c.arr_id: estimate for c, estimate in ranked}
+            profitable = profitable_candidates(ranked)
             has_estimates = any(estimate is not None for _, estimate in ranked)
             if has_estimates:
-                tries = [candidate for candidate, _ in ranked[:MAX_ROUTE_TRIES]]
+                tries = [candidate for candidate, _ in profitable[:MAX_ROUTE_TRIES]]
+                if not tries:
+                    log.warning(
+                        "%s: rotas disponíveis até %d km apresentam lucro líquido "
+                        "estimado não positivo; nenhuma taxa será paga por essas rotas.",
+                        aircraft.reg, distance,
+                    )
+                    continue
                 best = ranked[0][1]
                 if best is not None:
                     log.info(
@@ -736,7 +796,8 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 break
         if outcome in ("created", "dry"):
             created += 1
-            used.add(candidate.arr_id)
+            if not allow_duplicates:
+                used_pairs.add(route_key(endpoint(hub_id), endpoint(candidate.arr_id)))
         elif outcome == "stop":
             break
         else:

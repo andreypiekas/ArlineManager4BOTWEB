@@ -243,6 +243,21 @@ class RouteRegistry:
             self._save(data)
             return True
 
+    def mark_plan_attempt(self, aircraft_id: str) -> bool:
+        """Rotate planning fairly even for aircraft with no viable alternative.
+
+        Only the attempted aircraft is timestamped. Deferred rows retain their
+        old priority, so an impossible route does not starve the entire queue.
+        """
+        with _LOCK:
+            data = _state(self.path)
+            entry = data["aircraft"].get(str(aircraft_id))
+            if not entry:
+                return False
+            entry["last_planned_at"] = int(time.time())
+            self._save(data)
+            return True
+
     def note(self, aircraft_id: str, status: str, *, proposal: Optional[dict] = None) -> bool:
         """Save reroute status/profit proposal without changing the verified route."""
         with _LOCK:

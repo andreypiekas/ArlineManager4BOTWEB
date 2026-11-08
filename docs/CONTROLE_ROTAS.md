@@ -229,3 +229,55 @@ compare a lista real de voos do jogo. Somente quando a seleção for
 comprovada no jogo real é adequado avaliar a liberação de execução
 seletiva contínua. A configuração não deve ser usada para contornar
 limitações ou regras do serviço.
+
+
+## Motor de planejamento de rotas — evolução de 08/11/2026
+
+A criação automática de rotas e a análise de rotas repetidas passam a ser
+duas operações **independentes**:
+
+- `auto_route`: efetivamente cria novas rotas para aeronaves sem rota,
+  condicionado a orçamento, permissões, alcance, pista e formulário real.
+- `analyze_duplicate_routes`: **ligada por padrão**, mesmo com `auto_route`
+  desligada. Analisa rotas repetidas, pesquisa destinos e grava propostas,
+  porém **nunca altera uma rota existente** sem o fluxo de substituição
+  validado em uma sessão autenticada.
+- `route_min_profit_gain_pct`: percentual mínimo de aumento estimado
+  do lucro diário ao comparar uma alternativa com um lucro atual estimado
+  e disponível. Padrão **5%**. Quando não existe estimativa atual confiável,
+  exige apenas lucro estimado positivo e identifica a comparação como
+  indisponível; não inventa ganho líquido.
+
+### Pesquisa e seleção
+
+A estimativa considera demanda Y/J/F, alcance, velocidade, combustível,
+CO₂, fator de ocupação e modo de jogo. O cálculo tem limitações (custos,
+índices e parâmetros não expostos no jogo) e serve para priorização.
+
+- Quando o mercado fornece dados suficientes para calcular lucro, **rotas
+  conhecidamente deficitárias ou com lucro zero não são criadas**.
+- Quando faltam informações para calcular qualquer candidato, a seleção
+  anterior por demanda continua disponível, sem inventar lucro.
+- O bloqueio de repetição usa o **par origem ↔ destino**, não apenas o
+  destino; destinos iguais podem ser usados a partir de bases diferentes,
+  desde que não constituam a mesma rota duplicada.
+- A análise de rotas repetidas limita tentativas por ciclo à configuração
+  `fleet_actions_per_cycle`. Cada tentativa recebe data de análise, mesmo
+  quando não encontra uma alternativa lucrativa. No ciclo seguinte, rotas
+  ainda não pesquisadas são priorizadas: uma rota difícil não monopoliza
+  todas as pesquisas.
+- Adiar análises por limite de ciclo ou desligar a análise não apaga
+  propostas lucrativas já conhecidas.
+
+### Relatório
+
+Na aba **Rotas e aeronaves**, cada proposta apresenta destino, lucro
+estimado, aumento projetado quando há referência conhecida, data do
+cálculo e estado da pré-validação do ID da rota no jogo. Esses valores
+não representam lucro realizado nem indicam substituição executada.
+
+**Restrição mantida:** a troca automática real continua desabilitada.
+O bot ainda não tem validação de todas as etapas de ground/reroute/rollback
+do jogo; não será usada a criação de nova rota como substituição implícita
+da rota ativa. A opção de despachar aeronaves continua independente das
+configurações de criação/análise de rotas.
