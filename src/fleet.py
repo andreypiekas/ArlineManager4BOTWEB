@@ -440,7 +440,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         row["aircraft_id"],
     ))
     processed = 0
-    if not cfg.get_bool("options", "analyze_duplicate_routes", True):
+    if not cfg.get_bool("options", "analyze_duplicate_routes"):
         for row in targets:
             pending(row["aircraft_id"], "aguardando_ativacao_de_analise")
         return 0
