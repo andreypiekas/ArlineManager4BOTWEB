@@ -1118,8 +1118,16 @@ function renderRoutes(report) {
   let count = 0;
   for (const row of report.relations || []) {
     const origin = airportLabel(row.origin), destination = airportLabel(row.destination);
-    const proposal = row.proposal ? " · " + tr("Alternativa") + ": " + (row.proposal.destination || row.proposal.destination_id || "") +
-      " (~" + money(row.proposal.profit_per_day) + "/" + tr("dia") + ")" : "";
+    const proposal = row.proposal ? " · " + tr("Alternativa") + ": " +
+      (row.proposal.destination || row.proposal.destination_id || "") +
+      " (~" + money(row.proposal.profit_per_day) + "/" + tr("dia") + ")" +
+      (row.proposal.estimated_gain_per_day != null ?
+        " · ganho estimado +" + money(row.proposal.estimated_gain_per_day) + "/" + tr("dia") : "") +
+      (row.proposal.preflight && row.proposal.preflight.status ?
+        " · pré-validação: " + row.proposal.preflight.status.replaceAll("_", " ") : "") +
+      (row.proposal.calculated_at ?
+        " · proposta " + new Date(row.proposal.calculated_at * 1000).toLocaleString(
+          LANG === "en" ? "en-GB" : "pt-BR") : "") : "";
     const searchText = [row.aircraft_id, row.registration, row.model, origin, destination, row.status, proposal].join(" ").toLocaleLowerCase();
     if (query && !searchText.includes(query)) { continue; }
     count++;
