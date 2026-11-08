@@ -19,6 +19,7 @@ Screen facts (verified 2026-09-30):
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
@@ -30,9 +31,10 @@ from gamemode import EASY, GameMode
 from helpers import clean_response, fmt, to_int
 from notify import esc
 from route_optimizer import rank_candidates
+from route_strategy import best_reroute, profitable_candidates
 from route_airports import match_hub_options, code_from_candidate, explain_hub_options
 from airport_catalog import game_code
-from route_registry import RouteRegistry, reroute_block_reason, endpoint
+from route_registry import RouteRegistry, reroute_block_reason, endpoint, route_key
 from reroute_preflight import check_existing_route
 
 if TYPE_CHECKING:
@@ -363,8 +365,14 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
 
     def pending(aircraft_id: str, reason: str, *, proposal: Optional[dict] = None) -> None:
         """Expose the precise blocker without altering the verified assignment."""
-        registry.note(aircraft_id, reason, proposal=proposal)
         item = records.get(str(aircraft_id), {})
+        # When the analysis is paused or limited, retain the last profitable
+        # proposal instead of erasing useful comparisons from the dashboard.
+        if proposal is None and reason in (
+            "pendente_limite_ciclo", "aguardando_ativacao_de_analise"
+        ):
+            proposal = item.get("proposal")
+        registry.note(aircraft_id, reason, proposal=proposal)
         origin = item.get("origin") or {}
         destination = item.get("destination") or {}
         details = ""
@@ -394,6 +402,10 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             details = " (necessário comprovar localização na base e rota atual)"
         elif reason == "troca_de_rota_ainda_nao_validada":
             details = " (formulário de criação de nova rota não comprova substituição da rota já atribuída)"
+        elif reason == "sem_alternativa_melhor_que_atual":
+            details = " (nenhuma alternativa lucrativa supera a estimativa da rota atual com a margem mínima)"
+        elif reason == "aguardando_ativacao_de_analise":
+            details = " (análise de rotas repetidas desligada; nenhuma pesquisa enviada ao jogo)"
         if proposal:
             details += (
                 f" | alternativa: {proposal.get('destination') or proposal.get('destination_id')}"
@@ -407,24 +419,37 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             reason.replace("_", " "), details,
         )
 
-    changed = 0
+    # The planner does not change live routes; its own per-cycle budget must
+    # be separate from the budget for creating/ordering aircraft.
     cfg = bot.config
     market = load_market()
+    targets = []
     for duplicate in report["duplicates"]:
         members = [records[a["id"]] for a in duplicate["aircraft"] if a["id"] in records]
         if len(members) < 2:
             continue
-        # Prefer keeping the aircraft whose last estimated operating profit was
-        # higher. Ties keep the longest-established route to minimize churn.
         members.sort(key=lambda row: (
             -(row["profit_per_day"] if isinstance(row.get("profit_per_day"), (int, float)) else -1),
             row.get("assigned_at", 0), row["aircraft_id"],
         ))
-        for row in members[1:]:
+        targets.extend(members[1:])
+    # Fairness: previously unplanned targets first, then the oldest proposal.
+    # Without this, the first N repeated routes were researched forever.
+    targets.sort(key=lambda row: (
+        (row.get("proposal") or {}).get("calculated_at") or 0,
+        row["aircraft_id"],
+    ))
+    processed = 0
+    if not cfg.get_bool("options", "analyze_duplicate_routes", True):
+        for row in targets:
+            pending(row["aircraft_id"], "aguardando_ativacao_de_analise")
+        return 0
+    for row in targets:
             aircraft_id = row["aircraft_id"]
-            if changed >= budget or bot.stopping:
+            if processed >= budget or bot.stopping:
                 pending(aircraft_id, "pendente_limite_ciclo")
                 continue
+            processed += 1
             origin = row.get("origin", {})
             destination = row.get("destination", {})
             hub_id = str(origin.get("id") or "")
@@ -435,9 +460,6 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             # against the game's real hub selection, not for guessing an ID.
             if not (hub_id and destination.get("id")) and not (hub_code and current_dest_code):
                 pending(aircraft_id, "aguardando_identificacao_da_rota")
-                continue
-            if not cfg.get_bool("options", "auto_route"):
-                pending(aircraft_id, "aguardando_ativacao_de_rotas")
                 continue
             model = find_model(market, row.get("model") or "")
             if not model or not model.get("speed") or not model.get("fuel"):
@@ -529,13 +551,31 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 load_factor=bot.load_factor(), fuel_price=bot.fuel_cost_basis(),
                 co2_price=bot.co2_cost_basis(), premium=cfg.get_bool("options", "auto_seats"),
             )
-            alternative = next(((candidate, economics) for candidate, economics in ranked
-                                if economics is not None and economics.profit_per_day > 0), None)
+            alternative, required_profit = best_reroute(
+                ranked, current_profit=row.get("profit_per_day"),
+                minimum_gain_percent=cfg.get_int("settings", "route_min_profit_gain_pct", 5),
+            )
             if alternative is None:
-                pending(aircraft_id, "sem_alternativa_lucrativa")
+                pending(
+                    aircraft_id,
+                    "sem_alternativa_melhor_que_atual" if required_profit is not None
+                    else "sem_alternativa_lucrativa",
+                )
                 continue
             candidate, economics = alternative
             proposal = {
+                "calculated_at": int(time.time()),
+                "baseline_profit_per_day": (
+                    round(float(row["profit_per_day"]))
+                    if required_profit is not None else None
+                ),
+                "minimum_acceptable_profit_per_day": (
+                    round(required_profit) if required_profit is not None else None
+                ),
+                "estimated_gain_per_day": (
+                    round(economics.profit_per_day - float(row["profit_per_day"]))
+                    if required_profit is not None else None
+                ),
                 "origin_id": hub_id, "origin_code": hub_code,
                 "destination_id": candidate.arr_id, "destination_code": candidate.code,
                 "destination": candidate.name, "distance_km": round(candidate.distance),
@@ -587,7 +627,12 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             pending(aircraft_id, "troca_de_rota_ainda_nao_validada", proposal=proposal)
             continue
 
-    return changed
+    log.info(
+        "Controle de rotas: análise de %d/%d aeronaves com duplicidade neste ciclo; "
+        "próximas serão priorizadas por proposta mais antiga.",
+        processed, len(targets),
+    )
+    return 0  # Planning must never consume the live route-creation budget.
 
 
 # ---------------------------------------------------------------------- routes
@@ -648,7 +693,7 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
     market = load_market()
     premium = cfg.get_bool("options", "auto_seats")
     created = 0
-    used: set[str] = set()
+    used_pairs: set[str] = set()
     registry = RouteRegistry()
     allow_duplicates = cfg.get_bool("options", "allow_duplicate_routes", True)
 
@@ -672,10 +717,16 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
         for distance in (limit, limit // 2, limit // 4):
             if distance < 500 or bot.stopping:
                 break
-            candidates = [c for c in search_routes(bot, hub_id, distance, min_runway)
-                          if c.arr_id not in used and
-                          (allow_duplicates or not registry.is_occupied(
-                              endpoint(hub_id), endpoint(c.arr_id), aircraft.id))]
+            candidates = [
+                c for c in search_routes(bot, hub_id, distance, min_runway)
+                if c.arr_id != str(hub_id) and
+                (allow_duplicates or (
+                    route_key(endpoint(hub_id), endpoint(c.arr_id)) not in used_pairs
+                    and not registry.is_occupied(
+                        endpoint(hub_id), endpoint(c.arr_id), aircraft.id
+                    )
+                ))
+            ]
             # Use the game's known demand and the latest cached aircraft model to
             # estimate daily revenue minus fuel/CO2; missing model data keeps the
             # original demand-based ordering (no fabricated fuel/speed values).
@@ -686,9 +737,17 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 premium=premium,
             )
             estimates = {c.arr_id: estimate for c, estimate in ranked}
+            profitable = profitable_candidates(ranked)
             has_estimates = any(estimate is not None for _, estimate in ranked)
             if has_estimates:
-                tries = [candidate for candidate, _ in ranked[:MAX_ROUTE_TRIES]]
+                tries = [candidate for candidate, _ in profitable[:MAX_ROUTE_TRIES]]
+                if not tries:
+                    log.warning(
+                        "%s: rotas disponíveis até %d km apresentam lucro líquido "
+                        "estimado não positivo; nenhuma taxa será paga por essas rotas.",
+                        aircraft.reg, distance,
+                    )
+                    continue
                 best = ranked[0][1]
                 if best is not None:
                     log.info(
@@ -736,7 +795,8 @@ def create_routes(bot: "Bot", max_routes: int) -> int:
                 break
         if outcome in ("created", "dry"):
             created += 1
-            used.add(candidate.arr_id)
+            if not allow_duplicates:
+                used_pairs.add(route_key(endpoint(hub_id), endpoint(candidate.arr_id)))
         elif outcome == "stop":
             break
         else:
