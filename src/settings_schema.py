@@ -29,6 +29,7 @@ FLEET_FIELDS = [
     ("route_min_runway", "Pista mínima (pés)"),
     ("hangar_min_free", "Vagas disponíveis no hangar"),
     ("fleet_actions_per_cycle", "Rotas / pedidos por ciclo"),
+    ("route_min_profit_gain_pct", "Ajuste de rota: lucro mínimo adicional (%)"),
     ("seats_max_payback", "Oficina: retorno em até ≤ dias"),
 ]
 AIRCRAFT_FIELDS = [
@@ -50,6 +51,7 @@ FLEET_SWITCHES = [
     ("auto_repair", "Reparar aeronaves desgastadas"),
     ("auto_check", "Programar A-checks"),
     ("auto_route", "Criar rotas para aeronaves estacionadas"),
+    ("analyze_duplicate_routes", "Analisar e sugerir correções de rotas repetidas"),
     ("allow_duplicate_routes", "Permitir aeronaves na mesma rota (ida/volta)"),
     ("auto_hangar", "Ampliar o hangar quando estiver cheio"),
     ("auto_seats", "Assentos executiva / primeira conforme a demanda"),
