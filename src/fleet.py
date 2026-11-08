@@ -436,7 +436,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
     # Fairness: previously unplanned targets first, then the oldest proposal.
     # Without this, the first N repeated routes were researched forever.
     targets.sort(key=lambda row: (
-        (row.get("proposal") or {}).get("calculated_at") or 0,
+        row.get("last_planned_at") or 0,
         row["aircraft_id"],
     ))
     processed = 0
@@ -450,6 +450,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                 pending(aircraft_id, "pendente_limite_ciclo")
                 continue
             processed += 1
+            registry.mark_plan_attempt(aircraft_id)
             origin = row.get("origin", {})
             destination = row.get("destination", {})
             hub_id = str(origin.get("id") or "")
