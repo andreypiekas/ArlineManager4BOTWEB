@@ -6,7 +6,6 @@ kill; process status and the host's kernel journal are needed for that.
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 
