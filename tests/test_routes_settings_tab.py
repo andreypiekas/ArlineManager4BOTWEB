@@ -26,6 +26,8 @@ def test_route_settings_have_their_own_tab_and_are_not_duplicated():
     assert names == ["Mercado", "Frota", "Rotas", "Aeronaves", "Opções", "Telegram"]
     route = next(tab for tab in TABS if tab[0] == "Rotas")
     assert route[1] == "🧭"
+    assert route[2] is ROUTE_FIELDS
+    assert route[3] is ROUTE_SWITCHES
     assert set(key for key, _ in route[2]) == ROUTE_NUMBERS
     assert set(key for key, _ in route[3]) == ROUTE_OPTIONS
 
