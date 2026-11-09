@@ -37,7 +37,7 @@ def registry_with_four_duplicates(tmp_path):
         registry.record(str(idx * 10 + 1), f"PP-{idx}-1", "A320",
                         endpoint(code=dep), endpoint(code=arr), source="game", at_base=True)
         registry.record(str(idx * 10 + 2), f"PP-{idx}-2", "A320",
-                        endpoint(code=arr), endpoint(code=dep), source="game")
+                        endpoint(code=arr), endpoint(code=dep), source="game", at_base=True)
     return registry
 
 
