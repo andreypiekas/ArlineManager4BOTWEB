@@ -1,7 +1,6 @@
 """Non-Snap Chrome is an explicit, reversible service configuration."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from types import SimpleNamespace
 
