@@ -86,18 +86,16 @@ def test_desktop_usando_design_de_operacoes():
 
 
 def test_estados_e_abas_partem_do_portugues():
-    assert [nome for nome, *_ in TABS] == ["Mercado", "Frota", "Rotas", "Aeronaves", "Opções", "Telegram"]
+    assert [nome for nome, *_ in TABS] == ["Mercado", "Frota", "Aeronaves", "Opções", "Telegram"]
     assert BotState.STARTING.value == "Abrindo navegador"
     assert BotState.LOGGING_IN.value == "Fazendo login"
     assert BotState.RUNNING.value == "Em execução"
     assert BotState.ERROR.value == "Erro"
     set_language("pt_BR")
     assert t("Frota") == "Frota"
-    assert t("Rotas") == "Rotas"
     assert t("Salvar configurações") == "Salvar configurações"
     set_language("en")
     assert t("Frota") == "Fleet"
-    assert t("Rotas") == "Routes"
     assert t("Aeronaves") == "Aircraft"
     assert t("Opções") == "Options"
     assert t("Salvar configurações") == "Save settings"

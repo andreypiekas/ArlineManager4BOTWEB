@@ -31,11 +31,10 @@ from gamemode import EASY, GameMode
 from helpers import clean_response, fmt, to_int
 from notify import esc
 from route_optimizer import rank_candidates
-from route_strategy import best_reroute, profitable_candidates, route_research_blocker
-from route_proposals import proposed_route, proposal_reservations, reserved_by_other
+from route_strategy import best_reroute, profitable_candidates
 from route_airports import match_hub_options, code_from_candidate, explain_hub_options
 from airport_catalog import game_code
-from route_registry import RouteRegistry, reroute_block_reason, endpoint, route_key, same_route
+from route_registry import RouteRegistry, reroute_block_reason, endpoint, route_key
 from reroute_preflight import check_existing_route
 
 if TYPE_CHECKING:
@@ -320,12 +319,8 @@ def manage_fleet(bot: "Bot") -> None:
     audit_routes(bot, registry)
     budget = max(1, cfg.get_int("settings", "fleet_actions_per_cycle", 2))
     if not cfg.get_bool("options", "allow_duplicate_routes", True):
-        # Read-only analysis has its own quota and does not consume the
-        # limited budget for real route purchases or aircraft orders.
-        analysis_budget = max(1, min(
-            20, cfg.get_int("settings", "route_analysis_per_cycle", 5)
-        ))
-        resolve_duplicate_routes(bot, registry, analysis_budget)
+        repaired = resolve_duplicate_routes(bot, registry, budget)
+        budget -= repaired
     if cfg.get_bool("options", "auto_route") and parked > 0 and budget > 0:
         created = create_routes(bot, budget)
         budget -= created
@@ -358,14 +353,6 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         report["duplicate_routes"], report["affected_aircraft"],
     )
     records = {row["aircraft_id"]: row for row in report["relations"]}
-    reservations, existing_conflicts = proposal_reservations(report["relations"])
-    if existing_conflicts:
-        log.warning(
-            "Controle de rotas: %d propostas antigas apontam para alternativas "
-            "já reservadas por outra aeronave; recalculando esses casos "
-            "sem perpetuar uma nova duplicidade.",
-            existing_conflicts,
-        )
     for conflict in report["duplicates"]:
         names = ", ".join(
             f"{aircraft.get('registration') or aircraft.get('id')} (ID {aircraft.get('id')})"
@@ -382,9 +369,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         # When the analysis is paused or limited, retain the last profitable
         # proposal instead of erasing useful comparisons from the dashboard.
         if proposal is None and reason in (
-            "pendente_limite_ciclo", "aguardando_ativacao_de_analise",
-            "aguardando_pouso_para_analise", "localizacao_nao_confirmada",
-            "comprovacao_desatualizada",
+            "pendente_limite_ciclo", "aguardando_ativacao_de_analise"
         ):
             proposal = item.get("proposal")
         registry.note(aircraft_id, reason, proposal=proposal)
@@ -405,8 +390,6 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             details = " (pesquisa não exibiu um código IATA/ICAO verificável para a alternativa)"
         elif reason == "aeronave_fora_da_base":
             details = " (o jogo indica que esta aeronave NÃO está numa base; a proposta permanece salva)"
-        elif reason == "aguardando_pouso_para_analise":
-            details = " (aeronave em voo/fora da base; pesquisa pesada adiada para quando estiver parada)"
         elif reason == "localizacao_nao_confirmada":
             details = " (o jogo não disponibilizou posição de base desta aeronave)"
         elif reason == "rota_nao_confirmada_no_jogo":
@@ -414,14 +397,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         elif reason == "aeroportos_nao_confirmados":
             details = " (IDs ou códigos de aeroportos insuficientes)"
         elif reason == "comprovacao_desatualizada":
-            seen = item.get("game_verified_at") or item.get("last_seen")
-            age = max(0, int(time.time() - seen)) if isinstance(seen, (int, float)) else None
-            details = (
-                f" (registro histórico; última confirmação da rota há {age}s; "
-                "a aeronave pode estar em outra página ou em voo)"
-                if age is not None else
-                " (registro histórico sem data de confirmação; necessária nova leitura)"
-            )
+            details = " (evidência da rota ou localização expirou; necessária nova leitura)"
         elif reason == "aguardando_confirmacao_no_jogo":
             details = " (necessário comprovar localização na base e rota atual)"
         elif reason == "troca_de_rota_ainda_nao_validada":
@@ -460,12 +436,10 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
     # Fairness: unattempted targets first, then oldest last attempt.
     # Without this, the first N repeated routes were researched forever.
     targets.sort(key=lambda row: (
-        route_research_blocker(row) is not None,
         row.get("last_planned_at") or 0,
         row["aircraft_id"],
     ))
     processed = 0
-    researched = 0
     if not cfg.get_bool("options", "analyze_duplicate_routes"):
         for row in targets:
             pending(row["aircraft_id"], "aguardando_ativacao_de_analise")
@@ -477,12 +451,6 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             continue
         processed += 1
         registry.mark_plan_attempt(aircraft_id)
-        # Avoid costly route research for in-flight or stale-history aircraft;
-        # an existing route can only be replaced at a confirmed base.
-        blocker = route_research_blocker(row)
-        if blocker:
-            pending(aircraft_id, blocker)
-            continue
         origin = row.get("origin", {})
         destination = row.get("destination", {})
         hub_id = str(origin.get("id") or "")
@@ -505,7 +473,6 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         limit = cfg.get_int("settings", "route_max_distance_big" if seats >= BIG_SEATS else "route_max_distance", 6000)
         if model.get("range"):
             limit = min(limit, int(model["range"]))
-        researched += 1
         bot.open_popup("routes_main.php", "Routes", "nav_routes")
         bot.ajax("research_main.php", "routeAction")
         # Route labels are not direction-of-flight proof: for OSL↔DAC
@@ -573,14 +540,6 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                     endpoint(code=hub_code), endpoint(code=candidate.code), aircraft_id
                 ):
                     continue
-                planned = proposed_route({
-                    "origin_id": hub_id, "origin_code": hub_code,
-                    "destination_id": candidate.arr_id,
-                    "destination_code": candidate.code,
-                })
-                if (planned is None or same_route(row, planned)
-                        or reserved_by_other(reservations, aircraft_id, planned)):
-                    continue
                 options.append(candidate)
             destination_options.extend(options)
             if options:
@@ -624,13 +583,6 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             "profit_per_day": round(economics.profit_per_day),
             "current_route": row.get("route_key", ""),
         }
-        chosen_route = proposed_route(proposal)
-        if chosen_route:
-            # A fresh proposal supersedes any previous reservation owned by
-            # this same aircraft and reserves the new pair immediately.
-            reservations = [(owner, item) for owner, item in reservations
-                            if owner != str(aircraft_id)]
-            reservations.append((str(aircraft_id), chosen_route))
         # Confirm the existing route's own live ID and endpoints from the
         # aircraft details before considering grounding/replacing it.
         # This is a read-only probe and never submits fleet_ground.php.
@@ -677,10 +629,9 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         continue
 
     log.info(
-        "Controle de rotas: %d/%d aeronaves avaliadas, %d pesquisas no navegador "
-        "(limite=%d); aeronaves fora da base e registros históricos foram "
-        "adiados para economizar recursos do ChromeDriver.",
-        processed, len(targets), researched, budget,
+        "Controle de rotas: análise de %d/%d aeronaves com duplicidade neste ciclo; "
+        "próximas serão priorizadas por proposta mais antiga.",
+        processed, len(targets),
     )
     return 0  # Planning must never consume the live route-creation budget.
 

@@ -30,8 +30,6 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from browser_health import driver_health_details, is_driver_disconnected, user_facing_error
-from web_health import summarize_browser_state
 from checklist import check_checklist
 from config import AppConfig
 from driver import create_driver
@@ -152,8 +150,6 @@ class Bot:
         self.mode: GameMode = EASY
         # The game account follows the interface language: checked once per run and after every change.
         self._language_checked = False
-        # Consecutive frontend failures trigger a supervised browser restart.
-        self._web_timeout_streak = 0
 
     # ------------------------------------------------------------------ lifecycle
     def start(self) -> None:
@@ -164,7 +160,6 @@ class Bot:
         self.last_error = None
         self.marketing_next_check = 0.0
         self._language_checked = False
-        self._web_timeout_streak = 0
         self._thread = threading.Thread(target=self._run, name="am4bot", daemon=True)
         self._thread.start()
 
@@ -486,21 +481,17 @@ class Bot:
                 self.notify("⏹ Bot parado.", silent=True, category="status")
             else:
                 self.state = BotState.ERROR
-                self.last_error = user_facing_error(exc)
+                self.last_error = (str(exc).splitlines() or [exc.__class__.__name__])[0]
                 log.error("O bot foi interrompido por um erro: %s", self.last_error)
-                if is_driver_disconnected(exc):
-                    log.error("Diagnóstico ChromeDriver: %s", driver_health_details(self.driver))
+                if ("HTTPConnectionPool" in self.last_error or "chromedriver" in self.last_error.lower()
+                        or "Connection refused" in self.last_error):
                     log.warning(
-                        "Conexão com o ChromeDriver interrompida. O diagnóstico "
-                        "não prova falta de memória; verifique também "
-                        "sudo journalctl -k --since '30 minutes ago' "
-                        "e sudo systemctl status am4bot@principal."
+                        "Falha na comunicação com Chrome/ChromeDriver. Verifique "
+                        "data/logs/chromedriver.log, os recursos do servidor e "
+                        "sudo journalctl -k -n 100 --no-pager (possível OOM)."
                     )
                 log.debug("Traceback:", exc_info=True)
-                self.notify(
-                    f"🔴 <b>Bot interrompido por erro</b>: {esc(self.last_error)}",
-                    category="errors",
-                )
+                self.notify(f"🔴 <b>Bot interrompido por erro</b>: {esc(self.last_error)}", category="errors")
         else:
             log.info("Bot parado.")
             self.notify("⏹ Bot parado.", silent=True, category="status")
@@ -555,49 +546,23 @@ class Bot:
         self._guard(self._maybe_daily_summary, "enviar o resumo diário")
 
     def _guard(self, action: Callable[[], None], what: str) -> None:
-        """Run a step without letting an isolated failure block unrelated operations.
+        """Run one step of the cycle; a failing step is logged and the next ones still run.
 
-        Three consecutive Selenium timeouts indicate that the game frontend is not
-        responding. Fail the run instead of repeatedly waiting ~20 seconds for
-        every popup, so the existing supervisor can restart Chrome with backoff.
+        Only a dead browser (closed window, lost session) ends the run: _run() then closes Chrome and the
+        automatic restart opens it again.
         """
         try:
             action()
-            self._web_timeout_streak = 0
-        except TimeoutException as exc:
-            self._web_timeout_streak = getattr(self, "_web_timeout_streak", 0) + 1
-            count = self._web_timeout_streak
-            log.warning(
-                "Problema ao %s: TimeoutException (%d falha(s) consecutiva(s)). "
-                "Será retomado no próximo ciclo se o navegador continuar saudável.",
-                what, count,
-            )
-            log.debug("Detalhes:", exc_info=True)
-            self.close_popup(quiet=True)
-            if count >= 3 and not self._stop.is_set():
-                log.error(
-                    "Interface do jogo sem resposta após %d operações consecutivas. "
-                    "Diagnóstico: %s",
-                    count, summarize_browser_state(self.driver),
-                )
-                raise RuntimeError(
-                    "A interface do jogo não carregou em três operações seguidas; "
-                    "o navegador será reiniciado pelo supervisor."
-                ) from exc
         except _SOFT_ERRORS as exc:
-            self._web_timeout_streak = 0
             log.warning("Problema ao %s: %s. Será retomado no próximo ciclo.", what, exc.__class__.__name__)
             log.debug("Detalhes:", exc_info=True)
             self.close_popup(quiet=True)
-        except Exception as exc:  # noqa: BLE001 - optional steps must not stop unrelated actions
-            self._web_timeout_streak = 0
+        except Exception as exc:  # noqa: BLE001 - an optional step (marketing, checklist ...) must not stop departures
             if self._stop.is_set() or not self._browser_alive():
                 raise
             detail = (str(exc).splitlines() or [""])[0][:160]
-            log.error(
-                "Erro inesperado ao %s: %s%s. Continuando as demais etapas do ciclo.",
-                what, exc.__class__.__name__, f" ({detail})" if detail else "",
-            )
+            log.error("Erro inesperado ao %s: %s%s. Continuando as demais etapas do ciclo.", what, exc.__class__.__name__,
+                      f" ({detail})" if detail else "")
             log.debug("Traceback:", exc_info=True)
             self.close_popup(quiet=True)
 
@@ -1113,96 +1078,24 @@ class Bot:
         self._stop.wait(1.5)
 
     # ------------------------------------------------------------------ page helpers (used by fleet.py / maintenance.py)
-    def _popup_ready(self) -> bool:
-        """Only accept newly loaded, visible content (never a stale empty modal)."""
-        return bool(self.js("""
-            const el = document.getElementById('popContent');
-            return !!el && el.getClientRects().length > 0 &&
-                   el.innerHTML.trim().length > 0 &&
-                   !el.querySelector("img[src*='loader']");
-        """))
-
-    def _popup_direct(self, url: str, title: str) -> None:
-        """Invoke the game's own popup helper, not a direct page navigation."""
-        if not self.js(
-            "if (typeof window.popup !== 'function') return false;"
-            "window.popup(arguments[0], arguments[1], false, true); return true;",
-            url, title,
-        ):
-            raise RuntimeError(
-                "A função popup() do jogo não está disponível; "
-                "a interface principal não foi inicializada corretamente."
-            )
-
     def open_popup(self, url: str, title: str, nav_selector: str) -> None:
-        """Open a game popup, retrying its built-in helper if the menu click is inert.
-
-        Read-only popup navigation can safely be retried once. Never retry a
-        purchase, departure, maintenance submission or other write action here.
-        """
-        # An empty modal should never be accepted as the requested page.
-        self.js(
-            "var el = document.getElementById('popContent');"
-            "if (el) el.innerHTML = '';"
-        )
+        """Open one of the game's modal popups, preferably by clicking its nav button."""
         nav_xpath = self.config.get("selectors", nav_selector)
         button = self._find(nav_xpath, timeout=3) if nav_xpath else None
-        opened_from_menu = button is not None
-        if opened_from_menu:
+        if button is not None:
             self.pause()
             try:
                 button.click()
             except WebDriverException:
-                try:
-                    self.js("arguments[0].click();", button)
-                except WebDriverException:
-                    opened_from_menu = False
+                self.js("arguments[0].click();", button)
+        else:
+            log.debug("Não encontrei o botão '%s'; abrindo %s com o auxiliar popup() da web.", nav_selector, url)
+            self.js("popup(arguments[0], arguments[1], false, true);", url, title)
 
-        if not opened_from_menu:
-            log.info(
-                "Atalho de %s não encontrado/acionável; "
-                "tentando abertura direta pela interface do jogo.",
-                url,
-            )
-            self._popup_direct(url, title)
-
-        try:
-            WebDriverWait(self.driver, 6 if opened_from_menu else 20).until(
-                lambda driver: self._popup_ready()
-            )
-        except TimeoutException:
-            if not opened_from_menu:
-                log.warning(
-                    "Janela do jogo não carregou (%s) usando popup(). Estado: %s",
-                    url, summarize_browser_state(self.driver),
-                )
-                raise
-
-            log.warning(
-                "O menu não abriu a janela %s em 6 s; tentando popup() diretamente. "
-                "Estado anterior: %s",
-                url, summarize_browser_state(self.driver),
-            )
-            # Closing the broken/empty popup does not execute any game transaction.
-            self.close_popup(quiet=True)
-            self.js(
-                "var el = document.getElementById('popContent');"
-                "if (el) el.innerHTML = '';"
-            )
-            self._popup_direct(url, title)
-            try:
-                WebDriverWait(self.driver, 15).until(
-                    lambda driver: self._popup_ready()
-                )
-            except TimeoutException:
-                log.warning(
-                    "Janela do jogo não carregou (%s), nem pelo menu nem por popup(). "
-                    "Estado final: %s",
-                    url, summarize_browser_state(self.driver),
-                )
-                raise
-            log.info("Janela %s recuperada por popup() após falha do menu.", url)
-
+        content = self._sel("popup_content")
+        wait = WebDriverWait(self.driver, 20)
+        wait.until(EC.visibility_of_element_located((By.XPATH, content)))
+        wait.until(lambda d: not d.find_elements(By.XPATH, content + "//img[contains(@src, 'loader')]"))
         self._stop.wait(0.5)
 
     def close_popup(self, quiet: bool = False) -> None:
@@ -1225,15 +1118,8 @@ class Bot:
                 url, target)
         xpath = f"//*[@id='{target}']"
         wait = WebDriverWait(self.driver, timeout)
-        try:
-            wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
-            wait.until(lambda d: d.execute_script(_LOADED_JS, target))
-        except TimeoutException:
-            log.warning(
-                "Requisição de fragmento não concluiu (%s -> #%s). Estado: %s",
-                url, target, summarize_browser_state(self.driver),
-            )
-            raise
+        wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+        wait.until(lambda d: d.execute_script(_LOADED_JS, target))
         self._stop.wait(0.6)
         return self.driver.find_element(By.XPATH, xpath)
 
@@ -1318,7 +1204,5 @@ class Bot:
             return
         try:
             driver.quit()
-        except Exception as exc:  # noqa: BLE001 - urllib3 MaxRetryError is not a WebDriverException
-            # ChromeDriver can already be dead when Selenium tries /session/...;
-            # failure to close it must not interfere with the supervisor.
-            log.debug("ChromeDriver já indisponível durante encerramento: %s.", type(exc).__name__)
+        except WebDriverException:
+            pass
