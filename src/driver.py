@@ -33,6 +33,40 @@ def _system_chrome() -> tuple[Optional[str], Optional[str]]:
     return (driver, browser) if driver and browser else (None, None)
 
 
+def _selected_chrome() -> tuple[Optional[str], Optional[str]]:
+    """Allow an *opt-in* non-Snap browser/driver pair for systemd deployments.
+
+    Both binaries must be explicitly supplied. No automatic switch or
+    package installation occurs, and the old default remains unchanged.
+    """
+    chosen_driver = os.environ.get("AM4_CHROMEDRIVER_BINARY", "").strip()
+    chosen_browser = os.environ.get("AM4_CHROME_BINARY", "").strip()
+    if not chosen_driver and not chosen_browser:
+        return _system_chrome()
+    if not chosen_driver or not chosen_browser:
+        raise ValueError(
+            "Defina AM4_CHROME_BINARY e AM4_CHROMEDRIVER_BINARY juntos; "
+            "não misture ChromeDriver Snap com navegador não-Snap."
+        )
+    binaries = []
+    for label, raw in (
+        ("AM4_CHROMEDRIVER_BINARY", chosen_driver),
+        ("AM4_CHROME_BINARY", chosen_browser),
+    ):
+        candidate = Path(raw).expanduser()
+        if not candidate.is_absolute() or not candidate.is_file() or not os.access(candidate, os.X_OK):
+            raise ValueError(
+                f"{label}: executável não encontrado ou sem permissão; "
+                "informe um caminho absoluto válido."
+            )
+        binaries.append(str(candidate))
+    log.info(
+        "Navegador configurado explicitamente: ChromeDriver=%s; Chrome=%s.",
+        binaries[0], binaries[1],
+    )
+    return binaries[0], binaries[1]
+
+
 def _open_driver_log():
     """Captura stderr/stdout do ChromeDriver, incluindo erros do wrapper Snap.
 
@@ -70,11 +104,14 @@ def create_driver(url: str, keep_session: bool = False, headless: bool = False) 
     if keep_session:
         # Dedicated Chrome profile inside the project (git-ignored), one per bot profile, so the
         # "remember me" cookie survives between runs and two airlines never share a browser.
-        session = paths.current().session
+        session_override = os.environ.get("AM4_CHROME_PROFILE_DIR", "").strip()
+        session = Path(session_override).expanduser() if session_override else paths.current().session
+        if session_override and not session.is_absolute():
+            raise ValueError("AM4_CHROME_PROFILE_DIR deve ser um caminho absoluto.")
         session.mkdir(parents=True, exist_ok=True)
         options.add_argument(f"--user-data-dir={session.resolve()}")
 
-    chromedriver, browser = _system_chrome()
+    chromedriver, browser = _selected_chrome()
     if chromedriver:
         options.binary_location = browser
         log.debug("Usando ChromeDriver do sistema: %s; navegador: %s.", chromedriver, browser)
