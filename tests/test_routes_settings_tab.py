@@ -14,6 +14,7 @@ from settings_schema import (
 ROUTE_NUMBERS = {
     "route_max_distance", "route_max_distance_big",
     "route_min_runway", "route_min_profit_gain_pct",
+    "route_analysis_per_cycle",
 }
 ROUTE_OPTIONS = {
     "auto_route", "analyze_duplicate_routes", "allow_duplicate_routes",
@@ -51,6 +52,7 @@ def test_defaults_and_existing_saved_values_use_the_same_ini_keys():
     assert ini.getboolean("options", "analyze_duplicate_routes") is True
     assert ini.getboolean("options", "allow_duplicate_routes") is False
     assert ini.getboolean("options", "experimental_id_batch_depart") is False
+    assert ini.getint("settings", "route_analysis_per_cycle") == 5
 
 
 def test_web_and_desktop_use_one_shared_route_schema():
