@@ -41,8 +41,8 @@ def test_duplicate_logged_with_aircraft_and_missing_numeric_airport_ids(tmp_path
     monkeypatch.setattr("fleet.find_model", lambda market, model: {"speed": 800, "fuel": 7, "capacity": 180, "range": 6000})
     registry = RouteRegistry(tmp_path / "routes_registry.json")
     one, two = endpoint(code="DUB"), endpoint(code="GRU")
-    assert registry.record("101", "XP-101", "A320", one, two, source="game", at_base=True)
-    assert registry.record("202", "XP-202", "A320", two, one, source="game", at_base=True)
+    assert registry.record("101", "XP-101", "A320", one, two, source="game")
+    assert registry.record("202", "XP-202", "A320", two, one, source="game")
     with caplog.at_level(logging.INFO, logger="am4bot.rutas"):
         result = resolve_duplicate_routes(NoWriteBot(), registry, 2)
     assert result == 0

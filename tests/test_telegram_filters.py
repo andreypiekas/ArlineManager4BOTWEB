@@ -104,7 +104,7 @@ def test_telegram_sem_credenciais_nao_enfileira():
 
 def test_todas_as_categorias_sao_exibidas_na_aba_telegram():
     tabs = [name for name, *_ in TABS]
-    assert tabs == ["Mercado", "Frota", "Rotas", "Aeronaves", "Opções", "Telegram"]
+    assert tabs == ["Mercado", "Frota", "Aeronaves", "Opções", "Telegram"]
     switches = dict(TELEGRAM_SWITCHES)
     assert len(switches) == 15
     assert set(switches) == {"telegram"} | {f"telegram_{c}" for c in CATEGORIES}

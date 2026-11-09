@@ -24,16 +24,13 @@ FLEET_FIELDS = [
     ("repair_wear_pct", "Reparar a partir de desgaste (%)"),
     ("check_hours_min", "A-check quando restarem ≤ horas"),
     ("cash_reserve", "Reserva de caixa ($)"),
+    ("route_max_distance", "Rota máxima para aeronave pequena (km)"),
+    ("route_max_distance_big", "Rota máxima para aeronave grande (km)"),
+    ("route_min_runway", "Pista mínima (pés)"),
     ("hangar_min_free", "Vagas disponíveis no hangar"),
     ("fleet_actions_per_cycle", "Rotas / pedidos por ciclo"),
+    ("route_min_profit_gain_pct", "Ajuste de rota: lucro mínimo adicional (%)"),
     ("seats_max_payback", "Oficina: retorno em até ≤ dias"),
-]
-ROUTE_FIELDS = [
-    ("route_max_distance", "Distância máxima — aeronave pequena (km)"),
-    ("route_max_distance_big", "Distância máxima — aeronave grande (km)"),
-    ("route_min_runway", "Pista mínima do destino (pés)"),
-    ("route_min_profit_gain_pct", "Lucro mínimo adicional para ajuste (%)"),
-    ("route_analysis_per_cycle", "Aeronaves para analisar por ciclo"),
 ]
 AIRCRAFT_FIELDS = [
     ("aircraft_max_price", "Preço máximo sem meta (0 = livre)"),
@@ -44,7 +41,7 @@ MARKETING_FIELDS = [
 ]
 OPTIONS_FIELDS = MARKETING_FIELDS + [("cash_sync_seconds", "Sincronizar saldo a cada (segundos)")]
 TELEGRAM_FIELDS = [("summary_hour", "Horário do resumo diário (0-23)")]
-ALL_FIELDS = MARKET_FIELDS + FLEET_FIELDS + ROUTE_FIELDS + AIRCRAFT_FIELDS + OPTIONS_FIELDS + TELEGRAM_FIELDS
+ALL_FIELDS = MARKET_FIELDS + FLEET_FIELDS + AIRCRAFT_FIELDS + OPTIONS_FIELDS + TELEGRAM_FIELDS
 
 # (options key, label) for the switches of each tab
 MARKET_SWITCHES = [
@@ -53,17 +50,12 @@ MARKET_SWITCHES = [
 FLEET_SWITCHES = [
     ("auto_repair", "Reparar aeronaves desgastadas"),
     ("auto_check", "Programar A-checks"),
+    ("auto_route", "Criar rotas para aeronaves estacionadas"),
+    ("analyze_duplicate_routes", "Analisar e sugerir correções de rotas repetidas"),
+    ("allow_duplicate_routes", "Permitir aeronaves na mesma rota (ida/volta)"),
     ("auto_hangar", "Ampliar o hangar quando estiver cheio"),
     ("auto_seats", "Assentos executiva / primeira conforme a demanda"),
     ("auto_mods", "Melhorias: velocidade, combustível e CO₂"),
-]
-ROUTE_SWITCHES = [
-    ("auto_route", "Criar rotas automaticamente"),
-    ("analyze_duplicate_routes", "Analisar e sugerir ajustes de rotas repetidas"),
-    ("allow_duplicate_routes", "Permitir novas rotas duplicadas (ida/volta)"),
-    ("block_duplicate_departures", "Bloquear decolagens com rotas duplicadas"),
-    ("selective_depart", "Despacho individual seguro se houver duplicidades"),
-    ("experimental_id_batch_depart", "EXPERIMENTAL: decolar por ID (API não verificada)"),
 ]
 AIRCRAFT_SWITCHES = [
     ("autobuy_aircraft", "Comprar aeronaves"),
@@ -72,6 +64,9 @@ AIRCRAFT_SWITCHES = [
 ]
 OPTION_SWITCHES = [
     ("auto_depart", "Decolar aeronaves"),
+    ("block_duplicate_departures", "Bloquear decolagens com rotas duplicadas"),
+    ("selective_depart", "Despacho individual seguro quando houver rotas duplicadas"),
+    ("experimental_id_batch_depart", "EXPERIMENTAL: decolagem por ID (API não verificada)"),
     ("autobuy_fuel", "Comprar combustível"),
     ("autobuy_co2", "Comprar CO₂"),
     ("auto_marketing", "Campanhas de reputação"),
@@ -102,8 +97,7 @@ TELEGRAM_SWITCHES = [
     ("telegram_checklist", "Recompensas e tarefas"),
     ("telegram_simulation", "Eventos da simulação"),
 ]
-ALL_SWITCHES = (MARKET_SWITCHES + FLEET_SWITCHES + ROUTE_SWITCHES + AIRCRAFT_SWITCHES +
-                OPTION_SWITCHES + TELEGRAM_SWITCHES)
+ALL_SWITCHES = MARKET_SWITCHES + FLEET_SWITCHES + AIRCRAFT_SWITCHES + OPTION_SWITCHES + TELEGRAM_SWITCHES
 
 # Configurações de modelos e metas (aba Aeronaves)
 TEXT_SETTINGS = [
@@ -116,7 +110,6 @@ TEXT_SETTINGS = [
 TABS = [
     ("Mercado", "🛒", MARKET_FIELDS, MARKET_SWITCHES),
     ("Frota", "🛩️", FLEET_FIELDS, FLEET_SWITCHES),
-    ("Rotas", "🧭", ROUTE_FIELDS, ROUTE_SWITCHES),
     ("Aeronaves", "✈️", AIRCRAFT_FIELDS, AIRCRAFT_SWITCHES),
     ("Opções", "⚙️", OPTIONS_FIELDS, OPTION_SWITCHES),
     ("Telegram", "📨", TELEGRAM_FIELDS, TELEGRAM_SWITCHES),
@@ -132,7 +125,6 @@ _LIMITS = {
     "marketing_campaign": (1, 4),
     "marketing_hours": (4, 24),
     "cycle_min_minutes": (1, None),
-    "route_analysis_per_cycle": (1, 20),
 }
 
 
