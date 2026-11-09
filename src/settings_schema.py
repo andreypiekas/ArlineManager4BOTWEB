@@ -33,6 +33,7 @@ ROUTE_FIELDS = [
     ("route_max_distance_big", "Distância máxima — aeronave grande (km)"),
     ("route_min_runway", "Pista mínima do destino (pés)"),
     ("route_min_profit_gain_pct", "Lucro mínimo adicional para ajuste (%)"),
+    ("route_analysis_per_cycle", "Aeronaves para analisar por ciclo"),
 ]
 AIRCRAFT_FIELDS = [
     ("aircraft_max_price", "Preço máximo sem meta (0 = livre)"),
@@ -131,6 +132,7 @@ _LIMITS = {
     "marketing_campaign": (1, 4),
     "marketing_hours": (4, 24),
     "cycle_min_minutes": (1, None),
+    "route_analysis_per_cycle": (1, 20),
 }
 
 
