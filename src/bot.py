@@ -31,6 +31,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from browser_health import driver_health_details, is_driver_disconnected, user_facing_error
+from web_health import summarize_browser_state
 from checklist import check_checklist
 from config import AppConfig
 from driver import create_driver
@@ -151,6 +152,8 @@ class Bot:
         self.mode: GameMode = EASY
         # The game account follows the interface language: checked once per run and after every change.
         self._language_checked = False
+        # Consecutive frontend failures trigger a supervised browser restart.
+        self._web_timeout_streak = 0
 
     # ------------------------------------------------------------------ lifecycle
     def start(self) -> None:
@@ -161,6 +164,7 @@ class Bot:
         self.last_error = None
         self.marketing_next_check = 0.0
         self._language_checked = False
+        self._web_timeout_streak = 0
         self._thread = threading.Thread(target=self._run, name="am4bot", daemon=True)
         self._thread.start()
 
@@ -551,23 +555,49 @@ class Bot:
         self._guard(self._maybe_daily_summary, "enviar o resumo diário")
 
     def _guard(self, action: Callable[[], None], what: str) -> None:
-        """Run one step of the cycle; a failing step is logged and the next ones still run.
+        """Run a step without letting an isolated failure block unrelated operations.
 
-        Only a dead browser (closed window, lost session) ends the run: _run() then closes Chrome and the
-        automatic restart opens it again.
+        Three consecutive Selenium timeouts indicate that the game frontend is not
+        responding. Fail the run instead of repeatedly waiting ~20 seconds for
+        every popup, so the existing supervisor can restart Chrome with backoff.
         """
         try:
             action()
+            self._web_timeout_streak = 0
+        except TimeoutException as exc:
+            self._web_timeout_streak = getattr(self, "_web_timeout_streak", 0) + 1
+            count = self._web_timeout_streak
+            log.warning(
+                "Problema ao %s: TimeoutException (%d falha(s) consecutiva(s)). "
+                "Será retomado no próximo ciclo se o navegador continuar saudável.",
+                what, count,
+            )
+            log.debug("Detalhes:", exc_info=True)
+            self.close_popup(quiet=True)
+            if count >= 3 and not self._stop.is_set():
+                log.error(
+                    "Interface do jogo sem resposta após %d operações consecutivas. "
+                    "Diagnóstico: %s",
+                    count, summarize_browser_state(self.driver),
+                )
+                raise RuntimeError(
+                    "A interface do jogo não carregou em três operações seguidas; "
+                    "o navegador será reiniciado pelo supervisor."
+                ) from exc
         except _SOFT_ERRORS as exc:
+            self._web_timeout_streak = 0
             log.warning("Problema ao %s: %s. Será retomado no próximo ciclo.", what, exc.__class__.__name__)
             log.debug("Detalhes:", exc_info=True)
             self.close_popup(quiet=True)
-        except Exception as exc:  # noqa: BLE001 - an optional step (marketing, checklist ...) must not stop departures
+        except Exception as exc:  # noqa: BLE001 - optional steps must not stop unrelated actions
+            self._web_timeout_streak = 0
             if self._stop.is_set() or not self._browser_alive():
                 raise
             detail = (str(exc).splitlines() or [""])[0][:160]
-            log.error("Erro inesperado ao %s: %s%s. Continuando as demais etapas do ciclo.", what, exc.__class__.__name__,
-                      f" ({detail})" if detail else "")
+            log.error(
+                "Erro inesperado ao %s: %s%s. Continuando as demais etapas do ciclo.",
+                what, exc.__class__.__name__, f" ({detail})" if detail else "",
+            )
             log.debug("Traceback:", exc_info=True)
             self.close_popup(quiet=True)
 
@@ -1099,8 +1129,15 @@ class Bot:
 
         content = self._sel("popup_content")
         wait = WebDriverWait(self.driver, 20)
-        wait.until(EC.visibility_of_element_located((By.XPATH, content)))
-        wait.until(lambda d: not d.find_elements(By.XPATH, content + "//img[contains(@src, 'loader')]"))
+        try:
+            wait.until(EC.visibility_of_element_located((By.XPATH, content)))
+            wait.until(lambda d: not d.find_elements(By.XPATH, content + "//img[contains(@src, 'loader')]"))
+        except TimeoutException:
+            log.warning(
+                "Janela do jogo não carregou (%s). Estado: %s",
+                url, summarize_browser_state(self.driver),
+            )
+            raise
         self._stop.wait(0.5)
 
     def close_popup(self, quiet: bool = False) -> None:
@@ -1123,8 +1160,15 @@ class Bot:
                 url, target)
         xpath = f"//*[@id='{target}']"
         wait = WebDriverWait(self.driver, timeout)
-        wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
-        wait.until(lambda d: d.execute_script(_LOADED_JS, target))
+        try:
+            wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+            wait.until(lambda d: d.execute_script(_LOADED_JS, target))
+        except TimeoutException:
+            log.warning(
+                "Requisição de fragmento não concluiu (%s -> #%s). Estado: %s",
+                url, target, summarize_browser_state(self.driver),
+            )
+            raise
         self._stop.wait(0.6)
         return self.driver.find_element(By.XPATH, xpath)
 
