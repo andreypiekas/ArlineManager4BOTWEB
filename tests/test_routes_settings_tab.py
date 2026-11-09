@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from configparser import ConfigParser
-from pathlib import Path
 
 from conftest import ROOT
 from i18n import set_language, t
