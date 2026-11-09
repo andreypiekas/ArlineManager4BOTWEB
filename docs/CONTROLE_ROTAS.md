@@ -313,3 +313,47 @@ Essas reservas são apenas **planejamento local**, não reservas no jogo.
 Os cálculos de lucro continuam sendo estimativas. A troca real das
 rotas de aviões já atribuídos permanece protegida até existir validação
 completa e segura do procedimento de substituição.
+
+
+## Estabilidade do ChromeDriver — falha de conexão local em 09/11
+
+Um erro como `HTTPConnectionPool(host='localhost', port=...): [Errno 111]
+Connection refused` durante `/session/.../click` ou `/refresh`
+significa que o **cliente Selenium não alcançou mais a porta local do
+ChromeDriver**. O log sozinho **não comprova** problema de memória, embora
+um encerramento pelo OOM Killer seja uma hipótese a investigar.
+A alteração mais recente aumentou a capacidade de análise de rotas,
+e portanto o número de requisições Selenium por ciclo, mas a relação
+causal ainda depende dos diagnósticos do servidor.
+
+Mitigação aplicada: **não abrir pesquisa, seletor de aeroporto e detalhes
+de rota para aeronaves já identificadas como em voo ou com posição
+desatualizada**. O relatório preserva suas propostas anteriores e
+aguarda a confirmação de que estão paradas numa base. As operações de
+criação de rotas de aeronaves sem rota e as decolagens continuam
+independentes.
+
+O reinício automático, anteriormente restaurado ao atraso de 2 minutos
+assim que o bot entrava no estado `RUNNING`, passa a exigir **10
+minutos consecutivos de execução estável** antes de zerar a penalidade.
+Falhas sucessivas seguem atrasos de 2, 4, 8, 16, até 30 minutos,
+sem laço acelerado de reinício. Telegram recebe erro resumido, sem
+URL de sessão/elemento Selenium, e o log local indica PID/status do
+ChromeDriver e memória disponível aproximada do host. O encerramento
+ignora uma eventual segunda exceção de conexão recusada.
+
+**Checagem recomendada no Zentria:**
+
+```bash
+sudo journalctl -u am4bot@principal --since "30 min ago" --no-pager | tail -n 130
+tail -n 90 data/logs/chromedriver.log
+sudo journalctl -k --since "30 min ago" --no-pager | grep -Ei "out of memory|oom|killed process|chrom(e|ium)|segfault" || true
+free -h
+systemctl show am4bot@principal -p MemoryMax -p MemoryCurrent -p OOMPolicy
+```
+
+Se o kernel registrar `Killed process` com PID de Chrome/ChromeDriver,
+confirmar a razão e os limites de memória antes de tentar uma nova
+otimização agressiva. Se não existir evidência de OOM, verificar o log
+do driver, compatibilidade das versões do navegador e driver, e
+serviços systemd que possam estar encerrando processos.

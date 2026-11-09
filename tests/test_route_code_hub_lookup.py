@@ -61,10 +61,10 @@ def test_duplicate_can_propose_new_destination_from_live_hub_only(tmp_path, monk
     registry = RouteRegistry(tmp_path / "routes.json")
     assert registry.record("101", "PP-0103-2", "A320",
                            endpoint(code="DAC"), endpoint(code="OSL"),
-                           source="game", at_base=False)
+                           source="game", at_base=True)
     assert registry.record("202", "PP-0103-10", "A320",
                            endpoint(code="OSL"), endpoint(code="DAC"),
-                           source="game", at_base=False)
+                           source="game", at_base=True)
 
     class Config:
         def get_bool(self, section, key):
@@ -120,7 +120,7 @@ def test_duplicate_can_propose_new_destination_from_live_hub_only(tmp_path, monk
         assert resolve_duplicate_routes(Bot(), registry, 2) == 0
     assert seen == ["145"]
     affected = next(r for r in registry.snapshot()["relations"] if r["registration"] == "PP-0103-10")
-    assert affected["status"] == "aeronave_fora_da_base"
+    assert affected["status"] == "prevalidacao_de_rota_pendente"
     assert affected["proposal"]["destination_code"] == "SIN"
     assert affected["proposal"]["origin_code"] == "DAC"
     assert affected["proposal"]["profit_per_day"] > 0

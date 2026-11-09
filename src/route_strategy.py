@@ -62,3 +62,30 @@ def best_reroute(ranked: Iterable[tuple[Candidate, object]], *,
             continue
         return (candidate, estimate), baseline
     return None, baseline
+
+
+def route_research_blocker(row: dict, *, now: Optional[float] = None,
+                           max_evidence_age: int = 180) -> Optional[str]:
+    """Avoid opening heavy research pages when no route can currently be changed.
+
+    An airplane recorded as in flight, outside a base, or in a different
+    historical fleet page cannot be safely rerouted now. The old proposal
+    remains visible; a fresh read of its location re-enables live research.
+    """
+    import time
+
+    now = time.time() if now is None else now
+    if row.get("source") != "game":
+        return "rota_nao_confirmada_no_jogo"
+    if row.get("at_base") is False:
+        return "aguardando_pouso_para_analise"
+    if row.get("at_base") is not True:
+        return "localizacao_nao_confirmada"
+    for key in ("game_verified_at", "grounded_confirmed_at"):
+        observed = row.get(key)
+        if not isinstance(observed, (float, int)):
+            return "comprovacao_desatualizada"
+        elapsed = now - observed
+        if elapsed < 0 or elapsed >= max_evidence_age:
+            return "comprovacao_desatualizada"
+    return None
