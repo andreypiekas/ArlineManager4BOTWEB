@@ -389,3 +389,43 @@ pré-validação consulta os detalhes da aeronave para identificar o
 **ID da rota existente** e conferir seus aeroportos; não envia comandos de
 grounding ou alteração. O redirecionamento automático real continua
 desligado até validação da sequência completa e do rollback no jogo.
+
+
+### Chromium Snap no systemd: seleção opcional de executáveis
+
+Se o ChromeDriver do Snap apresentar erros de cgroup/AppArmor no serviço
+`am4bot@principal`, é possível testar um navegador **não-Snap**
+sem remover o navegador antigo e sem alterar a automação de rotas.
+O bot aceita três variáveis de ambiente opcionais:
+
+- `AM4_CHROME_BINARY`: caminho absoluto do executável Chrome/Chromium;
+- `AM4_CHROMEDRIVER_BINARY`: caminho absoluto do driver **compatível**
+  com esse navegador; ambas devem ser fornecidas juntas;
+- `AM4_CHROME_PROFILE_DIR`: diretório absoluto para uma sessão **nova e
+  separada** (recomendado para não abrir e modificar o perfil Snap existente).
+
+Os caminhos são exemplos; confirme os executáveis realmente instalados.
+Na unidade systemd, configure os valores com
+`sudo systemctl edit am4bot@principal`:
+
+```ini
+[Service]
+Environment="AM4_CHROME_BINARY=/CAMINHO/REAL/do/chrome"
+Environment="AM4_CHROMEDRIVER_BINARY=/CAMINHO/REAL/do/chromedriver"
+Environment="AM4_CHROME_PROFILE_DIR=/home/piekas/.local/share/am4-chrome-principal"
+```
+
+Confirme previamente arquitetura, versão principal compatível entre
+Chrome e ChromeDriver, permissões de execução do usuário do serviço
+e que o perfil novo não seja utilizado simultaneamente por outro processo.
+A sessão separada pode exigir um novo login manual no jogo. **Não copie
+arquivos de sessão nem cookies entre navegadores e não apague o perfil antigo.**
+
+As variáveis **não são definidas pelo código** e não mudam a configuração
+existente até serem adicionadas ao serviço. Para desfazer o teste,
+remova somente essas três linhas do override e reinicie o serviço,
+preservando outras configurações da unidade. Não desative AppArmor
+e não remova Snap apenas por causa dos avisos em logs.
+
+Quando só uma das duas variáveis de executáveis está definida ou um caminho
+é inválido, o bot falha com mensagem explícita em vez de misturar versões.
