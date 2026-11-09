@@ -1113,31 +1113,96 @@ class Bot:
         self._stop.wait(1.5)
 
     # ------------------------------------------------------------------ page helpers (used by fleet.py / maintenance.py)
+    def _popup_ready(self) -> bool:
+        """Only accept newly loaded, visible content (never a stale empty modal)."""
+        return bool(self.js("""
+            const el = document.getElementById('popContent');
+            return !!el && el.getClientRects().length > 0 &&
+                   el.innerHTML.trim().length > 0 &&
+                   !el.querySelector("img[src*='loader']");
+        """))
+
+    def _popup_direct(self, url: str, title: str) -> None:
+        """Invoke the game's own popup helper, not a direct page navigation."""
+        if not self.js(
+            "if (typeof window.popup !== 'function') return false;"
+            "window.popup(arguments[0], arguments[1], false, true); return true;",
+            url, title,
+        ):
+            raise RuntimeError(
+                "A função popup() do jogo não está disponível; "
+                "a interface principal não foi inicializada corretamente."
+            )
+
     def open_popup(self, url: str, title: str, nav_selector: str) -> None:
-        """Open one of the game's modal popups, preferably by clicking its nav button."""
+        """Open a game popup, retrying its built-in helper if the menu click is inert.
+
+        Read-only popup navigation can safely be retried once. Never retry a
+        purchase, departure, maintenance submission or other write action here.
+        """
+        # An empty modal should never be accepted as the requested page.
+        self.js(
+            "var el = document.getElementById('popContent');"
+            "if (el) el.innerHTML = '';"
+        )
         nav_xpath = self.config.get("selectors", nav_selector)
         button = self._find(nav_xpath, timeout=3) if nav_xpath else None
-        if button is not None:
+        opened_from_menu = button is not None
+        if opened_from_menu:
             self.pause()
             try:
                 button.click()
             except WebDriverException:
-                self.js("arguments[0].click();", button)
-        else:
-            log.debug("Não encontrei o botão '%s'; abrindo %s com o auxiliar popup() da web.", nav_selector, url)
-            self.js("popup(arguments[0], arguments[1], false, true);", url, title)
+                try:
+                    self.js("arguments[0].click();", button)
+                except WebDriverException:
+                    opened_from_menu = False
 
-        content = self._sel("popup_content")
-        wait = WebDriverWait(self.driver, 20)
+        if not opened_from_menu:
+            log.info(
+                "Atalho de %s não encontrado/acionável; "
+                "tentando abertura direta pela interface do jogo.",
+                url,
+            )
+            self._popup_direct(url, title)
+
         try:
-            wait.until(EC.visibility_of_element_located((By.XPATH, content)))
-            wait.until(lambda d: not d.find_elements(By.XPATH, content + "//img[contains(@src, 'loader')]"))
+            WebDriverWait(self.driver, 6 if opened_from_menu else 20).until(
+                lambda driver: self._popup_ready()
+            )
         except TimeoutException:
+            if not opened_from_menu:
+                log.warning(
+                    "Janela do jogo não carregou (%s) usando popup(). Estado: %s",
+                    url, summarize_browser_state(self.driver),
+                )
+                raise
+
             log.warning(
-                "Janela do jogo não carregou (%s). Estado: %s",
+                "O menu não abriu a janela %s em 6 s; tentando popup() diretamente. "
+                "Estado anterior: %s",
                 url, summarize_browser_state(self.driver),
             )
-            raise
+            # Closing the broken/empty popup does not execute any game transaction.
+            self.close_popup(quiet=True)
+            self.js(
+                "var el = document.getElementById('popContent');"
+                "if (el) el.innerHTML = '';"
+            )
+            self._popup_direct(url, title)
+            try:
+                WebDriverWait(self.driver, 15).until(
+                    lambda driver: self._popup_ready()
+                )
+            except TimeoutException:
+                log.warning(
+                    "Janela do jogo não carregou (%s), nem pelo menu nem por popup(). "
+                    "Estado final: %s",
+                    url, summarize_browser_state(self.driver),
+                )
+                raise
+            log.info("Janela %s recuperada por popup() após falha do menu.", url)
+
         self._stop.wait(0.5)
 
     def close_popup(self, quiet: bool = False) -> None:
