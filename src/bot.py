@@ -30,6 +30,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from browser_health import driver_health_details, is_driver_disconnected, user_facing_error
 from checklist import check_checklist
 from config import AppConfig
 from driver import create_driver
@@ -481,17 +482,21 @@ class Bot:
                 self.notify("⏹ Bot parado.", silent=True, category="status")
             else:
                 self.state = BotState.ERROR
-                self.last_error = (str(exc).splitlines() or [exc.__class__.__name__])[0]
+                self.last_error = user_facing_error(exc)
                 log.error("O bot foi interrompido por um erro: %s", self.last_error)
-                if ("HTTPConnectionPool" in self.last_error or "chromedriver" in self.last_error.lower()
-                        or "Connection refused" in self.last_error):
+                if is_driver_disconnected(exc):
+                    log.error("Diagnóstico ChromeDriver: %s", driver_health_details(self.driver))
                     log.warning(
-                        "Falha na comunicação com Chrome/ChromeDriver. Verifique "
-                        "data/logs/chromedriver.log, os recursos do servidor e "
-                        "sudo journalctl -k -n 100 --no-pager (possível OOM)."
+                        "Conexão com o ChromeDriver interrompida. O diagnóstico "
+                        "não prova falta de memória; verifique também "
+                        "sudo journalctl -k --since '30 minutes ago' "
+                        "e sudo systemctl status am4bot@principal."
                     )
                 log.debug("Traceback:", exc_info=True)
-                self.notify(f"🔴 <b>Bot interrompido por erro</b>: {esc(self.last_error)}", category="errors")
+                self.notify(
+                    f"🔴 <b>Bot interrompido por erro</b>: {esc(self.last_error)}",
+                    category="errors",
+                )
         else:
             log.info("Bot parado.")
             self.notify("⏹ Bot parado.", silent=True, category="status")
@@ -1204,5 +1209,7 @@ class Bot:
             return
         try:
             driver.quit()
-        except WebDriverException:
-            pass
+        except Exception as exc:  # noqa: BLE001 - urllib3 MaxRetryError is not a WebDriverException
+            # ChromeDriver can already be dead when Selenium tries /session/...;
+            # failure to close it must not interfere with the supervisor.
+            log.debug("ChromeDriver já indisponível durante encerramento: %s.", type(exc).__name__)
