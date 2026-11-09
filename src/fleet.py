@@ -31,7 +31,7 @@ from gamemode import EASY, GameMode
 from helpers import clean_response, fmt, to_int
 from notify import esc
 from route_optimizer import rank_candidates
-from route_strategy import best_reroute, profitable_candidates
+from route_strategy import best_reroute, profitable_candidates, route_research_blocker
 from route_proposals import proposed_route, proposal_reservations, reserved_by_other
 from route_airports import match_hub_options, code_from_candidate, explain_hub_options
 from airport_catalog import game_code
@@ -382,7 +382,9 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         # When the analysis is paused or limited, retain the last profitable
         # proposal instead of erasing useful comparisons from the dashboard.
         if proposal is None and reason in (
-            "pendente_limite_ciclo", "aguardando_ativacao_de_analise"
+            "pendente_limite_ciclo", "aguardando_ativacao_de_analise",
+            "aguardando_pouso_para_analise", "localizacao_nao_confirmada",
+            "comprovacao_desatualizada",
         ):
             proposal = item.get("proposal")
         registry.note(aircraft_id, reason, proposal=proposal)
@@ -403,6 +405,8 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             details = " (pesquisa não exibiu um código IATA/ICAO verificável para a alternativa)"
         elif reason == "aeronave_fora_da_base":
             details = " (o jogo indica que esta aeronave NÃO está numa base; a proposta permanece salva)"
+        elif reason == "aguardando_pouso_para_analise":
+            details = " (aeronave em voo/fora da base; pesquisa pesada adiada para quando estiver parada)"
         elif reason == "localizacao_nao_confirmada":
             details = " (o jogo não disponibilizou posição de base desta aeronave)"
         elif reason == "rota_nao_confirmada_no_jogo":
@@ -456,10 +460,12 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
     # Fairness: unattempted targets first, then oldest last attempt.
     # Without this, the first N repeated routes were researched forever.
     targets.sort(key=lambda row: (
+        route_research_blocker(row) is not None,
         row.get("last_planned_at") or 0,
         row["aircraft_id"],
     ))
     processed = 0
+    researched = 0
     if not cfg.get_bool("options", "analyze_duplicate_routes"):
         for row in targets:
             pending(row["aircraft_id"], "aguardando_ativacao_de_analise")
@@ -471,6 +477,12 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
             continue
         processed += 1
         registry.mark_plan_attempt(aircraft_id)
+        # Avoid costly route research for in-flight or stale-history aircraft;
+        # an existing route can only be replaced at a confirmed base.
+        blocker = route_research_blocker(row)
+        if blocker:
+            pending(aircraft_id, blocker)
+            continue
         origin = row.get("origin", {})
         destination = row.get("destination", {})
         hub_id = str(origin.get("id") or "")
@@ -493,6 +505,7 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         limit = cfg.get_int("settings", "route_max_distance_big" if seats >= BIG_SEATS else "route_max_distance", 6000)
         if model.get("range"):
             limit = min(limit, int(model["range"]))
+        researched += 1
         bot.open_popup("routes_main.php", "Routes", "nav_routes")
         bot.ajax("research_main.php", "routeAction")
         # Route labels are not direction-of-flight proof: for OSL↔DAC
@@ -664,10 +677,10 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
         continue
 
     log.info(
-        "Controle de rotas: análise de %d/%d aeronaves com duplicidade neste ciclo "
-        "(limite independente=%d); propostas de outras aeronaves "
-        "reservam destinos para evitar novas duplicidades.",
-        processed, len(targets), budget,
+        "Controle de rotas: %d/%d aeronaves avaliadas, %d pesquisas no navegador "
+        "(limite=%d); aeronaves fora da base e registros históricos foram "
+        "adiados para economizar recursos do ChromeDriver.",
+        processed, len(targets), researched, budget,
     )
     return 0  # Planning must never consume the live route-creation budget.
 
