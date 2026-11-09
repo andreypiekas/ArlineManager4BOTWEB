@@ -339,6 +339,22 @@ As seções de configuração são **[settings]** (valores numéricos), **[optio
 - O projeto usa a licença MIT. O aviso de copyright obrigatório está preservado no arquivo [LICENSE](LICENSE).
 
 
+### Parâmetros → Rotas (menu dedicado)
+
+Os controles de rotas ficam reunidos na aba **🧭 Rotas**, nas interfaces
+web e desktop, sem duplicação nas abas Frota e Opções.
+O menu separa as políticas de criação/análise/duplicidades, incluindo
+bloqueio de decolagens em rotas duplicadas e a opção experimental,
+dos quatro parâmetros numéricos de distância, pista e rentabilidade.
+**Os nomes das chaves em `settings.ini` não mudaram**: os valores
+configurados anteriormente são preservados. As opções são salvas
+automaticamente ao alternar; os campos numéricos são salvos por
+**Salvar alterações**.
+
+O ajuste `fleet_actions_per_cycle` continua em **Frota** porque também
+limita pedidos de compra, e `auto_depart` permanece em **Opções**
+por controlar todas as decolagens, não apenas as rotas duplicadas.
+
 ### Política independente de decolagens
 
 **Desativar "Criar rotas para aeronaves estacionadas" não desativa decolagens.**

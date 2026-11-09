@@ -32,8 +32,9 @@ from logsetup import LogBuffer, setup_logging
 from market import PriceHistory, history_file
 from notify import Telegram
 from settings_schema import (AIRCRAFT_FIELDS, AIRCRAFT_SWITCHES, ALL_FIELDS, FLEET_FIELDS, FLEET_SWITCHES,
-                             MARKET_FIELDS, MARKET_SWITCHES, MARKETING_FIELDS, OPTION_DEFAULTS, OPTION_SWITCHES, TABS,
-                             TELEGRAM_FIELDS, TELEGRAM_SWITCHES, clamp_settings, parse_int)
+                             MARKET_FIELDS, MARKET_SWITCHES, MARKETING_FIELDS, OPTION_DEFAULTS, OPTION_SWITCHES,
+                             ROUTE_FIELDS, ROUTE_SWITCHES, TABS, TELEGRAM_FIELDS, TELEGRAM_SWITCHES,
+                             clamp_settings, parse_int)
 from supervisor import AutoRestart
 from shortcuts import create_desktop_shortcut, launch
 from web import WebDashboard, profile_running, profile_token, running_instance
@@ -380,6 +381,36 @@ class App(ctk.CTk):
         fields = ctk.CTkFrame(fleet, fg_color="transparent")
         fields.grid(row=0, column=1, sticky="new")
         self._columns(fields, FLEET_FIELDS, 2, self._int_field)
+
+        # --- Rotas: criação, otimização e política de duplicidades
+        routes = tab("Rotas")
+        routes.grid_columnconfigure(0, weight=1)
+        routes.grid_columnconfigure(1, weight=1)
+        route_switches = ctk.CTkFrame(routes, fg_color="transparent")
+        route_switches.grid(row=0, column=0, sticky="new", padx=(0, 28))
+        ctk.CTkLabel(
+            route_switches, text=t("Estratégia e segurança de rotas"),
+            font=self.font_bold, text_color=MUTED, anchor="w",
+        ).grid(row=0, column=0, sticky="w", pady=(0, 9))
+        for row, (key, label) in enumerate(ROUTE_SWITCHES, start=1):
+            self._switch(route_switches, row, key, label)
+        ctk.CTkLabel(
+            route_switches,
+            text=t("Analisar rotas é independente de criar novas rotas. "
+                   "O bloqueio de decolagens duplicadas é opcional e separado da criação."),
+            font=self.font_small, text_color=MUTED, anchor="w",
+            justify="left", wraplength=420,
+        ).grid(row=len(ROUTE_SWITCHES) + 1, column=0, sticky="ew", pady=(10, 0))
+        route_values = ctk.CTkFrame(routes, fg_color="transparent")
+        route_values.grid(row=0, column=1, sticky="new")
+        ctk.CTkLabel(
+            route_values, text=t("Limites e rentabilidade"),
+            font=self.font_bold, text_color=MUTED, anchor="w",
+        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 9))
+        for row, (key, label) in enumerate(ROUTE_FIELDS, start=1):
+            self._int_field(route_values, row, key, label)
+        self._save_button(route_values, row=len(ROUTE_FIELDS) + 1,
+                          column=0, columnspan=2, sticky="w", pady=(14, 0))
 
         # --- Aeronaves: aquisições e meta de crescimento
         aircraft = tab("Aeronaves")

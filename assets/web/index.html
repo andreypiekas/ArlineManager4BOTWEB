@@ -536,6 +536,10 @@ const EN = {
   "O resultado de cada salvamento será exibido aqui.": "Each save result will appear here.",
   "Configurações persistidas no perfil ativo.": "Settings stored in the active profile.",
   "Automações": "Automations", "Salvar alterações": "Save changes",
+  "Estratégia e segurança de rotas": "Route strategy and safeguards",
+  "Limites e rentabilidade": "Limits and profitability",
+  "Analisar rotas é independente de criar novas rotas. O bloqueio de decolagens duplicadas é opcional e separado da criação.":
+    "Route analysis runs independently of creating routes. Blocking duplicate departures is optional and separate from route creation.",
   "Alteração pendente: {x}": "Unsaved change: {x}", "Clique em Salvar.": "Click Save.",
   "Salvando alteração: {x}": "Saving change: {x}", "Salvando valores e modelos…": "Saving values and models…",
   "Alteração salva: {x}": "Saved: {x}", "Alterações salvas com sucesso.": "Changes saved successfully.",
@@ -763,7 +767,8 @@ function renderSettings() {
   if (tab.switches.length) {
     const switches = document.createElement("section"); switches.className = "settings-group";
     const heading = document.createElement("div"); heading.className = "section-title";
-    heading.textContent = tr(tab.key === "Telegram" ? "Preferências de notificação" : "Automações");
+    heading.textContent = tr(tab.key === "Telegram" ? "Preferências de notificação" :
+      tab.key === "Rotas" ? "Estratégia e segurança de rotas" : "Automações");
     switches.appendChild(heading);
     const switchRows = tab.key === "Telegram" ? document.createElement("div") : switches;
     if (tab.key === "Telegram") {
@@ -800,6 +805,11 @@ function renderSettings() {
       row.querySelector("label").htmlFor = "";
       row.onclick = e => { if (e.target === row.firstChild && !input.disabled) { input.click(); } };
       switchRows.appendChild(row);
+    }
+    if (tab.key === "Rotas") {
+      const info = document.createElement("p"); info.className = "model-hint";
+      info.textContent = tr("Analisar rotas é independente de criar novas rotas. O bloqueio de decolagens duplicadas é opcional e separado da criação.");
+      switches.appendChild(info);
     }
     if (tab.key === "Telegram") {
       const info = document.createElement("p"); info.className = "model-hint";
@@ -962,7 +972,8 @@ function renderSettings() {
 
   if (tab.fields.length) {
     const heading = document.createElement("div"); heading.className = "section-title";
-    heading.textContent = tr("Valores"); values.appendChild(heading);
+    heading.textContent = tr(tab.key === "Rotas" ? "Limites e rentabilidade" : "Valores");
+    values.appendChild(heading);
     for (const s of tab.fields) {
       const input = document.createElement("input"); input.type = "number"; input.step = "1"; input.min = "0";
       input.value = pendingDrafts.get(draftKey("settings", s.key)) ?? s.value;
