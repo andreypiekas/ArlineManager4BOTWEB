@@ -89,6 +89,7 @@ EN: dict[str, str] = {
     "Reparar a partir de desgaste (%)": "Repair from wear (%)",
     "A-check quando restarem ≤ horas": "A-check at <= hours left",
     "Reserva de caixa ($)": "Cash reserve ($)",
+    "Aeronaves para analisar por ciclo": "Aircraft to analyze per cycle",
     "Distância máxima — aeronave pequena (km)": "Max. distance — small aircraft (km)",
     "Distância máxima — aeronave grande (km)": "Max. distance — large aircraft (km)",
     "Pista mínima do destino (pés)": "Min. destination runway (ft)",

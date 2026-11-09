@@ -281,3 +281,35 @@ O bot ainda não tem validação de todas as etapas de ground/reroute/rollback
 do jogo; não será usada a criação de nova rota como substituição implícita
 da rota ativa. A opção de despachar aeronaves continua independente das
 configurações de criação/análise de rotas.
+
+
+## Auditoria de 09/11/2026 — fila, dados antigos e alternativas concorrentes
+
+O log de 02:51 registrou **18 aeronaves na página atual** e **11
+rotas duplicadas no histórico acumulado, com 24 aeronaves envolvidas**.
+Os números representam conjuntos diferentes: nem todas as matrículas
+presentes no histórico estão visíveis na página atual. Quando a data
+de `game_verified_at` expira, a posição atual **não é presumida** e o
+log indica há quantos segundos a rota não é confirmada; não significa
+que uma rota acabou de ser lida e já perdeu a validade.
+
+Anteriormente o planejamento utilizava `fleet_actions_per_cycle = 2`,
+compartilhado com novas rotas e compras, gerando muitos registros de
+`pendente_limite_ciclo`. A nova opção **Aeronaves para analisar por
+ciclo** fica em **Parâmetros → Rotas** (`route_analysis_per_cycle`),
+com padrão **5** e intervalo aceito de **1 a 20**. Ela não altera o
+limite `fleet_actions_per_cycle` de ordens efetivas. A análise pode
+continuar com `auto_route` desligada e não envia troca de rota.
+
+Também foi introduzida a **reserva de propostas**: o bot compara
+origem↔destino (incluindo aliases IATA/ICAO/IDs) e, se uma proposta
+lucrativa recente já pertence a outra aeronave, tenta outra alternativa
+para não recriar as mesmas duplicidades. Por exemplo, propostas antigas
+`LAX-FIH` ou `DTW-MLE` de matrículas diferentes são analisadas
+como conflitos. Uma proposta sem data, já vencida (mais de **6 horas**)
+ou associada a uma rota de origem que mudou não bloqueia pesquisas.
+
+Essas reservas são apenas **planejamento local**, não reservas no jogo.
+Os cálculos de lucro continuam sendo estimativas. A troca real das
+rotas de aviões já atribuídos permanece protegida até existir validação
+completa e segura do procedimento de substituição.
