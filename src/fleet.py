@@ -35,7 +35,7 @@ from route_strategy import best_reroute, profitable_candidates
 from route_proposals import proposed_route, proposal_reservations, reserved_by_other
 from route_airports import match_hub_options, code_from_candidate, explain_hub_options
 from airport_catalog import game_code
-from route_registry import RouteRegistry, reroute_block_reason, endpoint, route_key
+from route_registry import RouteRegistry, reroute_block_reason, endpoint, route_key, same_route
 from reroute_preflight import check_existing_route
 
 if TYPE_CHECKING:
@@ -565,7 +565,8 @@ def resolve_duplicate_routes(bot: "Bot", registry: RouteRegistry, budget: int) -
                     "destination_id": candidate.arr_id,
                     "destination_code": candidate.code,
                 })
-                if planned is None or reserved_by_other(reservations, aircraft_id, planned):
+                if (planned is None or same_route(row, planned)
+                        or reserved_by_other(reservations, aircraft_id, planned)):
                     continue
                 options.append(candidate)
             destination_options.extend(options)
