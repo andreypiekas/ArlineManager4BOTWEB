@@ -119,12 +119,19 @@ retidas e as partidas confirmadas.
 
 [Guia de controle de rotas e decolagens](docs/CONTROLE_ROTAS.md)
 
-## Próxima implementação
+## Hubs e Aeronaves — roadmap em execução
 
-[Roadmap de Hubs e Aeronaves](docs/ROADMAP_HUBS_AERONAVES.md). O painel
-vai reunir as bases adquiridas, a frota e o lucro estimado por aeroporto.
-Também vai indicar onde alocar a próxima aeronave e comparar aeroportos
-para aquisição de novos hubs.
+O painel web já possui a primeira tela **Hubs e Aeronaves** e o endpoint
+autenticado `GET /api/hubs`. O inventário das bases é coletado quando a
+pesquisa de rotas do bot abre o seletor de hubs do jogo. A tela separa dados
+verificados de aeronaves cuja base de origem ainda não foi comprovada.
+Não há compras ou remanejamentos automáticos neste módulo.
+
+A associação individual da frota, a apuração de lucro por base e os rankings
+de expansão **ainda aguardam validação de fontes no jogo**.
+
+[Roadmap detalhado](docs/ROADMAP_HUBS_AERONAVES.md) ·
+[Histórico das entregas e testes](docs/HISTORICO_IMPLEMENTACOES.md).
 
 ## Interface — AM/04 Torre de Controle
 

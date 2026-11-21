@@ -382,6 +382,7 @@ footer strong { font-weight: 600; color: var(--aqua); }
       <a href="#activity"><span class="index">02/</span><span data-t="Registro operacional">Registro operacional</span></a>
       <a href="#parameters"><span class="index">03/</span><span data-t="Parâmetros">Parâmetros</span></a>
       <a href="#routes"><span class="index">04/</span><span data-t="Rotas e aeronaves">Rotas e aeronaves</span></a>
+      <a href="#hubs"><span class="index">05/</span><span data-t="Hubs e Aeronaves">Hubs e Aeronaves</span></a>
     </nav>
     <div class="side-actions">
       <span class="eyebrow" data-t="COMANDOS / CONTROLE">COMANDOS / CONTROLE</span>
@@ -507,6 +508,39 @@ footer strong { font-weight: 600; color: var(--aqua); }
       </form>
     </details>
   </main>
+  <main class="workspace settings-workspace" id="hubsView" hidden>
+    <div class="topline"><span class="path">AM4 / OPERATIONS / HUBS</span><span>FROTA / BASES</span><span class="live">● READ ONLY</span></div>
+    <header class="settings-hero">
+      <span class="eyebrow" data-t="INTELIGÊNCIA / EXPANSÃO">INTELIGÊNCIA / EXPANSÃO</span>
+      <h1>HUBS <span>&amp;</span> AERONAVES.</h1>
+      <p data-t="Inventário verificado no seletor do jogo. Bases não são inferidas pela rota ou localização atual da aeronave.">
+        Inventário verificado no seletor do jogo. Bases não são inferidas pela rota ou localização atual da aeronave.
+      </p>
+      <a class="settings-back" href="#overview" data-t="← Voltar ao painel">← Voltar ao painel</a>
+    </header>
+    <div class="route-summary" id="hubsSummary" aria-live="polite"></div>
+    <section class="card" aria-label="Inventário das bases adquiridas">
+      <div class="routes-header">
+        <div><strong data-t="BASES ADQUIRIDAS">BASES ADQUIRIDAS</strong>
+          <p id="hubsStatus" role="status" aria-live="polite">Aguardando leitura do jogo.</p></div>
+        <div class="routes-controls"><button id="hubsRefresh" type="button" data-t="Atualizar relatório">Atualizar relatório</button></div>
+      </div>
+      <div class="routes-table-wrap">
+        <table class="routes-table" aria-label="Hubs confirmados">
+          <thead><tr><th data-t="Aeroporto">Aeroporto</th><th data-t="Aeronaves confirmadas">Aeronaves confirmadas</th>
+            <th data-t="Lucro estimado/dia">Lucro estimado/dia</th><th data-t="Estimativas válidas">Estimativas válidas</th></tr></thead>
+          <tbody id="hubsTable"><tr><td colspan="4">—</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="card" style="margin-top:15px;padding:18px" aria-label="Aeronaves com base pendente">
+      <h2 data-t="Base a confirmar">Base a confirmar</h2>
+      <p style="color:var(--muted)" data-t="Nenhuma aeronave é vinculada automaticamente por origem, destino ou posição. A contagem representa apenas vínculos comprovados.">
+        Nenhuma aeronave é vinculada automaticamente por origem, destino ou posição. A contagem representa apenas vínculos comprovados.
+      </p>
+      <div id="hubsUnconfirmed" aria-live="polite"></div>
+    </section>
+  </main>
 </div>
 <script>
 "use strict";
@@ -609,6 +643,19 @@ const EN = {
   "Enviar mensagem de teste": "Send test message",
   "Enviando teste do Telegram…": "Sending Telegram test…",
   "Falha ao enviar. Verifique a conexão.": "Could not send. Check the connection.",
+  "Hubs e Aeronaves": "Hubs & Aircraft", "INTELIGÊNCIA / EXPANSÃO": "INTELLIGENCE / EXPANSION",
+  "BASES ADQUIRIDAS": "OWNED HUBS", "Base a confirmar": "Home base unverified",
+  "Aeroporto": "Airport", "Aeronaves confirmadas": "Confirmed aircraft",
+  "Estimativas válidas": "Valid estimates",
+  "Inventário verificado no seletor do jogo. Bases não são inferidas pela rota ou localização atual da aeronave.":
+    "Inventory verified through the game selector. Home bases are not inferred from routes or aircraft positions.",
+  "Nenhuma aeronave é vinculada automaticamente por origem, destino ou posição. A contagem representa apenas vínculos comprovados.":
+    "No aircraft is automatically assigned by origin, destination or location. Counts reflect verified links only.",
+  "Sem dados": "No data", "Ainda sem bases verificadas": "No verified hubs yet",
+  "base(s) adquirida(s)": "owned hub(s)", "aeronave(s) sem base confirmada": "aircraft without a verified home base",
+  "Nenhuma aeronave com base confirmada.": "No aircraft with a verified home base.",
+  "Sem aeronaves pendentes no cadastro local.": "No unassigned aircraft in the local registry.",
+  "Leitura antiga": "Stale reading", "Leitura verificada": "Verified reading",
   "Sem conexão com o bot": "No connection with the bot", "Resposta inválida": "Invalid answer",
   "Saldo ainda não conferido": "Balance not checked yet",
   "Saldo conferido às {x}": "Balance verified at {x}",
@@ -1031,11 +1078,14 @@ function activateWorkspaceFromHash() {
   const target = location.hash;
   const isSettings = target === "#parameters";
   const isRoutes = target === "#routes";
-  $("overview").hidden = isSettings || isRoutes;
+  const isHubs = target === "#hubs";
+  $("overview").hidden = isSettings || isRoutes || isHubs;
   $("settingsView").hidden = !isSettings;
   $("routesView").hidden = !isRoutes;
+  $("hubsView").hidden = !isHubs;
   if (isRoutes) { loadRoutes(); }
-  const current = isRoutes ? "#routes" : isSettings ? "#parameters" : target === "#activity" ? "#activity" : "#overview";
+  if (isHubs) { loadHubs(); }
+  const current = isHubs ? "#hubs" : isRoutes ? "#routes" : isSettings ? "#parameters" : target === "#activity" ? "#activity" : "#overview";
   for (const link of document.querySelectorAll(".nav-list a")) {
     const selected = link.getAttribute("href") === current;
     link.classList.toggle("active", selected);
@@ -1050,6 +1100,77 @@ function activateWorkspaceFromHash() {
 window.addEventListener("hashchange", activateWorkspaceFromHash);
 activateWorkspaceFromHash();
 
+
+// ------------------------------------------------------------------ verified hubs inventory (local, read-only)
+let lastHubFetch = 0;
+function renderHubs(report) {
+  const count = report.total_hubs || 0;
+  $("hubsSummary").textContent = count + " " + tr("base(s) adquirida(s)") +
+    " · " + (report.unconfirmed_aircraft || []).length + " " + tr("aeronave(s) sem base confirmada");
+  const stamp = report.read_at ? new Date(report.read_at * 1000).toLocaleString(LANG === "en" ? "en-GB" : "pt-BR") : "";
+  $("hubsStatus").textContent = count ?
+    tr(report.stale ? "Leitura antiga" : "Leitura verificada") + " · " + stamp +
+      " · " + tr("Apenas bases com ID confirmado no jogo.") :
+    tr("Ainda sem bases verificadas") + ". " +
+      tr("Abra a pesquisa de rotas no ciclo do bot para coletar o seletor.");
+  const tbody = $("hubsTable"); tbody.textContent = "";
+  for (const hub of report.hubs || []) {
+    const row = document.createElement("tr");
+    const name = document.createElement("td");
+    const details = document.createElement("details");
+    const label = document.createElement("summary");
+    label.textContent = (hub.name || hub.code || "#" + hub.id) +
+      (hub.code ? " · " + hub.code : "") + " · #" + hub.id;
+    details.appendChild(label);
+    const entries = document.createElement("ul");
+    for (const plane of hub.aircraft || []) {
+      const item = document.createElement("li");
+      item.textContent = (plane.registration || plane.aircraft_id) + " · " +
+        (plane.model || "—") + " · " + (plane.route || tr("Sem dados"));
+      entries.appendChild(item);
+    }
+    if (!entries.childElementCount) {
+      const item = document.createElement("li");
+      item.textContent = tr("Nenhuma aeronave com base confirmada.");
+      entries.appendChild(item);
+    }
+    details.appendChild(entries); name.appendChild(details); row.appendChild(name);
+    for (const value of [
+      String(hub.confirmed_aircraft || 0),
+      hub.profit_per_day == null ? tr("Sem dados") : money(hub.profit_per_day),
+      (hub.profit_coverage || 0) + " / " + (hub.confirmed_aircraft || 0)
+    ]) {
+      const cell = document.createElement("td"); cell.textContent = value; row.appendChild(cell);
+    }
+    tbody.appendChild(row);
+  }
+  if (!count) {
+    const row = document.createElement("tr"), cell = document.createElement("td");
+    cell.colSpan = 4; cell.textContent = tr("Ainda sem bases verificadas");
+    row.appendChild(cell); tbody.appendChild(row);
+  }
+  const pending = $("hubsUnconfirmed"); pending.textContent = "";
+  const list = document.createElement("ul");
+  for (const aircraft of report.unconfirmed_aircraft || []) {
+    const li = document.createElement("li");
+    li.textContent = (aircraft.registration || aircraft.aircraft_id) +
+      " · " + (aircraft.model || tr("Sem dados")) + " · #" + aircraft.aircraft_id;
+    list.appendChild(li);
+  }
+  if (list.childElementCount) { pending.appendChild(list); }
+  else { pending.textContent = tr("Sem aeronaves pendentes no cadastro local."); }
+}
+async function loadHubs() {
+  try {
+    const result = await api("/api/hubs");
+    if (!result || !Array.isArray(result.hubs)) { throw new Error("Invalid hub inventory"); }
+    renderHubs(result);
+    lastHubFetch = Date.now();
+  } catch (_) {
+    $("hubsStatus").textContent = tr("Não foi possível consultar o inventário de hubs.");
+  }
+}
+$("hubsRefresh").addEventListener("click", loadHubs);
 
 // ------------------------------------------------------------------ persistent route registry
 let routeReport = null;
@@ -1205,6 +1326,7 @@ async function tick() {
     const log = await api("/api/log?since=" + lastId);
     if (log.lines && log.lines.length) { addLines(log.lines); }
     if (!$("routesView").hidden && Date.now() - lastRouteFetch > 15000) { await loadRoutes(); }
+    if (!$("hubsView").hidden && Date.now() - lastHubFetch > 15000) { await loadHubs(); }
   } catch (e) {
     $("state").textContent = tr("Sem conexão com o bot"); $("pill").className = "pill ERROR";
   }

@@ -72,7 +72,9 @@ def test_resumo_de_alteracoes_substitui_formulario_no_painel():
 def test_navegacao_por_fragmento_mantem_o_dashboard_ativo():
     html = HTML.read_text(encoding="utf-8")
     assert 'target === "#parameters"' in html
-    assert '$("overview").hidden = isSettings || isRoutes;' in html
+    assert '$("overview").hidden = isSettings || isRoutes || isHubs;' in html
+    assert 'target === "#hubs"' in html
+    assert '$("hubsView").hidden = !isHubs;' in html
     assert '$("routesView").hidden = !isRoutes;' in html
     assert '$("settingsView").hidden = !isSettings;' in html
     assert 'target === "#activity"' in html

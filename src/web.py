@@ -37,6 +37,7 @@ from dashboard import snapshot
 from economy import AUTO_GOAL_LABEL, is_auto_goal, load_market, load_state
 from i18n import language, t, tip
 from route_registry import RouteRegistry, endpoint
+from hub_inventory import HubInventory
 from settings_schema import ALL_FIELDS, ALL_SWITCHES, OPTION_DEFAULTS, TABS, TEXT_SETTINGS, clamp_settings, parse_int
 
 if TYPE_CHECKING:
@@ -164,6 +165,10 @@ class WebDashboard:
         return RouteRegistry().snapshot(
             allow_duplicates=self.cfg.get_bool("options", "allow_duplicate_routes", False),
         )
+
+    def hubs(self) -> dict:
+        """Local read-only hub inventory; never accesses Selenium from a web thread."""
+        return HubInventory().snapshot(self.routes())
 
     def update_routes(self, payload: dict) -> tuple[bool, str]:
         """Manual registry corrections are auditable and never change routes in-game."""
@@ -342,6 +347,8 @@ class WebDashboard:
                     return self._json(dashboard.settings())
                 if url.path == "/api/routes":
                     return self._json(dashboard.routes())
+                if url.path == "/api/hubs":
+                    return self._json(dashboard.hubs())
                 self._send(HTTPStatus.NOT_FOUND, b"Not found", "text/plain")
 
             def do_POST(self) -> None:  # noqa: N802 - http.server API
